@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trading Journal</title>
+<meta name="description" content="Trading Journal. Every trade, every lesson, every step forward.">
+<meta name="theme-color" content="#0b1530">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1530'/%3E%3Crect x='6' y='6' width='14' height='4' fill='%23d9c29a'/%3E%3Cpath d='M6 26 L13 18 L18 22 L27 11' stroke='%23ecd9b3' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <h1>Trading Journal</h1>
+      <p class="tagline"><span>Every trade</span><span>Every lesson</span><span>Every step forward</span></p>
+    </div>
+    <span class="chip" id="sync" data-state="loading" role="status"><i></i><span id="sync-text">Connecting</span></span>
+  </header>
+  <nav class="nav" id="nav" aria-label="Sections">
+    <a href="#dashboard" data-v="dashboard">Dashboard</a>
+    <a href="#calendar" data-v="calendar">Calendar</a>
+    <a href="#trades" data-v="trades">Trades</a>
+    <a href="#playbooks" data-v="playbooks">Playbooks</a>
+    <a href="#reports" data-v="reports">Reports</a>
+    <a href="#insights" data-v="insights">Insights</a>
+    <a href="#settings" data-v="settings">Settings</a>
+  </nav>
+  <div class="banner" id="banner" hidden>
+    <p>You are looking at example data so you can see how every page works. Clear it before you log your own trades.</p>
+    <button class="btn btn-sm" id="btn-clear-ex" type="button">Clear examples</button>
+  </div>
+  <main>
+    <section id="v-dashboard" hidden></section>
+    <section id="v-calendar" hidden></section>
+    <section id="v-trades" hidden></section>
+    <section id="v-playbooks" hidden></section>
+    <section id="v-reports" hidden></section>
+    <section id="v-insights" hidden></section>
+    <section id="v-settings" hidden></section>
+  </main>
+  <p class="foot">R-multiple is profit or loss measured in units of your starting risk. 1R is the distance from entry to stop loss. Weeks run Monday to Sunday. Nothing here is financial advice.</p>
+</div>
+
+<button class="btn btn-primary fab" id="fab" type="button">+ Log trade</button>
+<div class="scrim" id="scrim" hidden></div>
+
+<aside class="drawer" id="drawer-trade" role="dialog" aria-modal="true" aria-labelledby="dt-title" hidden>
+  <div class="drawer-head"><h2 id="dt-title">Log a trade</h2><button class="xbtn" type="button" data-close aria-label="Close">&times;</button></div>
+  <p class="warn" id="limit-warn" role="alert" hidden></p>
+  <form id="trade-form" novalidate autocomplete="off">
+    <div class="fields">
+      <div class="field"><label for="f-asset">Pair / asset</label><input id="f-asset" list="dl-assets" placeholder="EURUSD, BTC, AAPL"></div>
+      <div class="field"><label for="f-pnl">P&amp;L amount</label><input id="f-pnl" type="number" step="any" inputmode="decimal" placeholder="65 or -40"></div>
+      <div class="field full" id="asset-chips-wrap" hidden><span class="lbl">Recent</span><div class="chips" id="asset-chips" style="margin-top:0"></div></div>
+      <div class="field full"><span class="lbl" id="side-lbl">Direction</span>
+        <div class="seg" role="radiogroup" aria-labelledby="side-lbl">
+          <input type="radio" name="side" id="side-buy" value="buy" checked><label for="side-buy">Buy</label>
+          <input type="radio" name="side" id="side-sell" value="sell"><label for="side-sell">Sell</label>
+        </div></div>
+      <div class="field"><label for="f-date">Date</label><input id="f-date" type="date"></div>
+      <div class="field"><label for="f-time">Time (optional)</label><input id="f-time" type="time"></div>
+      <div class="field full"><label for="f-risk">Amount risked (optional)</label><input id="f-risk" type="number" step="any" min="0" inputmode="decimal" placeholder="What you stood to lose if stopped out"><p class="hint" id="risk-hint">Add it to track R-multiple and your risk limit.</p></div>
+    </div>
+    <details class="sec" id="sec-plan" open>
+      <summary>Plan and psychology</summary>
+      <div class="fields">
+        <div class="field full"><label for="f-pb">Playbook</label><select id="f-pb"></select>
+          <div class="checks" id="checks" hidden></div></div>
+        <div class="field full"><span class="lbl" id="plan-lbl">Did you follow your plan?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="plan-lbl">
+            <input type="radio" name="plan" id="plan-yes" value="yes" checked><label for="plan-yes">Yes</label>
+            <input type="radio" name="plan" id="plan-no" value="no"><label for="plan-no">No</label>
+          </div></div>
+        <div class="field full"><label for="f-emotion">Emotion going in</label><select id="f-emotion"></select></div>
+        <div class="field full"><span class="lbl" id="mist-lbl">Mistakes (tick any)</span><div class="mchips" id="mchips" role="group" aria-labelledby="mist-lbl"></div></div>
+        <div class="field full"><label for="f-lesson">Lesson learned</label><textarea id="f-lesson" placeholder="What did this trade teach you?"></textarea></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-prices">
+      <summary>Prices and R-multiple</summary>
+      <div class="fields">
+        <div class="field"><label for="f-entry">Entry</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="1.0850"></div>
+        <div class="field"><label for="f-sl">Stop loss</label><input id="f-sl" type="number" step="any" inputmode="decimal" placeholder="1.0820"></div>
+        <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
+        <div class="field"><label for="f-exit">Exit</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="1.0915"></div>
+        <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
+        <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
+        <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/*"><div id="shot-prev" class="shotprev"></div></div>
+        <div class="field full"><p class="hint" id="r-hint" style="margin:0">R is worked out from entry, stop loss and exit. Type a value to override it.</p></div>
+      </div>
+    </details>
+    <p class="form-msg" id="form-msg" role="alert"></p>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-save" type="submit">Save trade</button>
+      <button class="btn" id="btn-another" type="button">Save &amp; add another</button>
+    </div>
+    <datalist id="dl-assets"></datalist>
+  </form>
+</aside>
+
+<aside class="drawer" id="drawer-pb" role="dialog" aria-modal="true" aria-labelledby="dp-title" hidden>
+  <div class="drawer-head"><h2 id="dp-title">New playbook</h2><button class="xbtn" type="button" data-close aria-label="Close">&times;</button></div>
+  <form id="pb-form" novalidate autocomplete="off">
+    <div class="fields">
+      <div class="field full"><label for="p-name">Name</label><input id="p-name" placeholder="Breakout retest"></div>
+      <div class="field full"><label for="p-desc">What is this setup?</label><textarea id="p-desc" placeholder="One or two lines on when you take it."></textarea></div>
+      <div class="field full"><label for="p-rules">Rules checklist (one per line)</label><textarea id="p-rules" style="min-height:150px" placeholder="Trade with the higher timeframe trend&#10;Wait for the retest&#10;Stop loss set before entry"></textarea>
+        <p class="hint">These show up as a checklist when you log a trade with this playbook. Unticked rules are tracked as rule breaks.</p></div>
+    </div>
+    <p class="form-msg" id="pb-msg" role="alert"></p>
+    <div class="form-actions"><button class="btn btn-primary" id="btn-pb-save" type="submit">Save playbook</button></div>
+  </form>
+</aside>
+
+<div class="toasts" aria-live="polite"><div class="toast" id="toast" hidden></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>

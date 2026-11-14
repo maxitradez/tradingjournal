@@ -1,6 +1,6 @@
-/* Trading Journal
-   Every trade. Every lesson. Every step forward.
-   Stores data in this browser (localStorage). Inside claude.ai it uses the host's saved storage instead. */
+/* Maxi Trades Journal
+   Guest journal data stays in this browser (localStorage).
+   Supabase authentication is enabled; cloud journal sync and guest migration are not enabled in this phase. */
 (function () {
   'use strict';
   var LS_KEY = 'trading-journal-pro-v1';

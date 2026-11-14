@@ -2,7 +2,7 @@
    Only use the project's publishable key here. NEVER put a secret/service_role key in frontend code. */
 window.MAXI_SUPABASE_CONFIG = Object.freeze({
   url: 'https://dnhpoimokvmpwvlvtqrh.supabase.co',
-  publishableKey: 'PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE'
+  publishableKey: 'sb_publishable_K3aYoy23xLxLpYfX94i_Mg_DwxyWscV'
 });
 
 (function () {

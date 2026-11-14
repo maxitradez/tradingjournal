@@ -350,7 +350,7 @@
           return saveLegacyRow('trades', obj.id, toCloudTrade(obj));
         }
         if (kind === 'days') {
-          var existing = await own('daily_journals').eq('journal_date', obj.date || obj.id).maybeSingle();
+          var existing = await own('daily_journals').eq('journal_date', obj.date || obj.id).is('account_id', null).maybeSingle();
           if (existing.error) throw existing.error;
           var payload = {
             user_id: userId, legacy_id: String(obj.id), journal_date: obj.date || obj.id,
@@ -371,8 +371,11 @@
         var query = own(table);
         if (kind === 'days') query = query.eq('journal_date', String(id));
         else query = query.eq('legacy_id', String(id));
-        var result = await api.from(table).delete().eq('user_id', userId)
-          .in('id', (await query.select('id')).data || []);
+        var found = await query.select('id');
+        if (found.error) throw found.error;
+        var rowIds = (found.data || []).map(function (row) { return row.id; });
+        if (!rowIds.length) return;
+        var result = await api.from(table).delete().eq('user_id', userId).in('id', rowIds);
         if (result.error) throw result.error;
       },
       async saveSettings(settings) {

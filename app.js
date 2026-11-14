@@ -256,7 +256,7 @@
     form.hidden = false;
     authPanel.querySelector('.auth-message').textContent = '';
     if (email) email.focus();
-    if (password) password.value = '';
+    if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password'); }
   }
   function refreshAuthPanel() {
     if (!authPanel) return;

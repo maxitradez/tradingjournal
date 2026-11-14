@@ -222,53 +222,148 @@
   }
   function seq(items, fn) { return items.reduce(function (p, x) { return p.then(function () { return fn(x); }); }, Promise.resolve()); }
   function failMsg(e) { return 'Could not save: ' + ((e && e.message) || 'try again'); }
-  var syncText = { loading: 'Connecting', cloud: 'Synced to your account', syncing: 'Syncing', local: 'Saved in this browser only', slow: 'Saved data not reachable yet', error: 'Saved in this browser only' };
+  var syncText = { loading: 'Connecting', cloud: 'Synced to your account', syncing: 'Syncing', local: 'Saved in this browser only', 'account-local': 'Account connected · data still local', slow: 'Saved data not reachable yet', error: 'Saved in this browser only' };
+  var authClient = window.maxiSupabase || null;
+  var authUser = null;
+  var authPanel = null;
+  var authFormMode = 'signin';
   function setSync(kind) {
     var chip = $('sync');
     chip.setAttribute('data-state', kind === 'syncing' ? 'loading' : kind);
-    $('sync-text').textContent = syncText[kind];
-    chip.title = (kind === 'local' || kind === 'error') ? 'Your journal is stored in this browser on this device. Download a CSV from Settings to keep a backup.' : '';
+    $('sync-text').textContent = syncText[kind] || syncText.local;
+    chip.title = kind === 'account-local'
+      ? 'Your account is connected, but journal records are still stored in this browser. Cloud journal sync has not been enabled yet.'
+      : 'Your journal is stored in this browser on this device. Cloud journal sync has not been enabled yet. Download a CSV from Settings to keep a backup.';
+  }
+  function authNotice(message, isError) {
+    if (!authPanel) return;
+    var note = authPanel.querySelector('.auth-message');
+    note.textContent = message || '';
+    note.setAttribute('data-kind', isError ? 'error' : 'info');
+  }
+  function showAuthForm(mode) {
+    authFormMode = mode;
+    if (!authPanel) return;
+    var form = authPanel.querySelector('.auth-form');
+    var heading = authPanel.querySelector('.auth-form-title');
+    var submit = authPanel.querySelector('.auth-submit');
+    var toggle = authPanel.querySelector('.auth-toggle');
+    var email = authPanel.querySelector('#maxi-auth-email');
+    var password = authPanel.querySelector('#maxi-auth-password');
+    heading.textContent = mode === 'signup' ? 'Create your free account' : 'Sign in to your account';
+    submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+    toggle.textContent = mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account';
+    form.hidden = false;
+    authPanel.querySelector('.auth-message').textContent = '';
+    if (email) email.focus();
+    if (password) password.value = '';
+  }
+  function refreshAuthPanel() {
+    if (!authPanel) return;
+    var signedIn = !!authUser;
+    authPanel.querySelector('.auth-state-title').textContent = signedIn ? 'Account connected' : 'Guest mode';
+    authPanel.querySelector('.auth-state-detail').textContent = signedIn
+      ? authUser.email || 'Signed-in account'
+      : 'Your journal is saved in this browser. Sign in or create an account to prepare for secure cloud sync.';
+    authPanel.querySelector('.auth-open').hidden = signedIn;
+    authPanel.querySelector('.auth-signout').hidden = !signedIn;
+    authPanel.querySelector('.auth-form').hidden = true;
+    if (signedIn) {
+      authNotice('Your account is authenticated. Your existing journal data has not been uploaded; it remains local until the migration feature is built.', false);
+      setSync('account-local');
+    } else {
+      authNotice('Guest data stays on this device. Signing in does not upload, merge, overwrite or delete it.', false);
+      setSync('local');
+    }
+  }
+  function buildAuthPanel() {
+    if (authPanel) return;
+    authPanel = h('section', { id: 'auth-panel', class: 'auth-panel panel', 'aria-label': 'Account access' });
+    var summary = h('div', { class: 'auth-summary' },
+      h('div', { class: 'auth-copy' },
+        h('strong', { class: 'auth-state-title', text: 'Guest mode' }),
+        h('p', { class: 'auth-state-detail', text: 'Your journal is saved in this browser.' })),
+      h('div', { class: 'auth-actions' },
+        h('button', { class: 'btn btn-primary auth-open', type: 'button', text: 'Sign in / Create account', onclick: function () { showAuthForm('signin'); } }),
+        h('button', { class: 'btn auth-signout', type: 'button', text: 'Sign out', hidden: true, onclick: async function () {
+          if (!authClient) return;
+          var b = authPanel.querySelector('.auth-signout');
+          b.disabled = true;
+          var result = await authClient.auth.signOut();
+          b.disabled = false;
+          if (result.error) authNotice('Could not sign out: ' + result.error.message, true);
+          else authNotice('You are signed out. Your local journal has not been changed.', false);
+        } })),
+    );
+    var form = h('form', { class: 'auth-form', hidden: true, novalidate: true });
+    form.appendChild(h('h2', { class: 'auth-form-title', text: 'Sign in to your account' }));
+    form.appendChild(h('div', { class: 'auth-fields' },
+      h('div', { class: 'field' }, h('label', { for: 'maxi-auth-email', text: 'Email address' }), h('input', { id: 'maxi-auth-email', type: 'email', autocomplete: 'email', required: true, maxlength: '254', placeholder: 'you@example.com' })),
+      h('div', { class: 'field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'At least 6 characters' }))));
+    form.appendChild(h('div', { class: 'auth-form-actions' },
+      h('button', { class: 'btn btn-primary auth-submit', type: 'submit', text: 'Sign in' }),
+      h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } }),
+      h('button', { class: 'btn auth-cancel', type: 'button', text: 'Cancel', onclick: function () { form.hidden = true; authNotice('', false); } })));
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (!authClient) { authNotice('Supabase is not configured. Check the project client setup.', true); return; }
+      var email = form.querySelector('#maxi-auth-email').value.trim();
+      var password = form.querySelector('#maxi-auth-password').value;
+      var submit = form.querySelector('.auth-submit');
+      if (!email || !password) { authNotice('Enter both your email address and password.', true); return; }
+      if (password.length < 6) { authNotice('Your password must contain at least 6 characters.', true); return; }
+      submit.disabled = true;
+      authNotice(authFormMode === 'signup' ? 'Creating your account…' : 'Signing you in…', false);
+      try {
+        var result = authFormMode === 'signup'
+          ? await authClient.auth.signUp({ email: email, password: password })
+          : await authClient.auth.signInWithPassword({ email: email, password: password });
+        if (result.error) throw result.error;
+        if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
+          form.hidden = true;
+          authNotice('Account created. Check your email for the confirmation link, then return here and sign in. Your journal data has not been uploaded.', false);
+        } else {
+          authUser = result.data && result.data.user ? result.data.user : null;
+          form.hidden = true;
+          refreshAuthPanel();
+          authNotice('Signed in successfully. Your journal remains local until cloud migration is implemented.', false);
+        }
+      } catch (error) {
+        authNotice('Authentication failed: ' + (error && error.message ? error.message : 'Please try again.'), true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    authPanel.appendChild(summary);
+    authPanel.appendChild(form);
+    authPanel.appendChild(h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' }));
+    var masthead = document.querySelector('.masthead');
+    masthead.insertAdjacentElement('afterend', authPanel);
+    refreshAuthPanel();
   }
   async function init() {
-    var db = null, uid = null;
+    state.mode = 'local';
+    loadLocal();
+    buildAuthPanel();
+    renderAll();
+    if (!authClient || !authClient.auth) {
+      authNotice('Guest mode is available. Account access is unavailable because Supabase did not initialize.', true);
+      setSync('local');
+      return;
+    }
+    authClient.auth.onAuthStateChange(function (_event, session) {
+      authUser = session && session.user ? session.user : null;
+      refreshAuthPanel();
+    });
     try {
-      var c = window.claude;
-      if (c && c.use) {
-        db = await c.use('db');
-        var user = await c.use('user');
-        if (user) uid = await user.id();
-        try { state.assets = await c.use('assets'); } catch (e2) { state.assets = null; }
-      }
-    } catch (e) { db = null; uid = null; }
-    if (db && uid) {
-      var base = db.doc('data/users/' + uid + '/journal');
-      state.mode = 'cloud'; state.cols = { trades: base.collection('trades'), playbooks: base.collection('playbooks'), days: base.collection('days'), settings: base.collection('settings') };
-      setSync('syncing');
-      var timer = setTimeout(function () { setSync('slow'); }, 10000);
-      var fail = function () {
-        clearTimeout(timer);
-        if (state.mode !== 'cloud') return;
-        state.mode = 'local'; loadLocal(); setSync('error'); renderAll();
-      };
-      state.cols.trades.onSnapshot(function (snap) {
-        clearTimeout(timer);
-        state.trades = snap.docs.map(function (d) { return normTrade(d.data()); });
-        setSync(snap.metadata.fromCache ? 'syncing' : 'cloud'); renderAll();
-      }, fail);
-      state.cols.playbooks.onSnapshot(function (snap) {
-        state.playbooks = snap.docs.map(function (d) { return normPb(d.data()); });
-        renderAll();
-      }, fail);
-      state.cols.days.onSnapshot(function (snap) {
-        state.days = snap.docs.map(function (d) { return normDay(d.data()); });
-        renderAll();
-      }, fail);
-      state.cols.settings.onSnapshot(function (snap) {
-        var m = snap.docs.find(function (d) { return d.id === 'main'; });
-        state.settings = normSettings(m ? m.data() : null); applySettings(); renderAll();
-      }, fail);
-    } else {
-      state.mode = 'local'; loadLocal(); setSync('local'); renderAll();
+      var result = await authClient.auth.getSession();
+      if (result.error) throw result.error;
+      authUser = result.data && result.data.session ? result.data.session.user : null;
+      refreshAuthPanel();
+    } catch (error) {
+      authUser = null;
+      refreshAuthPanel();
+      authNotice('Could not check your account session: ' + (error && error.message ? error.message : 'Please refresh and try again.'), true);
     }
   }
 

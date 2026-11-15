@@ -1247,7 +1247,7 @@
     $('checks').textContent = ''; $('checks').hidden = true; $('sec-prices').open = false; resetShot(''); updateRHint();
   }
   function openTradeForm(t) {
-    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     fillSelects(); resetTradeForm(false);
     if (t) {
       state.editingTrade = t.id;
@@ -1290,7 +1290,7 @@
 
   /* ---------- playbook form ---------- */
   function openPbForm(p) {
-    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     state.editingPb = p ? p.id : null;
     $('p-name').value = p ? p.name : ''; $('p-desc').value = p ? p.description : ''; $('p-rules').value = p ? p.rules.join('\n') : '';
     $('dp-title').textContent = p ? 'Edit playbook' : 'New playbook'; $('pb-msg').textContent = '';

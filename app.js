@@ -15,7 +15,7 @@
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'pending', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'local', dataState: 'guest-local', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -221,9 +221,9 @@
     return Promise.resolve();
   }
 
-  /* ---------- Supabase journal data adapter (Phase 2A) ---------- */
-  // This adapter is intentionally not activated by init() yet. Phase 2B will
-  // connect it to the authenticated session after the mappings are tested.
+  /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
+  // The shared adapter is verified but intentionally not activated. This stage
+  // keeps all journal reads and writes local; cloud integration is a later phase.
   function cloudAdapterFor(userId) {
     if (!window.MaxiCloudAdapterFactory) throw new Error('Supabase data adapter module did not load.');
     return window.MaxiCloudAdapterFactory(authClient, userId, {
@@ -234,18 +234,48 @@
 
   function seq(items, fn) { return items.reduce(function (p, x) { return p.then(function () { return fn(x); }); }, Promise.resolve()); }
   function failMsg(e) { return 'Could not save: ' + ((e && e.message) || 'try again'); }
-  var syncText = { loading: 'Connecting', cloud: 'Synced to your account', syncing: 'Syncing', local: 'Saved in this browser only', 'account-local': 'Account connected · data still local', slow: 'Saved data not reachable yet', error: 'Saved in this browser only' };
+  // Explicit data states. Cloud states are reserved for later phases and are not
+  // entered by this build: authentication does not load or write journal records.
+  var dataStateText = {
+    'guest-local': 'Saved in this browser only',
+    'account-local': 'Account connected · data still local',
+    'session-error': 'Account status unavailable · journal local',
+    'cloud-loading': 'Loading account journal',
+    'cloud-syncing': 'Saving to your account',
+    'cloud-synced': 'Synced to your account',
+    'cloud-error': 'Cloud save not confirmed',
+    offline: 'Offline · cloud unavailable'
+  };
+  var dataStateTitles = {
+    'guest-local': 'Journal data is stored only in this browser. It is not backed up or synced to an account.',
+    'account-local': 'You are signed in, but journal data remains local to this browser. No cloud journal data has been loaded or saved.',
+    'session-error': 'The journal remains local. We could not verify the account session; refresh and try again.',
+    'cloud-loading': 'Account journal data is being loaded.',
+    'cloud-syncing': 'A journal change is being saved to your account.',
+    'cloud-synced': 'The latest journal change was confirmed saved to your account.',
+    'cloud-error': 'The latest cloud save was not confirmed. Do not assume this change is synced.',
+    offline: 'Network unavailable. Cloud changes cannot currently be confirmed.'
+  };
   var authClient = window.maxiSupabase || null;
   var authUser = null;
   var authPanel = null;
   var authFormMode = 'signin';
-  function setSync(kind) {
+  function setDataState(kind) {
+    if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
+    state.dataState = kind;
     var chip = $('sync');
-    chip.setAttribute('data-state', kind === 'syncing' ? 'loading' : kind);
-    $('sync-text').textContent = syncText[kind] || syncText.local;
-    chip.title = kind === 'account-local'
-      ? 'Your account is connected, but journal records are still stored in this browser. Cloud journal sync has not been enabled yet.'
-      : 'Your journal is stored in this browser on this device. Cloud journal sync has not been enabled yet. Download a CSV from Settings to keep a backup.';
+    var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
+      : kind === 'cloud-synced' ? 'cloud'
+      : kind === 'cloud-error' || kind === 'session-error' || kind === 'offline' ? 'error'
+      : kind === 'account-local' ? 'account-local' : 'local';
+    chip.setAttribute('data-state', visualState);
+    chip.setAttribute('aria-label', dataStateText[kind]);
+    $('sync-text').textContent = dataStateText[kind];
+    chip.title = dataStateTitles[kind];
+  }
+  // Kept as a narrow alias for existing initialization call sites.
+  function setSync(kind) {
+    setDataState(kind === 'local' ? 'guest-local' : kind === 'account-local' ? 'account-local' : kind);
   }
   function authNotice(message, isError) {
     if (!authPanel) return;
@@ -282,10 +312,10 @@
     authPanel.querySelector('.auth-form').hidden = true;
     if (signedIn) {
       authNotice('Your account is authenticated. Your existing journal data has not been uploaded; it remains local until the migration feature is built.', false);
-      setSync('account-local');
+      setDataState('account-local');
     } else {
       authNotice('Guest data stays on this device. Signing in does not upload, merge, overwrite or delete it.', false);
-      setSync('local');
+      setDataState('guest-local');
     }
   }
   function buildAuthPanel() {
@@ -360,7 +390,7 @@
     renderAll();
     if (!authClient || !authClient.auth) {
       authNotice('Guest mode is available. Account access is unavailable because Supabase did not initialize.', true);
-      setSync('local');
+      setDataState('guest-local');
       return;
     }
     authClient.auth.onAuthStateChange(function (_event, session) {
@@ -375,7 +405,8 @@
     } catch (error) {
       authUser = null;
       refreshAuthPanel();
-      authNotice('Could not check your account session: ' + (error && error.message ? error.message : 'Please refresh and try again.'), true);
+      setDataState('session-error');
+      authNotice('Could not verify your account session: ' + (error && error.message ? error.message : 'Please refresh and try again. Your journal remains local.'), true);
     }
   }
 

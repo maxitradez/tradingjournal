@@ -736,6 +736,7 @@
   async function beginGuestMigrationImport() {
     if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
     var batch = migrationWorkflowBatch, userId = authUser.id, token = authLoadToken;
+    migrationBusy = true;
     try {
       var storedSnapshot = verifyGuestSnapshotUnchanged();
       var currentHash = migrationSnapshotHash(storedSnapshot);
@@ -747,7 +748,6 @@
       if (migrationCloudSnapshotHash(latestCloud) !== batch.manifest.cloud_snapshot_hash) {
         throw new Error('Your cloud journal changed after this preview. Refresh the preview and review the updated comparison before importing.');
       }
-      migrationBusy = true;
       var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batch.id, p_next_status: 'importing', p_error: null });
       if (result.error) throw result.error;
       migrationEnsureOwner(userId, token);

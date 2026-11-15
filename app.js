@@ -343,7 +343,7 @@
       : 'Create a free account or sign in to access your private trading journal.';
     authPanel.querySelector('.auth-open').hidden = true;
     authPanel.querySelector('.auth-signout').hidden = !signedIn;
-    authPanel.querySelector('.auth-form').hidden = signedIn;
+    authPanel.querySelector('.auth-form').hidden = signedIn && authFormMode !== 'recovery';
     if (signedIn) {
       if (state.mode === 'cloud-readonly') {
         authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled.', false);

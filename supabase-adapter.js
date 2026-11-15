@@ -136,6 +136,7 @@
   
       return {
         uploadScreenshot: uploadScreenshot,
+        getScreenshotUrl: screenshotUrl,
         deleteScreenshot: removeScreenshot,
         async load() {
           var results = await Promise.all([

@@ -320,15 +320,19 @@
     var heading = authPanel.querySelector('.auth-form-title');
     var submit = authPanel.querySelector('.auth-submit');
     var toggle = authPanel.querySelector('.auth-toggle');
+    var forgot = authPanel.querySelector('.auth-forgot');
     var email = authPanel.querySelector('#maxi-auth-email');
     var password = authPanel.querySelector('#maxi-auth-password');
-    heading.textContent = mode === 'signup' ? 'Create your free account' : 'Sign in to your account';
-    submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+    heading.textContent = mode === 'signup' ? 'Create your free account' : mode === 'recovery' ? 'Set a new password' : 'Sign in to your account';
+    submit.textContent = mode === 'signup' ? 'Create account' : mode === 'recovery' ? 'Update password' : 'Sign in';
     toggle.textContent = mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account';
+    toggle.hidden = mode === 'recovery';
+    if (forgot) forgot.hidden = mode !== 'signin';
+    if (email) email.hidden = mode === 'recovery';
     form.hidden = false;
     authPanel.querySelector('.auth-message').textContent = '';
-    if (email) email.focus();
-    if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password'); }
+    if (email && mode !== 'recovery') email.focus();
+    if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' || mode === 'recovery' ? 'new-password' : 'current-password'); }
   }
   function refreshAuthPanel() {
     if (!authPanel) return;
@@ -425,23 +429,44 @@
       h('div', { class: 'field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'At least 6 characters' }))));
     form.appendChild(h('div', { class: 'auth-form-actions' },
       h('button', { class: 'btn btn-primary auth-submit', type: 'submit', text: 'Sign in' }),
-      h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } })));
+      h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } }),
+      h('button', { class: 'btn auth-forgot', type: 'button', text: 'Forgot password?', hidden: true, onclick: async function () {
+        if (!authClient) { authNotice('Account services are unavailable. Please try again later.', true); return; }
+        var emailInput = form.querySelector('#maxi-auth-email');
+        var email = emailInput.value.trim();
+        if (!email) { authNotice('Enter your email address first, then select Forgot password again.', true); emailInput.focus(); return; }
+        var forgotButton = form.querySelector('.auth-forgot');
+        forgotButton.disabled = true;
+        authNotice('Sending password reset email…', false);
+        try {
+          var reset = await authClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+          if (reset.error) throw reset.error;
+          authNotice('If an account exists for that email, a password reset link has been sent. Check your inbox and spam folder.', false);
+        } catch (error) {
+          authNotice('Could not send the reset email: ' + (error && error.message ? error.message : 'Please try again.'), true);
+        } finally { forgotButton.disabled = false; }
+      } })));
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       if (!authClient) { authNotice('Supabase is not configured. Check the project client setup.', true); return; }
       var email = form.querySelector('#maxi-auth-email').value.trim();
       var password = form.querySelector('#maxi-auth-password').value;
       var submit = form.querySelector('.auth-submit');
-      if (!email || !password) { authNotice('Enter both your email address and password.', true); return; }
-      if (password.length < 6) { authNotice('Your password must contain at least 6 characters.', true); return; }
+      if (authFormMode !== 'recovery' && !email) { authNotice('Enter your email address.', true); return; }
+      if (!password || password.length < 6) { authNotice('Your password must contain at least 6 characters.', true); return; }
       submit.disabled = true;
-      authNotice(authFormMode === 'signup' ? 'Creating your account…' : 'Signing you in…', false);
+      authNotice(authFormMode === 'signup' ? 'Creating your account…' : authFormMode === 'recovery' ? 'Updating your password…' : 'Signing you in…', false);
       try {
         var result = authFormMode === 'signup'
           ? await authClient.auth.signUp({ email: email, password: password })
-          : await authClient.auth.signInWithPassword({ email: email, password: password });
+          : authFormMode === 'recovery'
+            ? await authClient.auth.updateUser({ password: password })
+            : await authClient.auth.signInWithPassword({ email: email, password: password });
         if (result.error) throw result.error;
-        if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
+        if (authFormMode === 'recovery') {
+          showAuthForm('signin');
+          authNotice('Your password has been updated. Sign in with your new password.', false);
+        } else if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
           showAuthForm('signin');
           authNotice('Account created. Check your email for the confirmation link, then sign in here to open your journal.', false);
         } else {
@@ -480,7 +505,15 @@
       setDataState('account-required'); setAccountGate(false);
       return;
     }
-    authClient.auth.onAuthStateChange(function (_event, session) { handleAuthSession(session); });
+    authClient.auth.onAuthStateChange(function (event, session) {
+      if (event === 'PASSWORD_RECOVERY') {
+        handleAuthSession(session);
+        showAuthForm('recovery');
+        authNotice('Choose a new password for your account.', false);
+        return;
+      }
+      handleAuthSession(session);
+    });
     try {
       var result = await authClient.auth.getSession();
       if (result.error) throw result.error;

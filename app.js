@@ -669,6 +669,7 @@
       migrationPanel.querySelector('.migration-status').textContent = 'Could not start migration: ' + ((error && error.message) || 'Please try again.');
     } finally {
       migrationBusy = false;
+      refreshMigrationPanel();
     }
   }
   async function resumeGuestMigrationImport() {

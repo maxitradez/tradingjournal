@@ -560,7 +560,8 @@
         actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Import playbooks first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlocked ? 'Import or explicitly skip all eligible playbooks before importing trades.' : '', onclick: function () {
           runMigrationItemAction(item, 'import', accountSelect, unassignedCheck, settingsCheck);
         }}));
-      } else if (batch.status === 'importing' && item.import_status !== 'imported' && item.import_status !== 'skipped') {
+      }
+      if (batch.status === 'importing' && item.import_status !== 'imported' && item.import_status !== 'skipped') {
         actions.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Skip this record', onclick: function () {
           runMigrationItemAction(item, 'skip');
         }}));

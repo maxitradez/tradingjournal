@@ -589,8 +589,20 @@
           settingsCheck = h('input', { type: 'checkbox', class: 'migration-settings-check' });
           actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings and replacing matching account currency, balance and risk preferences. Unrelated preferences will be preserved.' })));
         }
-        var tradeBlocked = item.entity_type === 'trade' && playbooksPending;
-        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Import playbooks first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlocked ? 'Import or explicitly skip all eligible playbooks before importing trades.' : '', onclick: function () {
+        var linkedPlaybook = item.entity_type === 'trade' && item.payload && item.payload.playbook
+          ? migrationWorkflowItems.find(function (candidate) {
+              return candidate.entity_type === 'playbook' && candidate.source_record_key === item.payload.playbook;
+            }) : null;
+        var linkedPlaybookBlocked = item.entity_type === 'trade' && !!item.payload.playbook &&
+          (!linkedPlaybook || !(linkedPlaybook.classification === 'duplicate' ||
+            (linkedPlaybook.classification === 'new' && linkedPlaybook.import_status === 'imported')));
+        var tradeBlocked = item.entity_type === 'trade' && (playbooksPending || linkedPlaybookBlocked);
+        var tradeBlockTitle = playbooksPending
+          ? 'Import all eligible new playbooks before importing trades.'
+          : linkedPlaybookBlocked
+            ? 'This trade is linked to a playbook that is unresolved, conflicting, or not imported. Resolve the playbook first, or skip this trade.'
+            : '';
+        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Resolve linked playbook first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlockTitle, onclick: function () {
           runMigrationItemAction(item, 'import', accountSelect, unassignedCheck, settingsCheck);
         }}));
       }

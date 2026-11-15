@@ -313,7 +313,9 @@
           var pbRow = (results[0].data || []).find(function (p) {
             return p.id === t.playbook || String(p.legacy_id || p.id) === t.playbook;
           });
-          t.playbook = pbRow ? String(pbRow.legacy_id || pbRow.id) : '';
+          // Keep an unresolved legacy reference so the UI can label it
+          // "Deleted playbook" instead of silently erasing the trade history.
+          if (pbRow) t.playbook = String(pbRow.legacy_id || pbRow.id);
         });
         var settingsRow = results[3].data;
         var prefs = settingsRow && settingsRow.preferences && typeof settingsRow.preferences === 'object' ? settingsRow.preferences : {};
@@ -365,7 +367,30 @@
         throw new Error('Unsupported cloud record type: ' + kind);
       },
       async del(kind, id) {
-        var table = kind === 'trades' ? 'trades' : kind === 'playbooks' ? 'playbooks' : kind === 'days' ? 'daily_journals' : null;
+        if (kind === 'playbooks') {
+          var playbook = await legacyRow('playbooks', id);
+          if (playbook.error) throw playbook.error;
+          if (!playbook.data) return;
+          var linked = await api.from('trades').select('id,notes')
+            .eq('user_id', userId).eq('playbook_id', playbook.data.id);
+          if (linked.error) throw linked.error;
+          // The database protects referenced playbooks with ON DELETE RESTRICT.
+          // Detach each trade but retain its legacy label for historical display.
+          for (var i = 0; i < (linked.data || []).length; i++) {
+            var trade = linked.data[i];
+            var notes = trade.notes && typeof trade.notes === 'object' ? trade.notes : {};
+            notes.playbook_legacy_id = String(id);
+            var detached = await api.from('trades').update({
+              playbook_id: null, notes: notes
+            }).eq('user_id', userId).eq('id', trade.id);
+            if (detached.error) throw detached.error;
+          }
+          var removed = await api.from('playbooks').delete()
+            .eq('user_id', userId).eq('id', playbook.data.id);
+          if (removed.error) throw removed.error;
+          return;
+        }
+        var table = kind === 'trades' ? 'trades' : kind === 'days' ? 'daily_journals' : null;
         if (!table) throw new Error('Unsupported cloud record type: ' + kind);
         var query = own(table);
         if (kind === 'days') query = query.eq('journal_date', String(id));

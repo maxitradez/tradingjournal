@@ -308,8 +308,8 @@
   var activeCloudUserId = null;
   var activeCloudAdapter = null;
   var migrationPanel = null;
-  var migrationPreview = null;
   var migrationBusy = false;
+  var migrationConsentUserId = null;
   function setDataState(kind) {
     if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
     state.dataState = kind;
@@ -509,7 +509,7 @@
       counts.appendChild(h('div', { class: 'migration-count' },
         h('strong', { text: String(entry[1]) }), h('span', { text: entry[0] })));
     });
-    var note = h('p', { class: 'migration-note', text: 'Preview only. Nothing has been imported. Before a future import, each trade will need an explicit trading-account choice or confirmation to remain unassigned; settings need separate confirmation. Screenshot attachments require a separate upload step. Your guest journal remains in this browser.' });
+    var note = h('p', { class: 'migration-note', text: 'Preview only. These record details have been copied to private migration staging tables for this account; they have not been added to your cloud journal. Before a future import, each trade will need an explicit trading-account choice or confirmation to remain unassigned; settings need separate confirmation. Screenshot attachments require a separate upload step. Your original guest journal remains in this browser.' });
     var list = h('div', { class: 'migration-item-list' });
     items.slice(0, 40).forEach(function (item) {
       list.appendChild(h('div', { class: 'migration-item' },
@@ -520,12 +520,17 @@
     if (items.length > 40) list.appendChild(h('p', { class: 'migration-note', text: 'Showing 40 of ' + items.length + ' records. All records are included in the saved preview.' }));
     results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(list);
     results.hidden = false;
-    migrationPreview = { id: batch.id, status: batch.status, counts: batch, items: items };
+
   }
   async function runGuestMigrationPreview() {
     if (migrationBusy) return;
     if (!authUser || !activeCloudAdapter || state.mode !== 'cloud' || !localSnapshot) {
       migrationPanel.querySelector('.migration-status').textContent = 'Sign in and wait for your cloud journal to finish loading before preparing a preview.';
+      return;
+    }
+    var consent = migrationPanel.querySelector('.migration-consent-check');
+    if (!consent || !consent.checked) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Please confirm that you want to copy a snapshot of these guest records into private migration staging for preview. No journal import will happen.';
       return;
     }
     var items = migrationBuildItems();
@@ -599,12 +604,13 @@
       if (rows.error) throw rows.error;
       ensurePreviewOwner();
       migrationRenderPreview(latest.data, rows.data || []);
-      migrationPanel.querySelector('.migration-status').textContent = 'Preview saved to your account. No journal records were imported.';
+      migrationPanel.querySelector('.migration-status').textContent = 'Preview saved to private migration staging for this account. No journal records were imported; browser guest data is unchanged.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Preview could not be completed: ' + ((error && error.message) || 'Please try again.');
     } finally {
       migrationBusy = false;
-      button.disabled = false; button.textContent = 'Prepare / refresh migration preview';
+      button.textContent = 'Prepare / refresh migration preview';
+      refreshMigrationPanel();
     }
   }
   function refreshMigrationPanel() {
@@ -612,22 +618,29 @@
     var ready = !!authUser && state.mode === 'cloud' && !!activeCloudAdapter && !state.readOnlyCloud;
     migrationPanel.hidden = !ready;
     if (!ready) return;
+    if (migrationConsentUserId !== authUser.id) {
+      migrationPanel.querySelector('.migration-consent-check').checked = false;
+      migrationConsentUserId = authUser.id;
+    }
     var records = migrationSourceRecords();
     var detail = migrationPanel.querySelector('.migration-description');
     detail.textContent = records.length
       ? records.length + ' guest records or settings are available locally. Review a comparison with your account before deciding whether to migrate.'
       : 'No personal guest records or settings were found in this browser. Example records are excluded.';
     var button = migrationPanel.querySelector('.migration-preview-btn');
-    button.disabled = migrationBusy || !records.length;
+    button.disabled = migrationBusy || !records.length || !migrationPanel.querySelector('.migration-consent-check').checked;
   }
   function buildMigrationPanel() {
     migrationPanel = h('section', { class: 'migration-panel', hidden: true, 'aria-label': 'Guest journal migration' },
       h('div', { class: 'migration-heading' },
-        h('div', {}, h('strong', { text: 'Guest journal found' }),
-          h('p', { class: 'migration-description', text: 'Your browser journal stays separate until you explicitly choose to migrate it.' })),
-        h('button', { class: 'btn btn-primary migration-preview-btn', type: 'button', text: 'Prepare / refresh migration preview', onclick: function () {
+        h('div', {}, h('strong', { text: 'Guest journal migration' }),
+          h('p', { class: 'migration-description', text: 'Your browser journal stays separate until you explicitly choose to prepare a preview.' })),
+        h('button', { class: 'btn btn-primary migration-preview-btn', type: 'button', text: 'Prepare migration preview', disabled: true, onclick: function () {
           runGuestMigrationPreview();
         }})),
+      h('label', { class: 'migration-consent' },
+        h('input', { class: 'migration-consent-check', type: 'checkbox', onchange: function () { refreshMigrationPanel(); } }),
+        h('span', { text: 'I understand this copies a snapshot of my guest records into private migration staging tables for preview only. It will not add records to my cloud journal or delete my browser data.' })),
       h('p', { class: 'migration-status', role: 'status', 'aria-live': 'polite', text: 'Preparing a preview will not import or change any journal records.' }),
       h('div', { class: 'migration-results', hidden: true })
     );

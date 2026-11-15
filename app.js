@@ -15,7 +15,7 @@
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'local', dataState: 'guest-local', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'local', readOnlyCloud: false, dataState: 'guest-local', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -203,6 +203,7 @@
     applySettings();
   }
   function put(kind, obj) {
+    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
     if (state.mode === 'cloud') return state.cols[kind].doc(obj.id).set(obj);
     var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
     if (i >= 0) list[i] = obj; else list.push(obj);
@@ -210,12 +211,14 @@
     return Promise.resolve();
   }
   function del(kind, id) {
+    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
     if (state.mode === 'cloud') return state.cols[kind].doc(id).delete();
     state[kind] = state[kind].filter(function (x) { return x.id !== id; });
     persistLocal(); renderAll();
     return Promise.resolve();
   }
   function saveSettings(obj) {
+    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
     if (state.mode === 'cloud') return state.cols.settings.doc('main').set(obj);
     state.settings = obj; applySettings(); persistLocal(); renderAll();
     return Promise.resolve();
@@ -244,7 +247,8 @@
     'cloud-syncing': 'Saving to your account',
     'cloud-synced': 'Synced to your account',
     'cloud-error': 'Cloud save not confirmed',
-    offline: 'Offline · cloud unavailable'
+    offline: 'Offline · cloud unavailable',
+    'cloud-readonly': 'Cloud journal · read-only'
   };
   var dataStateTitles = {
     'guest-local': 'Journal data is stored only in this browser. It is not backed up or synced to an account.',
@@ -254,18 +258,22 @@
     'cloud-syncing': 'A journal change is being saved to your account.',
     'cloud-synced': 'The latest journal change was confirmed saved to your account.',
     'cloud-error': 'The latest cloud save was not confirmed. Do not assume this change is synced.',
-    offline: 'Network unavailable. Cloud changes cannot currently be confirmed.'
+    offline: 'Network unavailable. Cloud changes cannot currently be confirmed.',
+    'cloud-readonly': 'You are viewing records loaded from your Supabase account. Editing, deleting and saving are disabled in this stage.'
   };
   var authClient = window.maxiSupabase || null;
   var authUser = null;
   var authPanel = null;
   var authFormMode = 'signin';
+  var localSnapshot = null;
+  var authLoadToken = 0;
+  var activeCloudUserId = null;
   function setDataState(kind) {
     if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
     state.dataState = kind;
     var chip = $('sync');
     var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
-      : kind === 'cloud-synced' ? 'cloud'
+      : kind === 'cloud-synced' || kind === 'cloud-readonly' ? 'cloud'
       : kind === 'cloud-error' || kind === 'session-error' || kind === 'offline' ? 'error'
       : kind === 'account-local' ? 'account-local' : 'local';
     chip.setAttribute('data-state', visualState);
@@ -311,12 +319,68 @@
     authPanel.querySelector('.auth-signout').hidden = !signedIn;
     authPanel.querySelector('.auth-form').hidden = true;
     if (signedIn) {
-      authNotice('Your account is authenticated. Your existing journal data has not been uploaded; it remains local until the migration feature is built.', false);
-      setDataState('account-local');
+      if (state.mode === 'cloud-readonly') {
+        authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled; your browser guest journal remains separate and untouched.', false);
+        setDataState('cloud-readonly');
+      } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error') {
+        authNotice('Your account is authenticated. Your browser journal remains local unless the cloud journal has loaded successfully.', false);
+        setDataState('account-local');
+      }
     } else {
       authNotice('Guest data stays on this device. Signing in does not upload, merge, overwrite or delete it.', false);
-      setDataState('guest-local');
+      if (!state.readOnlyCloud) setDataState('guest-local');
     }
+  }
+  function captureLocalSnapshot() {
+    return {
+      trades: state.trades.map(normTrade), playbooks: state.playbooks.map(normPb),
+      days: state.days.map(normDay), settings: normSettings(state.settings)
+    };
+  }
+  function restoreLocalSnapshot() {
+    if (!localSnapshot) return;
+    state.mode = 'local'; state.readOnlyCloud = false;
+    state.trades = localSnapshot.trades.map(normTrade);
+    state.playbooks = localSnapshot.playbooks.map(normPb);
+    state.days = localSnapshot.days.map(normDay);
+    state.settings = normSettings(localSnapshot.settings);
+    applySettings(); renderAll();
+  }
+  async function loadCloudJournal(user) {
+    if (!user || !user.id) return;
+    if (activeCloudUserId === user.id && (state.dataState === 'cloud-loading' || state.mode === 'cloud-readonly')) return;
+    activeCloudUserId = user.id;
+    var token = ++authLoadToken;
+    if (!localSnapshot) localSnapshot = captureLocalSnapshot();
+    state.mode = 'local'; state.readOnlyCloud = false;
+    setDataState('cloud-loading');
+    authNotice('Loading your account journal. Your browser guest data is preserved separately.', false);
+    try {
+      var cloud = await cloudAdapterFor(user.id).load();
+      if (token !== authLoadToken || !authUser || authUser.id !== user.id) return;
+      state.trades = (cloud.trades || []).map(normTrade);
+      state.playbooks = (cloud.playbooks || []).map(normPb);
+      state.days = (cloud.days || []).map(normDay);
+      state.settings = normSettings(cloud.settings);
+      state.mode = 'cloud-readonly'; state.readOnlyCloud = true;
+      applySettings(); renderAll(); setDataState('cloud-readonly');
+      authNotice('Cloud journal loaded successfully. You are in read-only mode: no cloud or guest records can be edited, deleted or overwritten.', false);
+    } catch (error) {
+      if (token !== authLoadToken) return;
+      restoreLocalSnapshot(); setDataState('cloud-error');
+      authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your browser journal is preserved and unchanged.'), true);
+    }
+  }
+  function handleAuthSession(session) {
+    var nextUser = session && session.user ? session.user : null;
+    if (!nextUser) {
+      authUser = null; authLoadToken++; activeCloudUserId = null;
+      restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); return;
+    }
+    if (authUser && authUser.id !== nextUser.id) {
+      authLoadToken++; activeCloudUserId = null; restoreLocalSnapshot();
+    }
+    authUser = nextUser; refreshAuthPanel(); loadCloudJournal(authUser);
   }
   function buildAuthPanel() {
     if (authPanel) return;
@@ -334,7 +398,7 @@
           var result = await authClient.auth.signOut();
           b.disabled = false;
           if (result.error) authNotice('Could not sign out: ' + result.error.message, true);
-          else authNotice('You are signed out. Your local journal has not been changed.', false);
+          else { handleAuthSession(null); authNotice('You are signed out. Your local journal has not been changed.', false); }
         } })),
     );
     var form = h('form', { class: 'auth-form', hidden: true, novalidate: true });
@@ -367,8 +431,9 @@
         } else {
           authUser = result.data && result.data.user ? result.data.user : null;
           form.hidden = true;
-          refreshAuthPanel();
-          authNotice('Signed in successfully. Your journal remains local until cloud migration is implemented.', false);
+          if (result.data && result.data.session) handleAuthSession(result.data.session);
+          else refreshAuthPanel();
+          authNotice('Signed in successfully. Your account journal is being checked; browser guest data remains separate.', false);
         }
       } catch (error) {
         authNotice('Authentication failed: ' + (error && error.message ? error.message : 'Please try again.'), true);
@@ -393,15 +458,11 @@
       setDataState('guest-local');
       return;
     }
-    authClient.auth.onAuthStateChange(function (_event, session) {
-      authUser = session && session.user ? session.user : null;
-      refreshAuthPanel();
-    });
+    authClient.auth.onAuthStateChange(function (_event, session) { handleAuthSession(session); });
     try {
       var result = await authClient.auth.getSession();
       if (result.error) throw result.error;
-      authUser = result.data && result.data.session ? result.data.session.user : null;
-      refreshAuthPanel();
+      handleAuthSession(result.data && result.data.session ? result.data.session : null);
     } catch (error) {
       authUser = null;
       refreshAuthPanel();
@@ -478,7 +539,7 @@
     });
     return b;
   }
-  function delTrade(id) { var tr = state.trades.find(function (x) { return x.id === id; }); del('trades', id).then(function () { if (tr) dropAsset(tr.shotId); toast('Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
+  function delTrade(id) { if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; } var tr = state.trades.find(function (x) { return x.id === id; }); del('trades', id).then(function () { if (tr) dropAsset(tr.shotId); toast('Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
   function planPill(t) { return h('span', { class: 'pill ' + (t.followed ? 'win' : 'loss'), text: t.followed ? 'Plan kept' : 'Plan broken' }); }
   function emptyHero() {
     return h('div', { class: 'panel hero-empty' },
@@ -738,6 +799,7 @@
     var msg = h('p', { class: 'form-msg', role: 'alert' }), save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save notes' });
     save.addEventListener('click', function () {
       var picked = mood.querySelector('input:checked'), p = plan.value.trim(), r = review.value.trim(), m = picked ? Number(picked.value) : null, empty = !p && !r && !m;
+      if (state.readOnlyCloud) { msg.textContent = 'This cloud journal is read-only. Your notes cannot be changed in this stage.'; return; }
       if (state.mode === 'pending') { msg.textContent = 'Still connecting to your saved journal. Try again in a moment.'; return; }
       save.disabled = true; msg.textContent = '';
       var op = empty ? del('days', date) : put('days', normDay({ id: date, date: date, plan: p, review: r, mood: m, example: cur ? cur.example : false }));
@@ -1035,6 +1097,7 @@
     bal.value = s.balance == null ? '' : s.balance; risk.value = s.riskPct == null ? '' : s.riskPct; cur.value = s.currency;
     var lim = riskLimit(), save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save settings' });
     save.addEventListener('click', function () {
+      if (state.readOnlyCloud) { msg.textContent = 'Cloud journal is read-only. Settings cannot be changed in this stage.'; return; }
       var b = num(bal.value), r = num(risk.value);
       if (bal.value.trim() && (b == null || b <= 0)) { msg.textContent = 'Starting balance must be a number above zero.'; bal.focus(); return; }
       if (risk.value.trim() && (r == null || r <= 0 || r > 100)) { msg.textContent = 'Risk per trade must be between 0 and 100 percent.'; risk.focus(); return; }
@@ -1180,6 +1243,7 @@
     $('checks').textContent = ''; $('checks').hidden = true; $('sec-prices').open = false; resetShot(''); updateRHint();
   }
   function openTradeForm(t) {
+    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     fillSelects(); resetTradeForm(false);
     if (t) {
       state.editingTrade = t.id;
@@ -1198,6 +1262,7 @@
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
   }
   function submitTrade(another) {
+    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     var msg = $('form-msg'); msg.textContent = '';
     var asset = $('f-asset').value.trim().toUpperCase(), pnl = num($('f-pnl').value), date = $('f-date').value;
     if (!asset) { msg.textContent = 'Enter the pair or asset you traded.'; $('f-asset').focus(); return; }
@@ -1221,12 +1286,14 @@
 
   /* ---------- playbook form ---------- */
   function openPbForm(p) {
+    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     state.editingPb = p ? p.id : null;
     $('p-name').value = p ? p.name : ''; $('p-desc').value = p ? p.description : ''; $('p-rules').value = p ? p.rules.join('\n') : '';
     $('dp-title').textContent = p ? 'Edit playbook' : 'New playbook'; $('pb-msg').textContent = '';
     openDrawer($('drawer-pb'), 'p-name');
   }
   function submitPb() {
+    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     var name = $('p-name').value.trim(), msg = $('pb-msg'); msg.textContent = '';
     if (!name) { msg.textContent = 'Give the playbook a name.'; $('p-name').focus(); return; }
     if (state.mode === 'pending') { msg.textContent = 'Still connecting to your saved journal. Try again in a moment.'; return; }
@@ -1238,12 +1305,14 @@
 
   /* ---------- examples ---------- */
   function loadExamples() {
+    if (state.readOnlyCloud) { toast('Example data cannot be added in read-only mode'); return; }
     if (state.mode === 'pending') { toast('Still connecting. Try again in a moment.'); return; }
     var ex = exampleData();
     toast('Loading example data');
     seq(ex.playbooks, function (p) { return put('playbooks', p); }).then(function () { return seq(ex.trades, function (t) { return put('trades', t); }); }).then(function () { return seq(ex.days, function (d) { return put('days', d); }); }).then(function () { if (!state.settings.balance) return saveSettings(normSettings({ balance: 10000, riskPct: 1, currency: '$', monthlyTarget: 1500, maxTradesDay: 2, dailyLoss: 250, example: true })); }).then(function () { toast('Example data loaded'); }).catch(function (e) { toast(failMsg(e)); });
   }
   function clearExamples() {
+    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     var tr = state.trades.filter(function (t) { return t.example; }), pb = state.playbooks.filter(function (p) { return p.example; });
     seq(tr, function (t) { return del('trades', t.id); }).then(function () { return seq(pb, function (p) { return del('playbooks', p.id); }); }).then(function () { return seq(state.days.filter(function (d) { return d.example; }), function (d) { return del('days', d.id); }); }).then(function () { if (state.settings.example) return saveSettings(normSettings(null)); }).then(function () { toast('Examples cleared'); }).catch(function (e) { toast(failMsg(e)); });
   }
@@ -1252,8 +1321,13 @@
   var RENDER = { dashboard: viewDashboard, calendar: viewCalendar, trades: viewTrades, playbooks: viewPlaybooks, reports: viewReports, insights: viewInsights, settings: viewSettings };
   function renderView() { var box = $('v-' + state.view); box.textContent = ''; RENDER[state.view](box); }
   function renderAll() {
+    $('fab').hidden = !!state.readOnlyCloud;
+    $('btn-clear-ex').hidden = !!state.readOnlyCloud;
     $('banner').hidden = !(state.trades.some(function (t) { return t.example; }) || state.playbooks.some(function (p) { return p.example; }) || state.days.some(function (d) { return d.example; }) || state.settings.example);
     renderView();
+    if (state.readOnlyCloud) {
+      Array.prototype.forEach.call(document.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
+    }
   }
   function setView(name) {
     if (VIEWS.indexOf(name) < 0) name = 'dashboard';

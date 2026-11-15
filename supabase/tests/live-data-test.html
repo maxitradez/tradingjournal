@@ -129,6 +129,50 @@ async function runAdapterTests(test){
   if(pbMade){try{await adapter.del('playbooks',pbId);log('Cleanup: removed adapter playbook.','warn');}catch(e){log('Cleanup warning (adapter playbook): '+e.message,'warn');}}
  }
 }
+async function runMigrationInfrastructureTests(test, uid, other, stamp){
+ var migrationKey='harness_'+uid+'_'+stamp, manifest={source:'stage4-harness',version:1,token:stamp}, batchId=null;
+ await test('Migration ledger creates an account-owned batch and is idempotent',async function(){
+  var first=await client.rpc('create_guest_migration_batch',{p_migration_key:migrationKey,p_source_version:'local-v1',p_manifest:manifest});
+  if(first.error)throw first.error;batchId=first.data;assert(typeof batchId==='string'&&batchId.length>20,'Migration batch RPC did not return a UUID.');
+  var again=await client.rpc('create_guest_migration_batch',{p_migration_key:migrationKey,p_source_version:'local-v1',p_manifest:manifest});
+  if(again.error)throw again.error;assert(again.data===batchId,'Identical migration key created a second batch.');
+  var mismatch=await client.rpc('create_guest_migration_batch',{p_migration_key:migrationKey,p_source_version:'local-v1',p_manifest:{source:'different-snapshot'}});
+  assert(!!mismatch.error,'Migration key reuse with a different manifest was accepted.');
+ });
+ await test('Migration item staging rolls back an invalid batch atomically',async function(){
+  var items=[{entity_type:'trade',source_record_key:'trade_atomic_'+stamp,fingerprint:'fp_atomic_'+stamp,classification:'new',payload:{symbol:'TEST'}},{entity_type:'trade',source_record_key:'trade_invalid_'+stamp,fingerprint:'fp_invalid_'+stamp,classification:'not-valid',payload:{symbol:'INVALID'}}];
+  var failed=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:items});assert(!!failed.error,'Invalid staging batch unexpectedly succeeded.');
+  var rows=await client.from('guest_migration_items').select('id').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;
+  assert((rows.data||[]).length===0,'A partial item remained after the atomic rollback.');
+ });
+ var stagedItems=[{entity_type:'trade',source_record_key:'trade_'+stamp,fingerprint:'trade_fp_'+stamp,classification:'new',payload:{symbol:'XAUUSD',note:'disposable preview'}},{entity_type:'daily_journal',source_record_key:'day_'+stamp,fingerprint:'day_fp_'+stamp,classification:'conflict',payload:{date:'2099-01-01',note:'conflict preview'}}];
+ await test('Migration staging is idempotent and rejects changed source records',async function(){
+  var staged=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:stagedItems});if(staged.error)throw staged.error;assert(staged.data===2,'Expected two staged records.');
+  var retry=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:stagedItems});if(retry.error)throw retry.error;assert(retry.data===0,'Identical retry inserted duplicate records.');
+  var changed=JSON.parse(JSON.stringify(stagedItems));changed[0].fingerprint='changed_'+stamp;
+  var rejected=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:changed});assert(!!rejected.error,'Changed source record was accepted under the same idempotency key.');
+  var rows=await client.from('guest_migration_items').select('id').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;assert((rows.data||[]).length===2,'Staged records are missing or duplicated.');
+ });
+ await test('Migration preview reports accurate classifications',async function(){
+  var preview=await client.rpc('finalize_guest_migration_preview',{p_batch_id:batchId,p_preview_notes:{test:'stage4'}});if(preview.error)throw preview.error;
+  assert(preview.data&&preview.data.records_seen===2,'Preview total is incorrect.');assert(preview.data.records_new===1&&preview.data.records_conflict===1,'Preview classifications are incorrect.');
+  var row=await client.from('guest_migration_batches').select('status,records_seen').eq('user_id',uid).eq('id',batchId).single();if(row.error)throw row.error;assert(row.data.status==='previewed'&&row.data.records_seen===2,'Preview status did not persist.');
+ });
+ await test('Migration lifecycle supports pause, resume and cancellation',async function(){
+  var a=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});if(a.error)throw a.error;assert(a.data==='importing','Could not start migration.');
+  var b=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'paused',p_error:null});if(b.error)throw b.error;assert(b.data==='paused','Could not pause migration.');
+  var c=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});if(c.error)throw c.error;assert(c.data==='importing','Could not resume migration.');
+  var d=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'cancelled',p_error:null});if(d.error)throw d.error;assert(d.data==='cancelled','Could not cancel test migration.');
+  var invalid=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'completed',p_error:null});assert(!!invalid.error,'Unsupported completion transition was accepted.');
+  log('Cancelled migration test batch retained as audit evidence: '+batchId,'warn');
+ });
+ await test('Migration staging tables deny direct client writes',async function(){
+  var direct=await client.from('guest_migration_batches').insert({user_id:uid,migration_key:'direct_'+stamp,source_version:'test',manifest:{}});assert(!!direct.error,'Direct client insert succeeded; guarded RPCs should be required.');
+ });
+ if(other){await test('Migration ledger rows are isolated from another account',async function(){
+  assert(other!==uid,'Other account UUID must differ from signed-in account.');var rows=await client.from('guest_migration_batches').select('id').eq('user_id',other);if(rows.error)throw rows.error;assert((rows.data||[]).length===0,'Another account migration rows were visible.');
+ });}
+}
 async function runTests(){
  $('run').disabled=true;out.textContent='';
  var user=(await client.auth.getUser()).data.user;
@@ -200,6 +244,7 @@ async function runTests(){
    });
   }else log('SKIP  Cross-user tests — add the other test account UUID above.','warn');
   await runAdapterTests(test);
+  await runMigrationInfrastructureTests(test,uid,other,stamp);
   log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
  }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
  finally{

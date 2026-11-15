@@ -503,6 +503,17 @@
     var p = item.payload || {};
     return p.name || p.asset || p.date || p.trade_id || item.source_record_key;
   }
+  function migrationItemSummary(item) {
+    var p = item.payload || {};
+    function val(v) { return v == null || v === '' ? '—' : String(v); }
+    function short(v) { v = String(v || '').trim(); return v.length > 150 ? v.slice(0, 147) + '…' : v; }
+    if (item.entity_type === 'trade') return [val(p.date), val(p.time), val(p.side).toUpperCase(), val(p.asset),
+      'Entry ' + val(p.entry), 'Exit ' + val(p.exit), 'P&L ' + val(p.pnl), p.playbook ? 'Playbook ' + val(p.playbook) : 'No playbook'].join(' · ');
+    if (item.entity_type === 'playbook') return short(p.description) + (Array.isArray(p.rules) ? ' · ' + p.rules.length + ' rules' : '');
+    if (item.entity_type === 'daily_journal') return [val(p.date || p.id), short(p.plan), short(p.review), p.mood == null ? '' : 'Mood ' + val(p.mood)].filter(Boolean).join(' · ');
+    if (item.entity_type === 'settings') return ['Currency ' + val(p.currency), 'Balance ' + val(p.balance), 'Risk ' + val(p.riskPct) + '%', 'Daily loss ' + val(p.dailyLoss)].join(' · ');
+    return short(p.name || p.filename || p.fileName || item.source_record_key);
+  }
   function migrationRenderPreview(batch, items) {
     if (!migrationPanel) return;
     migrationWorkflowBatch = batch;
@@ -526,16 +537,17 @@
       row.appendChild(h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }));
       row.appendChild(h('span', { class: 'migration-item-name', text: migrationDisplayName(item) }));
       row.appendChild(h('span', { class: 'migration-item-state', 'data-state': item.classification, text: item.classification + ' · ' + (item.import_status || 'pending') }));
+      row.appendChild(h('span', { class: 'migration-item-summary', text: migrationItemSummary(item) }));
       var actions = h('div', { class: 'migration-item-actions' });
       if (batch.status === 'importing' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status)) {
         var accountSelect = null, unassignedCheck = null, settingsCheck = null;
         if (item.entity_type === 'trade') {
-          accountSelect = h('select', { class: 'migration-account-select', 'aria-label': 'Trading account for ' + migrationDisplayName(item) });
+          accountSelect = h('select', { class: 'migration-account-select', 'aria-label': 'Trading account for ' + migrationDisplayName(item), onchange: function () { if (accountSelect.value && unassignedCheck) unassignedCheck.checked = false; } });
           accountSelect.appendChild(h('option', { value: '', text: 'Choose trading account…' }));
           migrationWorkflowAccounts.forEach(function (account) {
             accountSelect.appendChild(h('option', { value: account.id, text: account.account_name }));
           });
-          unassignedCheck = h('input', { type: 'checkbox', class: 'migration-unassigned-check' });
+          unassignedCheck = h('input', { type: 'checkbox', class: 'migration-unassigned-check', onchange: function () { if (unassignedCheck.checked && accountSelect) accountSelect.value = ''; } });
           actions.appendChild(accountSelect);
           actions.appendChild(h('label', { class: 'migration-inline-check' }, unassignedCheck, h('span', { text: 'Leave unassigned' })));
         }

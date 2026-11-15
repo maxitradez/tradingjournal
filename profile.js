@@ -35,7 +35,7 @@
     card.appendChild(el('p', { class: 'profile-intro' }, 'A few details help us shape your journal around the way you trade. You can update these later.'));
     var form = el('form', { class: 'profile-form' });
     var grid = el('div', { class: 'auth-fields' });
-    grid.appendChild(field('Display name', 'display_name', 'text', profile.display_name || user.user_metadata && user.user_metadata.full_name || '', 'How should we address you?'));
+    grid.appendChild(field('Name', 'display_name', 'text', profile.display_name || user.user_metadata && user.user_metadata.full_name || '', 'How should we address you?'));
     grid.appendChild(field('Username', 'username', 'text', profile.username || '', 'Choose a unique username'));
     grid.appendChild(field('Country', 'country', 'text', profile.country || '', 'e.g. Kenya'));
     grid.appendChild(field('Experience level', 'experience_level', 'select', profile.experience_level || ''));
@@ -52,7 +52,7 @@
       var username = String(data.get('username') || '').trim().toLowerCase();
       var displayName = String(data.get('display_name') || '').trim();
       if (!displayName || !/^[a-z0-9_]{3,24}$/.test(username)) {
-        note.textContent = 'Add a display name and a username (3–24 letters, numbers or underscores).';
+        note.textContent = 'Add your name and a username (3–24 letters, numbers or underscores).';
         return;
       }
       submit.disabled = true; note.textContent = 'Saving your profile…';
@@ -135,7 +135,7 @@
       uid.appendChild(copy); card.appendChild(uid);
       var form = el('form', { class: 'profile-form' });
       var grid = el('div', { class: 'auth-fields' });
-      grid.appendChild(field('Display name', 'display_name', 'text', p.display_name || ''));
+      grid.appendChild(field('Name', 'display_name', 'text', p.display_name || ''));
       grid.appendChild(field('Username', 'username', 'text', p.username || ''));
       grid.appendChild(field('Country', 'country', 'text', p.country || ''));
       grid.appendChild(field('Experience level', 'experience_level', 'select', p.experience_level || ''));

@@ -1,6 +1,6 @@
 /* Maxi Trades Journal
-   Guest journal data stays in this browser (localStorage).
-   Supabase accounts can load and save their own cloud journal. Guest migration uses private preview staging and an explicit, per-record import workflow; browser guest data is never deleted by migration. */
+   Account-first journal: authenticated users load and save their private Supabase journal.
+   Legacy browser guest records are read only as an optional migration source; they are never used as an active journal or overwritten by cloud saves. */
 (function () {
   'use strict';
   var LS_KEY = 'trading-journal-pro-v1';
@@ -565,6 +565,7 @@
   }
   function migrationRenderPreview(batch, items) {
     if (!migrationPanel) return;
+    migrationPanel.hidden = false;
     if (!migrationWorkflowBatch || migrationWorkflowBatch.id !== batch.id) migrationWorkflowPage = 0;
     migrationWorkflowBatch = batch;
     migrationWorkflowItems = items || [];
@@ -966,6 +967,7 @@
       migrationConsentUserId = authUser.id;
     }
     var records = migrationSourceRecords();
+    if (!records.length && !migrationWorkflowBatch) { migrationPanel.hidden = true; return; }
     var detail = migrationPanel.querySelector('.migration-description');
     detail.textContent = records.length
       ? records.length + ' guest records or settings are available locally. Review a comparison with your account before deciding whether to migrate.'
@@ -1108,8 +1110,7 @@
       h('div', { class: 'field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'At least 6 characters' }))));
     form.appendChild(h('div', { class: 'auth-form-actions' },
       h('button', { class: 'btn btn-primary auth-submit', type: 'submit', text: 'Sign in' }),
-      h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } }),
-      h('button', { class: 'btn auth-cancel', type: 'button', text: 'Cancel', onclick: function () { form.hidden = true; authNotice('', false); } })));
+      h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } })));
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       if (!authClient) { authNotice('Supabase is not configured. Check the project client setup.', true); return; }

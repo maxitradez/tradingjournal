@@ -457,7 +457,7 @@
         migrationStableString(migrationComparable('settings', state.settings)) ? 'duplicate' : 'conflict';
     }
     if (type === 'daily_journal') {
-      found = (list || []).find(function (x) { return String(x.date || x.id) === String(p.date); });
+      found = (list || []).find(function (x) { return !x.example && String(x.date || x.id) === String(p.date); });
     } else {
       found = (list || []).find(function (x) { return !x.example && String(x.id) === String(p.id); });
       if (!found && type === 'trade') {
@@ -481,8 +481,8 @@
     return migrationSourceRecords().map(function (record) {
       var payload = record.payload;
       var invalid = !record.key || record.key.length > 240;
-      if (record.type === 'trade' && (!/^\d{4}-\d{2}-\d{2}$/.test(payload.date) || !payload.asset || !['buy', 'sell'].includes(payload.side))) invalid = true;
-      if (record.type === 'daily_journal' && !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) invalid = true;
+      if (record.type === 'trade' && (!migrationValidDate(payload.date) || !payload.asset || !['buy', 'sell'].includes(payload.side))) invalid = true;
+      if (record.type === 'daily_journal' && !migrationValidDate(payload.date)) invalid = true;
       var classification = invalid ? 'invalid' : migrationClassify(record);
       var fingerprint = migrationHash(payload);
       return {
@@ -525,7 +525,8 @@
   async function runGuestMigrationPreview() {
     if (migrationBusy) return;
     if (!authUser || !activeCloudAdapter || state.mode !== 'cloud' || !localSnapshot) {
-      throw new Error('Sign in and wait for your cloud journal to finish loading before preparing a preview.');
+      migrationPanel.querySelector('.migration-status').textContent = 'Sign in and wait for your cloud journal to finish loading before preparing a preview.';
+      return;
     }
     var items = migrationBuildItems();
     if (!items.length) {

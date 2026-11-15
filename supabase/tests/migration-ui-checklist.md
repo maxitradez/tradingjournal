@@ -20,6 +20,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Confirm the guest records remain separate and are not visible as cloud records.
 - Check the preview consent box and prepare the preview.
 - Confirm the counts and record summaries match the disposable guest snapshot.
+- If testing malformed legacy data, include a disposable record with a source ID longer than 240 characters and confirm it is listed as invalid without aborting the whole preview.
 - Confirm no records have appeared in the cloud journal yet.
 - Refresh the page and confirm the preview is restored.
 - In a second tab on the same origin, change a guest record after signing in; return to the first tab and confirm preview/import is blocked until refresh captures the latest browser journal.

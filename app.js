@@ -1,6 +1,6 @@
 /* Maxi Trades Journal
    Guest journal data stays in this browser (localStorage).
-   Supabase authentication is enabled; cloud journal sync and guest migration are not enabled in this phase. */
+   Supabase accounts can view their cloud journal in read-only mode; cloud writes and guest migration remain disabled. */
 (function () {
   'use strict';
   var LS_KEY = 'trading-journal-pro-v1';
@@ -225,8 +225,8 @@
   }
 
   /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
-  // The shared adapter is verified but intentionally not activated. This stage
-  // keeps all journal reads and writes local; cloud integration is a later phase.
+  // Stage 2 uses the shared adapter for authenticated read-only loading only.
+  // All journal writes remain disabled while state.readOnlyCloud is active.
   function cloudAdapterFor(userId) {
     if (!window.MaxiCloudAdapterFactory) throw new Error('Supabase data adapter module did not load.');
     return window.MaxiCloudAdapterFactory(authClient, userId, {
@@ -237,8 +237,7 @@
 
   function seq(items, fn) { return items.reduce(function (p, x) { return p.then(function () { return fn(x); }); }, Promise.resolve()); }
   function failMsg(e) { return 'Could not save: ' + ((e && e.message) || 'try again'); }
-  // Explicit data states. Cloud states are reserved for later phases and are not
-  // entered by this build: authentication does not load or write journal records.
+  // Explicit data states distinguish local storage, cloud loading and read-only cloud viewing.
   var dataStateText = {
     'guest-local': 'Saved in this browser only',
     'account-local': 'Account connected · data still local',
@@ -1319,7 +1318,10 @@
 
   /* ---------- routing + render ---------- */
   var RENDER = { dashboard: viewDashboard, calendar: viewCalendar, trades: viewTrades, playbooks: viewPlaybooks, reports: viewReports, insights: viewInsights, settings: viewSettings };
-  function renderView() { var box = $('v-' + state.view); box.textContent = ''; RENDER[state.view](box); }
+  function renderView() {
+    var box = $('v-' + state.view); box.textContent = ''; RENDER[state.view](box);
+    if (state.readOnlyCloud) Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
+  }
   function renderAll() {
     $('fab').hidden = !!state.readOnlyCloud;
     $('btn-clear-ex').hidden = !!state.readOnlyCloud;

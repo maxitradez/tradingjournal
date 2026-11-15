@@ -398,6 +398,7 @@
     state.mode = 'local'; state.readOnlyCloud = false;
     setDataState('cloud-loading');
     authNotice('Loading your account journal. Your browser guest data is preserved separately.', false);
+    renderAll();
     try {
       var adapter = cloudAdapterFor(user.id);
       var cloud = await adapter.load();
@@ -1352,6 +1353,7 @@
   /* ---------- examples ---------- */
   function loadExamples() {
     if (state.readOnlyCloud) { toast('Example data cannot be added in read-only mode'); return; }
+    if (state.dataState === 'cloud-loading') { toast('Please wait for the account journal to finish loading'); return; }
     if (state.mode === 'pending') { toast('Still connecting. Try again in a moment.'); return; }
     var ex = exampleData();
     toast('Loading example data');
@@ -1359,6 +1361,7 @@
   }
   function clearExamples() {
     if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
+    if (state.dataState === 'cloud-loading') { toast('Please wait for the account journal to finish loading'); return; }
     var tr = state.trades.filter(function (t) { return t.example; }), pb = state.playbooks.filter(function (p) { return p.example; });
     seq(tr, function (t) { return del('trades', t.id); }).then(function () { return seq(pb, function (p) { return del('playbooks', p.id); }); }).then(function () { return seq(state.days.filter(function (d) { return d.example; }), function (d) { return del('days', d.id); }); }).then(function () { if (state.settings.example) return saveSettings(normSettings(null)); }).then(function () { toast('Examples cleared'); }).catch(function (e) { toast(failMsg(e)); });
   }
@@ -1367,14 +1370,14 @@
   var RENDER = { dashboard: viewDashboard, calendar: viewCalendar, trades: viewTrades, playbooks: viewPlaybooks, reports: viewReports, insights: viewInsights, settings: viewSettings };
   function renderView() {
     var box = $('v-' + state.view); box.textContent = ''; RENDER[state.view](box);
-    if (state.readOnlyCloud) Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
   }
   function renderAll() {
-    $('fab').hidden = !!state.readOnlyCloud;
-    $('btn-clear-ex').hidden = !!state.readOnlyCloud;
+    $('fab').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';
+    $('btn-clear-ex').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';
     $('banner').hidden = !(state.trades.some(function (t) { return t.example; }) || state.playbooks.some(function (p) { return p.example; }) || state.days.some(function (d) { return d.example; }) || state.settings.example);
     renderView();
-    if (state.readOnlyCloud) {
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') {
       Array.prototype.forEach.call(document.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
     }
   }

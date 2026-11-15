@@ -1127,7 +1127,6 @@
       var rows = groupBy(x.set, function () { return x.key; })[0]; return rows;
     });
     g.appendChild(h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Plan kept vs broken' }), h('span', { class: 'sub', text: 'Net P&L' })), breakdown(fb)));
-    g.appendChild(reviewPanel(a));
     box.appendChild(g);
   }
 

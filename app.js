@@ -615,6 +615,10 @@
   }
   function refreshMigrationPanel() {
     if (!migrationPanel) return;
+    if (!authUser) {
+      migrationConsentUserId = null;
+      migrationPanel.querySelector('.migration-consent-check').checked = false;
+    }
     var ready = !!authUser && state.mode === 'cloud' && !!activeCloudAdapter && !state.readOnlyCloud;
     migrationPanel.hidden = !ready;
     if (!ready) return;

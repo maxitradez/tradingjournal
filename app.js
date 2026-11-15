@@ -421,7 +421,7 @@
     var nextUser = session && session.user ? session.user : null;
     if (!nextUser) {
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); return;
+      restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); renderAll(); return;
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null; restoreLocalSnapshot();

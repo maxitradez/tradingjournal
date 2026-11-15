@@ -95,7 +95,7 @@ create or replace function public.set_guest_migration_item_initial_status()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
     if tg_op = 'INSERT' then
         new.import_status := case
@@ -120,7 +120,7 @@ begin
     end if;
     return new;
 end;
-$;
+$$;
 
 drop trigger if exists guest_migration_item_initial_status
     on public.guest_migration_items;

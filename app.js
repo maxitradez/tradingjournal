@@ -212,11 +212,26 @@
     if (!authUser || !activeCloudUserId || authUser.id !== activeCloudUserId || !activeCloudAdapter) throw new Error('Your account connection changed. Refresh the journal before trying again.');
     return true;
   }
+  var cloudWriteQueue = Promise.resolve();
   function cloudWrite(task, apply) {
-    setDataState('cloud-syncing');
-    return Promise.resolve().then(task).then(function (result) {
+    var writeUserId = activeCloudUserId;
+    var run = cloudWriteQueue.then(function () {
+      if (!writeUserId || !authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
+        throw new Error('Your account connection changed before this save started. Refresh the journal and try again.');
+      }
+      setDataState('cloud-syncing');
+      return task();
+    }).then(function (result) {
+      if (!authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
+        throw new Error('Your account changed while this save was in progress. Sign in again and refresh to confirm the cloud result.');
+      }
       apply(); renderAll(); setDataState('cloud-synced'); return result;
-    }).catch(function (error) { setDataState('cloud-error'); throw error; });
+    }).catch(function (error) {
+      if (authUser && authUser.id === writeUserId && activeCloudUserId === writeUserId && state.mode === 'cloud') setDataState('cloud-error');
+      throw error;
+    });
+    cloudWriteQueue = run.catch(function () {});
+    return run;
   }
   function put(kind, obj) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));

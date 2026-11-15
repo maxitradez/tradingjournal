@@ -27,12 +27,11 @@ Run these checks on the `account-first` branch using a fresh ZIP. Do not merge o
 - [ ] Simulate a cloud load failure and confirm the journal remains locked rather than displaying local or stale data.
 - [ ] Confirm a cloud save failure is reported and does not show a false success.
 
-## Legacy guest-data recovery
-- [ ] In a browser profile that already contains legacy guest records, sign in.
-- [ ] Confirm the legacy records remain untouched in browser storage.
-- [ ] Confirm the legacy migration panel appears only when legacy records or a saved migration workflow exist.
-- [ ] Confirm the migration preview still works and requires explicit per-record choices.
-- [ ] Confirm a normal new account with no legacy guest data does not see an empty migration panel.
+## Guest-mode removal
+- [ ] Confirm the sign-in screen contains no guest mode or migration panel.
+- [ ] Confirm the app does not read, restore, or write a local guest journal.
+- [ ] Confirm the legacy `trading-journal-pro-v1` browser storage key is cleared on app startup.
+- [ ] Sign in normally and confirm no guest migration RPCs or migration prompts are triggered.
 
 ## Release boundary
 - [ ] Keep `main` and `pre-audit-backup` unchanged until all checks pass.

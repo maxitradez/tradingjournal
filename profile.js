@@ -172,38 +172,52 @@
       });
       card.appendChild(form);
 
-      var passwordCard = el('section', { class: 'profile-card' });
-      passwordCard.appendChild(el('h3', {}, 'Change password'));
-      passwordCard.appendChild(el('p', { class: 'profile-intro' }, 'Because you are signed in, you can set a new password here without requesting another email.'));
+      var passwordCard = el('section', { class: 'password-card' });
+      var passwordToggle = el('button', { class: 'btn', type: 'button', 'aria-expanded': 'false' }, 'Change password');
       var passwordForm = el('form', { class: 'profile-form' });
+      passwordForm.hidden = true;
+      passwordCard.appendChild(passwordToggle);
+      var passwordIntro = el('p', { class: 'profile-intro' }, 'Enter your current password and choose a new one.');
+      passwordIntro.hidden = true;
+      passwordCard.appendChild(passwordIntro);
       var passwordGrid = el('div', { class: 'auth-fields' });
-      passwordGrid.appendChild(field('Current password', 'current_password', 'password', '', 'Enter your existing password'));
+      passwordGrid.appendChild(field('Current password', 'current_password', 'password', '', 'Enter your current password'));
       passwordGrid.appendChild(field('New password', 'new_password', 'password', '', 'At least 8 characters'));
-      passwordGrid.appendChild(field('Confirm new password', 'confirm_password', 'password', '', 'Enter it again'));
       passwordForm.appendChild(passwordGrid);
       var passwordMsg = el('p', { class: 'profile-message', role: 'status' });
-      var passwordSave = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Update password');
-      passwordForm.appendChild(passwordMsg); passwordForm.appendChild(passwordSave);
+      var passwordSave = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Save new password');
+      passwordForm.appendChild(passwordMsg);
+      passwordForm.appendChild(passwordSave);
+      passwordToggle.addEventListener('click', function () {
+        var opening = passwordForm.hidden;
+        passwordForm.hidden = !opening;
+        passwordIntro.hidden = !opening;
+        passwordToggle.setAttribute('aria-expanded', String(opening));
+        passwordToggle.textContent = opening ? 'Cancel' : 'Change password';
+        if (opening) passwordForm.querySelector('[name="current_password"]').focus();
+        else { passwordForm.reset(); passwordMsg.textContent = ''; }
+      });
       passwordForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         var currentPassword = passwordForm.querySelector('[name="current_password"]').value;
         var nextPassword = passwordForm.querySelector('[name="new_password"]').value;
-        var confirmPassword = passwordForm.querySelector('[name="confirm_password"]').value;
         if (!currentPassword) { passwordMsg.textContent = 'Enter your current password to verify your account.'; return; }
         if (nextPassword.length < 8) { passwordMsg.textContent = 'Use a password with at least 8 characters.'; return; }
-        if (nextPassword !== confirmPassword) { passwordMsg.textContent = 'The passwords do not match.'; return; }
         if (nextPassword === currentPassword) { passwordMsg.textContent = 'Choose a password different from your current one.'; return; }
         passwordSave.disabled = true; passwordMsg.textContent = 'Updating password…';
         try {
           var changed = await api.auth.updateUser({ password: nextPassword, current_password: currentPassword });
           if (changed.error) throw changed.error;
           passwordForm.reset();
+          passwordForm.hidden = true;
+          passwordIntro.hidden = true;
+          passwordToggle.setAttribute('aria-expanded', 'false');
+          passwordToggle.textContent = 'Change password';
           passwordMsg.textContent = 'Password updated successfully. Your account remains signed in.';
         } catch (error) {
           passwordMsg.textContent = 'Could not update password: ' + (error && error.message ? error.message : 'Please try again.');
         } finally { passwordSave.disabled = false; }
       });
-      passwordCard.appendChild(passwordForm);
       card.appendChild(passwordCard);
       card.appendChild(signout); box.appendChild(card);
     }

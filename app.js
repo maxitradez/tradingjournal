@@ -589,7 +589,7 @@
       .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
       .eq('user_id', userId);
     if (batchId) batchQuery = batchQuery.eq('id', batchId);
-    else batchQuery = batchQuery.in('status', ['previewed', 'importing', 'paused']).order('updated_at', { ascending: false }).limit(1);
+    else batchQuery = batchQuery.in('status', ['previewed', 'importing', 'paused', 'completed']).order('updated_at', { ascending: false }).limit(1);
     var batchResult = batchId ? await batchQuery.single() : await batchQuery.maybeSingle();
     if (batchResult.error) throw batchResult.error;
     migrationEnsureOwner(userId, token);
@@ -615,6 +615,11 @@
     try {
       var saved = await migrationFetchWorkflow(null);
       if (saved) migrationRenderPreview(saved.batch, saved.items);
+      else {
+        migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+        var results = migrationPanel.querySelector('.migration-results');
+        results.textContent = ''; results.hidden = true;
+      }
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Could not restore migration progress: ' + ((error && error.message) || 'Please refresh and try again.');
     }
@@ -938,10 +943,15 @@
     var nextUser = session && session.user ? session.user : null;
     if (!nextUser) {
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
+      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+      if (migrationPanel) { var oldResults = migrationPanel.querySelector('.migration-results'); oldResults.textContent = ''; oldResults.hidden = true; }
       restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); renderAll(); return;
     }
     if (authUser && authUser.id !== nextUser.id) {
-      authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null; restoreLocalSnapshot();
+      authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
+      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+      if (migrationPanel) { var switchedResults = migrationPanel.querySelector('.migration-results'); switchedResults.textContent = ''; switchedResults.hidden = true; }
+      restoreLocalSnapshot();
     }
     authUser = nextUser; refreshAuthPanel(); loadCloudJournal(authUser);
   }

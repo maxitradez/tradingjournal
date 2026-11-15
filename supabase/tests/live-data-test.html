@@ -30,7 +30,7 @@ button:disabled{opacity:.5;cursor:wait}#results{white-space:pre-wrap;font:13px/1
 </div>
 <div class="panel">
 <h2>2. Run isolated tests</h2>
-<p class="small">Tests: direct Supabase CRUD, RLS and private storage, plus the exact shared app adapter's load, mapping, create, update, delete and settings-preservation behavior.</p>
+<p class="small">Tests: direct Supabase CRUD, RLS and private storage, the shared app adapter, migration ledger, and isolated guest-importer safety checks.</p>
 <p class="warn small">Use only one of the dedicated test accounts. Do not enter your main account password. Never paste a Supabase secret/service-role key here.</p>
 <button id="run" disabled>Run live tests</button>
 <button id="clear" disabled>Clear output</button>
@@ -189,6 +189,120 @@ async function runMigrationInfrastructureTests(test, uid, other, stamp){
   assert(other!==uid,'Other account UUID must differ from signed-in account.');var rows=await client.from('guest_migration_batches').select('id').eq('user_id',other);if(rows.error)throw rows.error;assert((rows.data||[]).length===0,'Another account migration rows were visible.');
  });}
 }
+
+async function runGuestMigrationImporterTests(test,uid,other,stamp){
+ var batchId=null, ids={}, made={pb:null,trade:null,day:null,collision:null}, settings=null;
+ var pbKey='gpb_'+stamp, tradeKey='gtr_'+stamp, collisionKey='gcol_'+stamp, journalDate='9998-12-31';
+ function itemId(key){return ids[key];}
+ async function importItem(key,extra){
+  var args=Object.assign({p_batch_id:batchId,p_item_id:itemId(key),p_account_id:null,p_confirm_unassigned_account:false,p_confirm_settings:false},extra||{});
+  return client.rpc('import_guest_migration_item',args);
+ }
+ async function skipItem(key,reason){
+  var r=await client.rpc('skip_guest_migration_item',{p_batch_id:batchId,p_item_id:itemId(key),p_reason:reason});
+  if(r.error)throw r.error;
+  assert(r.data&&r.data.status==='skipped','Could not skip '+key+'.');
+ }
+ try{
+  await test('Guest importer stages a dedicated preview batch',async function(){
+   assert(other&&other!==uid,'Enter the other test account UUID to verify foreign-account rejection.');
+   var key='importer_'+uid+'_'+stamp;
+   var b=await client.rpc('create_guest_migration_batch',{p_migration_key:key,p_source_version:'guest-v1',p_manifest:{source:'stage5-importer-test',token:stamp}});
+   if(b.error)throw b.error;batchId=b.data;
+   var items=[
+    {entity_type:'playbook',source_record_key:pbKey,fingerprint:'fp_'+pbKey,classification:'new',payload:{id:pbKey,name:'TEMP IMPORT '+stamp,description:'test',rules:['test'],example:false}},
+    {entity_type:'trade',source_record_key:tradeKey,fingerprint:'fp_'+tradeKey,classification:'new',payload:{id:tradeKey,date:dateToday(),time:'10:15',asset:'TEST-IMPORT',side:'sell',entry:'100',sl:'105',tp:'90',exit:'92',pnl:8,r:1.6,risk:5,playbook:pbKey,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'test',shot:'',shotId:'',example:false}},
+    {entity_type:'daily_journal',source_record_key:'gday_'+stamp,fingerprint:'fp_day_'+stamp,classification:'new',payload:{id:journalDate,date:journalDate,plan:'TEMP '+stamp,review:'test',mood:4,example:false}},
+    {entity_type:'settings',source_record_key:'gsettings_'+stamp,fingerprint:'fp_settings_'+stamp,classification:'new',payload:{balance:9876.54,currency:'USD',riskPct:1.23,monthlyTarget:400,maxTradesDay:3,dailyLoss:2,example:false}},
+    {entity_type:'playbook',source_record_key:collisionKey,fingerprint:'fp_'+collisionKey,classification:'new',payload:{id:collisionKey,name:'DO NOT OVERWRITE '+stamp,description:'collision',rules:[],example:false}},
+    {entity_type:'attachment',source_record_key:'gattachment_'+stamp,fingerprint:'fp_attachment_'+stamp,classification:'new',payload:{fileName:'test.png'}},
+    {entity_type:'trade',source_record_key:'gconflict_'+stamp,fingerprint:'fp_conflict_'+stamp,classification:'conflict',payload:{id:'conflict_'+stamp,date:dateToday(),asset:'CONFLICT',side:'buy'}}
+   ];
+   var staged=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:items});if(staged.error)throw staged.error;
+   assert(staged.data===items.length,'Not all importer test records were staged.');
+   var rows=await client.from('guest_migration_items').select('id,source_record_key').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;
+   rows.data.forEach(function(x){ids[x.source_record_key]=x.id;});
+   [pbKey,tradeKey,'gday_'+stamp,'gsettings_'+stamp,collisionKey,'gattachment_'+stamp,'gconflict_'+stamp].forEach(function(k){assert(itemId(k),'Missing item '+k+'.');});
+   var preview=await client.rpc('finalize_guest_migration_preview',{p_batch_id:batchId,p_preview_notes:{test:'stage5-importer'}});
+   if(preview.error)throw preview.error;
+   assert(preview.data.records_new===6&&preview.data.records_conflict===1,'Unexpected importer preview counts.');
+   var start=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});
+   if(start.error)throw start.error;assert(start.data==='importing','Could not start importer test batch.');
+  });
+  await test('Guest importer blocks unconfirmed, foreign-account and out-of-order trades',async function(){
+   var noChoice=await importItem(tradeKey);assert(!!noChoice.error,'Trade imported without an account choice.');
+   var beforePlaybook=await importItem(tradeKey,{p_confirm_unassigned_account:true});assert(!!beforePlaybook.error,'Trade imported before its playbook.');
+   var foreign=await importItem(tradeKey,{p_account_id:other,p_confirm_unassigned_account:true});
+   assert(!!foreign.error,'Importer accepted another user trading account.');
+   var row=await client.from('guest_migration_items').select('import_status,import_attempts').eq('id',itemId(tradeKey)).single();if(row.error)throw row.error;
+   assert(row.data.import_status==='pending'&&row.data.import_attempts===0,'Rejected import changed item progress.');
+  });
+  await test('Guest importer creates playbooks and makes retries idempotent',async function(){
+   var p=await importItem(pbKey);if(p.error)throw p.error;
+   assert(p.data.status==='imported'&&p.data.target_record_id,'Playbook was not imported.');made.pb=p.data.target_record_id;
+   var again=await importItem(pbKey);if(again.error)throw again.error;assert(again.data.already_done===true,'Retry was not idempotent.');
+   var rows=await client.from('playbooks').select('id').eq('user_id',uid).eq('legacy_id',pbKey);if(rows.error)throw rows.error;
+   assert(rows.data.length===1,'Retry created a duplicate playbook.');
+  });
+  await test('Guest importer never overwrites a cloud playbook created after preview',async function(){
+   var old=await client.from('playbooks').insert({user_id:uid,legacy_id:collisionKey,name:'EXISTING '+stamp,description:'keep this',rules:[]}).select('id').single();
+   if(old.error)throw old.error;made.collision=old.data.id;
+   var result=await importItem(collisionKey);if(result.error)throw result.error;
+   assert(result.data.status==='needs_review','New conflict was not held for review.');
+   var check=await client.from('playbooks').select('name,description').eq('id',made.collision).eq('user_id',uid).single();if(check.error)throw check.error;
+   assert(check.data.name==='EXISTING '+stamp&&check.data.description==='keep this','Existing cloud data was overwritten.');
+  });
+  await test('Guest importer preserves trade-playbook relationship and explicit account choice',async function(){
+   var result=await importItem(tradeKey,{p_confirm_unassigned_account:true});if(result.error)throw result.error;
+   assert(result.data.status==='imported'&&result.data.target_record_id,'Trade was not imported.');made.trade=result.data.target_record_id;
+   var row=await client.from('trades').select('playbook_id,account_id,instrument_symbol,side,net_pnl').eq('id',made.trade).eq('user_id',uid).single();if(row.error)throw row.error;
+   assert(row.data.playbook_id===made.pb,'Trade-playbook relationship was lost.');
+   assert(row.data.account_id===null,'Trade was assigned without explicit account selection.');
+   assert(row.data.instrument_symbol==='TEST-IMPORT'&&row.data.side==='sell'&&Number(row.data.net_pnl)===8,'Trade fields were mapped incorrectly.');
+  });
+  await test('Guest importer creates daily journals and requires settings confirmation',async function(){
+   var day=await importItem('gday_'+stamp);if(day.error)throw day.error;made.day=day.data.target_record_id;
+   assert(day.data.status==='imported'&&made.day,'Daily journal was not imported.');
+   var d=await client.from('daily_journals').select('journal_date,plan,mood').eq('id',made.day).eq('user_id',uid).single();if(d.error)throw d.error;
+   assert(d.data.journal_date===journalDate&&d.data.plan==='TEMP '+stamp&&d.data.mood===4,'Daily journal mapping failed.');
+   var snap=await client.from('user_settings').select('*').eq('user_id',uid).single();if(snap.error)throw snap.error;settings=snap.data;
+   var denied=await importItem('gsettings_'+stamp);assert(!!denied.error,'Settings imported without confirmation.');
+   var accepted=await importItem('gsettings_'+stamp,{p_confirm_settings:true});if(accepted.error)throw accepted.error;
+   assert(accepted.data.status==='imported','Confirmed settings were not imported.');
+   var after=await client.from('user_settings').select('*').eq('user_id',uid).single();if(after.error)throw after.error;
+   assert(Number(after.data.default_starting_balance)===9876.54&&after.data.default_currency==='USD','Settings values were not imported.');
+   assert(after.data.timezone===settings.timezone,'Settings import changed timezone.');
+   Object.keys(settings.preferences||{}).forEach(function(k){
+    if(['riskPct','monthlyTarget','maxTradesDay','dailyLoss','example'].indexOf(k)<0)assert(after.data.preferences[k]===settings.preferences[k],'Unrelated preference was overwritten: '+k);
+   });
+  });
+  await test('Guest importer requires explicit review decisions and blocks premature completion',async function(){
+   var att=await importItem('gattachment_'+stamp);if(att.error)throw att.error;
+   assert(att.data.status==='needs_review','Unsupported attachment was silently imported.');
+   var blocked=await client.rpc('finalize_guest_migration_import',{p_batch_id:batchId});
+   assert(!!blocked.error,'Batch finalized while review items were unresolved.');
+   await skipItem('gconflict_'+stamp,'Explicitly skipped by importer test.');
+   await skipItem(collisionKey,'Existing cloud playbook must remain unchanged.');
+   await skipItem('gattachment_'+stamp,'Attachment storage uses a separate workflow.');
+   var done=await client.rpc('finalize_guest_migration_import',{p_batch_id:batchId});if(done.error)throw done.error;
+   assert(done.data.status==='completed'&&done.data.records_imported===4&&done.data.records_skipped===3,'Final import summary is incorrect.');
+   var b=await client.from('guest_migration_batches').select('status,records_imported,records_failed,records_skipped,import_started_at,import_completed_at').eq('id',batchId).eq('user_id',uid).single();if(b.error)throw b.error;
+   assert(b.data.status==='completed'&&b.data.records_imported===4&&b.data.records_failed===0&&b.data.records_skipped===3,'Completed batch counters are incorrect.');
+   assert(b.data.import_started_at&&b.data.import_completed_at,'Import timestamps were not recorded.');
+   log('Completed importer test batch retained as audit evidence: '+batchId,'warn');
+  });
+ } finally {
+  if(settings){
+   var restore=await client.from('user_settings').update({default_currency:settings.default_currency,default_starting_balance:settings.default_starting_balance,timezone:settings.timezone,preferences:settings.preferences,is_example:settings.is_example}).eq('user_id',uid);
+   if(restore.error)log('Cleanup warning (importer settings): '+restore.error.message,'warn');else log('Cleanup: restored importer settings snapshot.','warn');
+  }
+  if(made.trade){var a=await client.from('trades').delete().eq('id',made.trade).eq('user_id',uid);if(a.error)log('Cleanup warning (importer trade): '+a.error.message,'warn');}
+  if(made.day){var b=await client.from('daily_journals').delete().eq('id',made.day).eq('user_id',uid);if(b.error)log('Cleanup warning (importer journal): '+b.error.message,'warn');}
+  if(made.pb){var d=await client.from('playbooks').delete().eq('id',made.pb).eq('user_id',uid);if(d.error)log('Cleanup warning (importer playbook): '+d.error.message,'warn');}
+  if(made.collision){var e=await client.from('playbooks').delete().eq('id',made.collision).eq('user_id',uid);if(e.error)log('Cleanup warning (collision playbook): '+e.error.message,'warn');}
+ }
+}
+
 async function runTests(){
  $('run').disabled=true;out.textContent='';
  var user=(await client.auth.getUser()).data.user;
@@ -261,6 +375,7 @@ async function runTests(){
   }else log('SKIP  Cross-user tests — add the other test account UUID above.','warn');
   await runAdapterTests(test);
   await runMigrationInfrastructureTests(test,uid,other,stamp);
+  await runGuestMigrationImporterTests(test,uid,other,stamp);
   log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
  }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
  finally{

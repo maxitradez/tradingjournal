@@ -813,6 +813,8 @@
   }
   function shotPrep(existing) {
     var s = state.shot, old = existing ? existing.shotId : '';
+    if (state.mode === 'cloud' && s.blob) return Promise.reject(new Error('Chart image uploads are not enabled for cloud journals yet. Remove the selected image and save the trade, or keep this trade in guest mode.'));
+    if (state.mode === 'cloud') return Promise.resolve({ id: '', drop: '' });
     if (s.blob && state.assets) return state.assets.upload(s.blob).then(function (res) { return { id: res.id, drop: old }; });
     if (s.remove) return Promise.resolve({ id: '', drop: old });
     return Promise.resolve({ id: old, drop: '' });

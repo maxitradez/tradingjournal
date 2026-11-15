@@ -777,7 +777,7 @@
     var src = s.preview || (s.existing && !s.remove ? s.existingUrl : '');
     if (src) box.appendChild(h('img', { src: src, alt: 'Chart screenshot preview' }));
     if (!s.blob && (!s.existing || s.remove)) return;
-    box.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Remove', onclick: function () {
+    box.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Remove screenshot', 'aria-label': 'Remove screenshot only; keep this trade and its P&L', title: 'Remove only the screenshot. The trade and P&L will be kept.', onclick: function () {
       if (s.preview) URL.revokeObjectURL(s.preview);
       s.blob = null; s.preview = ''; if (s.existing) s.remove = true;
       $('f-shotfile').value = ''; renderShotPrev();

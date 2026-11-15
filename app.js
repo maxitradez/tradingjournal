@@ -9,7 +9,7 @@
   var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   var EMOTIONS = ['Calm', 'Confident', 'Focused', 'Patient', 'Hesitant', 'Fearful', 'Impatient', 'FOMO', 'Greedy', 'Revenge', 'Bored', 'Tired'];
   var MISTAKES = ['Moved stop', 'Oversized', 'Early exit', 'Late entry', 'No setup', 'Chased price', 'Overtraded', 'Ignored news', 'Averaged down'];
-  var VIEWS = ['dashboard', 'calendar', 'trades', 'playbooks', 'reports', 'insights', 'settings'];
+  var VIEWS = ['dashboard', 'calendar', 'trades', 'playbooks', 'reports', 'insights', 'settings', 'profile'];
   var STARTERS = [
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
@@ -460,8 +460,13 @@
     authPanel.appendChild(summary);
     authPanel.appendChild(form);
     authPanel.appendChild(h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' }));
-    var masthead = document.querySelector('.masthead');
-    masthead.insertAdjacentElement('afterend', authPanel);
+    var publicAuth = document.getElementById('public-auth');
+    if (publicAuth) publicAuth.appendChild(authPanel);
+    else document.querySelector('.masthead').insertAdjacentElement('afterend', authPanel);
+    var createButton = document.getElementById('public-create');
+    var loginButton = document.getElementById('public-login');
+    if (createButton) createButton.addEventListener('click', function () { showAuthForm('signup'); });
+    if (loginButton) loginButton.addEventListener('click', function () { showAuthForm('signin'); });
     refreshAuthPanel();
   }
   async function init() {
@@ -1340,7 +1345,7 @@
   }
 
   /* ---------- routing + render ---------- */
-  var RENDER = { dashboard: viewDashboard, calendar: viewCalendar, trades: viewTrades, playbooks: viewPlaybooks, reports: viewReports, insights: viewInsights, settings: viewSettings };
+  var RENDER = { dashboard: viewDashboard, calendar: viewCalendar, trades: viewTrades, playbooks: viewPlaybooks, reports: viewReports, insights: viewInsights, settings: viewSettings, profile: function (box) { if (window.MaxiProfileUI) window.MaxiProfileUI.render(box); else box.textContent = 'Profile is loading…'; } };
   function renderView() {
     var box = $('v-' + state.view); box.textContent = ''; RENDER[state.view](box);
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });

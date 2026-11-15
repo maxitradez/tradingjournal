@@ -35,6 +35,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Import one trade after choosing a trading account, or explicitly confirming it should remain unassigned.
 - Import the linked trade and confirm the playbook relationship is preserved.
 - Confirm a trade linked to a conflicting or unresolved playbook is held for review and cannot attach itself to a different cloud playbook.
+- Confirm a trade linked to a duplicate playbook is held for review if that cloud playbook changes after the preview.
 - Import the daily journal note.
 - If testing settings, read the warning carefully, confirm the settings action, and verify only the described settings fields change.
 - Explicitly skip the remaining disposable record and confirm it is counted as skipped.
@@ -48,7 +49,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Try to import settings without checking its confirmation; the UI should block it.
 - Confirm failed or conflicting records are not silently treated as imported.
 - Confirm a second account cannot see or operate the first account's migration batch.
-- Run the updated live Supabase test harness and confirm all 30 checks pass.
+- Run the updated live Supabase test harness and confirm all 31 checks pass.
 - Test the account panel, journal views, trade/playbook editing, daily notes, settings, sign-out, and guest-local mode on desktop and a physical phone.
 
 ## Cleanup

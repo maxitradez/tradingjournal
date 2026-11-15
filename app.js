@@ -593,7 +593,7 @@
       h('div', { class: 'asset' }, t.playbook ? h('span', { class: 'pill', text: pbName(t.playbook) }) : null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk' }) : null, t.emotion ? h('span', { class: 'pill', text: t.emotion }) : null),
       mistakeRow(t),
       t.lesson ? h('p', { text: t.lesson }) : null,
-      t.shotUrl ? h('a', { class: 'shotthumb', href: t.shotUrl, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: t.shotUrl, alt: 'Chart screenshot for ' + t.asset, loading: 'lazy' })) : null,
+      screenshotSource(t) ? h('a', { class: 'shotthumb', href: screenshotSource(t), target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: screenshotSource(t), alt: 'Chart screenshot for ' + t.asset, loading: 'lazy' })) : null,
       t.misses.length ? h('div', { class: 'cell-sub', text: 'Rules missed: ' + t.misses.join('; ') }) : null,
       h('div', { class: 'acts', style: 'justify-content:flex-start' },
         link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗', style: 'margin:0 8px 0 0;align-self:center' }) : null,
@@ -771,11 +771,12 @@
       img.src = url;
     });
   }
+  function screenshotSource(t) { return state.mode === 'cloud' ? (t.shotUrl || '') : (t.shotId ? '/_blob/' + t.shotId : ''); }
   function renderShotPrev() {
     var box = $('shot-prev'), s = state.shot; box.textContent = '';
     var src = s.preview || (s.existing && !s.remove ? s.existingUrl : '');
     if (src) box.appendChild(h('img', { src: src, alt: 'Chart screenshot preview' }));
-    if (!s.blob && !s.existing) return;
+    if (!s.blob && (!s.existing || s.remove)) return;
     box.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Remove', onclick: function () {
       if (s.preview) URL.revokeObjectURL(s.preview);
       s.blob = null; s.preview = ''; if (s.existing) s.remove = true;
@@ -791,13 +792,15 @@
     var s = state.shot, old = existing ? existing.shotId : '';
     if (state.mode === 'cloud') {
       if (!activeCloudAdapter) return Promise.reject(new Error('Your cloud connection is not ready. Refresh and try again.'));
-      if (s.blob) return activeCloudAdapter.uploadScreenshot(s.blob, tradeId).then(function (path) { return { id: path, drop: old }; });
-      if (s.remove) return Promise.resolve({ id: '', drop: old });
-      return Promise.resolve({ id: old, drop: '' });
+      if (s.blob) return activeCloudAdapter.uploadScreenshot(s.blob, tradeId).then(function (path) {
+        return activeCloudAdapter.getScreenshotUrl(path).then(function (url) { return { id: path, drop: old, url: url }; });
+      });
+      if (s.remove) return Promise.resolve({ id: '', drop: old, url: '' });
+      return Promise.resolve({ id: old, drop: '', url: existing ? (existing.shotUrl || '') : '' });
     }
-    if (s.blob && state.assets) return state.assets.upload(s.blob).then(function (res) { return { id: res.id, drop: old }; });
-    if (s.remove) return Promise.resolve({ id: '', drop: old });
-    return Promise.resolve({ id: old, drop: '' });
+    if (s.blob && state.assets) return state.assets.upload(s.blob).then(function (res) { return { id: res.id, drop: old, url: '' }; });
+    if (s.remove) return Promise.resolve({ id: '', drop: old, url: '' });
+    return Promise.resolve({ id: old, drop: '', url: '' });
   }
   function dropAsset(id) {
     if (!id) return;
@@ -928,7 +931,7 @@
       body.appendChild(h('tr', null,
         h('td', { class: 'mono nowrap' }, fmtDate(t.date), t.time ? h('div', { class: 'cell-sub', text: t.time }) : null),
         h('td', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
-          prices ? h('div', { class: 'cell-sub', text: prices }) : null, t.shotUrl ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: t.shotUrl, target: '_blank', rel: 'noopener noreferrer', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
+          prices ? h('div', { class: 'cell-sub', text: prices }) : null, screenshotSource(t) ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: screenshotSource(t), target: '_blank', rel: 'noopener noreferrer', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
         h('td', { text: t.playbook ? pbName(t.playbook) : '—' }),
         h('td', { text: t.emotion || '—' }),
         h('td', null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk', style: 'margin-left:6px' }) : null, t.misses.length ? h('div', { class: 'cell-sub', text: t.misses.join('; ') }) : null, t.mistakes.length ? h('div', { class: 'cell-sub', text: t.mistakes.join(', ') }) : null),
@@ -1314,7 +1317,7 @@
     var wasEdit = !!existing, b1 = $('btn-save'), b2 = $('btn-another'); b1.disabled = b2.disabled = true;
     var uploadedScreenshot = '';
     shotPrep(existing, t.id).then(function (sp) {
-      t.shotId = sp.id;
+      t.shotId = sp.id; t.shotUrl = sp.url || '';
       if (sp.id && sp.id !== (existing ? existing.shotId : '')) uploadedScreenshot = sp.id;
       return put('trades', t).then(function () { if (sp.drop) dropAsset(sp.drop); });
     }).then(function () {

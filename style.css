@@ -577,3 +577,64 @@ td { border-bottom-color: var(--line); }
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
 }
+
+
+/* --------------------------------------------------------------------------
+   Maxi Trades premium shell — phase 1
+   Presentation-only layout refinement; all existing view and form behaviour
+   remains owned by app.js.
+   -------------------------------------------------------------------------- */
+@media (min-width: 980px) {
+  .wrap {
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    grid-template-areas:
+      "mast mast"
+      "nav banner"
+      "nav main"
+      "foot foot";
+    column-gap: 28px;
+    align-items: start;
+  }
+  .masthead { grid-area: mast; align-items: center; padding: 10px 0 24px; }
+  .masthead .brand h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.055em; }
+  .masthead .tagline { margin-top: 5px; font-size: 12px; }
+  .nav {
+    grid-area: nav;
+    position: sticky;
+    top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow: visible;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 10px;
+    margin: 0;
+  }
+  .nav a {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .nav a:hover { background: var(--surface-2); color: var(--fg); }
+  .nav a[aria-current="page"] {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--accent-hot);
+    border: 0;
+  }
+  .banner { grid-area: banner; margin: 0 0 18px; }
+  main { grid-area: main; min-width: 0; }
+  .foot { grid-area: foot; margin-top: 28px; }
+}
+@media (max-width: 979px) {
+  .wrap { display: block; }
+  .nav { display: flex; flex-direction: row; }
+}

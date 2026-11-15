@@ -1,7 +1,7 @@
 /* Maxi Trades Journal — Supabase data adapter
    Shared adapter implementation for the app and isolated live tests.
-   This file defines the adapter only; it does not authenticate, load data,
-   migrate guest records, or activate cloud sync by itself. */
+   This file defines the adapter only; the app controls authentication and
+   activation. Guest migration and screenshot storage workflows remain separate. */
 (function (global) {
   'use strict';
   function createCloudAdapter(api, userId, helpers) {
@@ -224,7 +224,7 @@
             ? current.data.preferences : {};
           var mergedPrefs = Object.assign({}, existingPrefs, prefs);
           var result = await api.from('user_settings').update({
-            default_currency: settings.currency || 'USD',
+            default_currency: settings.currency || '',
             default_starting_balance: settings.balance, preferences: mergedPrefs
           }).eq('user_id', userId).select('user_id').maybeSingle();
           if (result.error) throw result.error;

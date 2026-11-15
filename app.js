@@ -408,11 +408,18 @@
           maxTradesDay: settings.maxTradesDay, dailyLoss: settings.dailyLoss,
           example: !!settings.example
         };
-        // Signup creates this row. Update only fields owned by this app so
-        // future settings such as timezone are not reset by an upsert default.
+        // Signup creates this row. Merge preferences and update only fields
+        // owned by this app so unrelated preferences and timezone are preserved.
+        var current = await api.from('user_settings').select('preferences')
+          .eq('user_id', userId).maybeSingle();
+        if (current.error) throw current.error;
+        if (!current.data) throw new Error('Your account settings row was not found. Please sign out and sign in again.');
+        var existingPrefs = current.data.preferences && typeof current.data.preferences === 'object'
+          ? current.data.preferences : {};
+        var mergedPrefs = Object.assign({}, existingPrefs, prefs);
         var result = await api.from('user_settings').update({
           default_currency: settings.currency || 'USD',
-          default_starting_balance: settings.balance, preferences: prefs
+          default_starting_balance: settings.balance, preferences: mergedPrefs
         }).eq('user_id', userId).select('user_id').maybeSingle();
         if (result.error) throw result.error;
         if (!result.data) throw new Error('Your account settings row was not found. Please sign out and sign in again.');

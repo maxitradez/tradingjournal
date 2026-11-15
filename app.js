@@ -260,8 +260,8 @@
   }
 
   /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
-  // Stage 2 uses the shared adapter for authenticated read-only loading only.
-  // All journal writes remain disabled while state.readOnlyCloud is active.
+  // Stage 3 uses the shared adapter for authenticated cloud loading and writes.
+  // Guest migration and cloud screenshot storage remain separate later stages.
   function cloudAdapterFor(userId) {
     if (!window.MaxiCloudAdapterFactory) throw new Error('Supabase data adapter module did not load.');
     return window.MaxiCloudAdapterFactory(authClient, userId, {

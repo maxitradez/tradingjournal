@@ -1,6 +1,6 @@
 /* Maxi Trades Journal
    Guest journal data stays in this browser (localStorage).
-   Supabase accounts can view their cloud journal in read-only mode; cloud writes and guest migration remain disabled. */
+   Supabase accounts can load and save their own cloud journal; guest migration remains disabled. */
 (function () {
   'use strict';
   var LS_KEY = 'trading-journal-pro-v1';
@@ -347,7 +347,7 @@
         authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled; your browser guest journal remains separate and untouched.', false);
         setDataState('cloud-readonly');
       } else if (state.mode === 'cloud') {
-        authNotice('Your account journal is connected. Changes are saved to your account; your browser guest journal remains separate and untouched.', false);
+        authNotice('Your account journal is connected. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
         if (state.dataState !== 'cloud-syncing' && state.dataState !== 'cloud-error') setDataState('cloud-ready');
       } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error' && state.dataState !== 'cloud-load-error') {
         authNotice('Your account is authenticated. Your browser journal remains local unless the cloud journal has loaded successfully.', false);
@@ -394,7 +394,7 @@
       state.settings = normSettings(cloud.settings);
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); renderAll(); setDataState('cloud-ready');
-      authNotice('Cloud journal loaded successfully. Changes you make are saved to your account. Your browser guest journal remains separate and unchanged.', false);
+      authNotice('Cloud journal loaded successfully. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
       activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error');

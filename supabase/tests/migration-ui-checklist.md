@@ -23,6 +23,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Confirm no records have appeared in the cloud journal yet.
 - Refresh the page and confirm the preview is restored.
 - In a second tab on the same origin, change a guest record after signing in; return to the first tab and confirm preview/import is blocked until refresh captures the latest browser journal.
+- In a second tab, change the signed-in cloud journal after previewing; return to the first tab and confirm the import is blocked until a fresh preview is prepared.
 - Sign out and back in, then confirm the preview is restored for the same account.
 - If available, sign in to a second test account and confirm the first account's preview is not shown.
 

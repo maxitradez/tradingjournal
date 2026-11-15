@@ -28,7 +28,7 @@
       async function allOwned(table, orderColumn) {
         var rows = [], offset = 0, pageSize = 1000;
         while (true) {
-          var page = await own(table).order(orderColumn, { ascending: true }).range(offset, offset + pageSize - 1);
+          var page = await own(table).order(orderColumn, { ascending: true }).order('id', { ascending: true }).range(offset, offset + pageSize - 1);
           if (page.error) throw page.error;
           var batch = page.data || []; rows = rows.concat(batch);
           if (batch.length < pageSize) break;
@@ -108,6 +108,7 @@
             allOwned('daily_journals', 'journal_date'),
             api.from('user_settings').select('*').eq('user_id', userId).maybeSingle()
           ]);
+          if (results[3].error) throw results[3].error;
           var pbs = (results[0] || []).map(fromCloudPlaybook);
           var trs = (results[1] || []).map(fromCloudTrade);
           // Resolve playbook UUIDs to the journal's stable legacy IDs.

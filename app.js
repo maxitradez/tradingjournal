@@ -484,7 +484,7 @@
       if (record.type === 'trade') {
         var numericFields = [payload.entry, payload.sl, payload.tp, payload.exit, payload.risk, payload.r];
         var numericValid = numericFields.every(function (value) { return value == null || value === '' || isFinite(Number(value)); });
-        var timeValid = !payload.time || /^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$/.test(payload.time);
+        var timeValid = !payload.time || /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(payload.time);
         if (!migrationValidDate(payload.date) || !payload.asset || !['buy', 'sell'].includes(payload.side) || !numericValid || !timeValid) invalid = true;
       }
       if (record.type === 'daily_journal' && (!migrationValidDate(payload.date) || (payload.mood != null && (payload.mood < 1 || payload.mood > 5)))) invalid = true;

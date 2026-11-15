@@ -2,10 +2,35 @@
 -- This intentionally deletes its staging/audit rows and all guest-migration RPCs.
 -- It does not touch authenticated journal tables, user profiles, or trade data.
 
--- Triggers depend on these trigger functions, so remove them explicitly first.
--- These tables are created by migration 003 and are expected to exist here.
-drop trigger if exists guest_migration_item_initial_status on public.guest_migration_items;
-drop trigger if exists guest_migration_batch_updated_at on public.guest_migration_batches;
+-- Remove every non-internal trigger that references either trigger function.
+-- Discover dependencies from PostgreSQL's catalog rather than assuming trigger names.
+do $$
+declare
+  v_trigger record;
+begin
+  for v_trigger in
+    select
+      ns.nspname as schema_name,
+      cls.relname as table_name,
+      trg.tgname as trigger_name
+    from pg_trigger trg
+    join pg_class cls on cls.oid = trg.tgrelid
+    join pg_namespace ns on ns.oid = cls.relnamespace
+    where not trg.tgisinternal
+      and trg.tgfoid in (
+        'public.set_guest_migration_item_initial_status()'::regprocedure,
+        'public.set_guest_migration_batch_updated_at()'::regprocedure
+      )
+  loop
+    execute format(
+      'drop trigger if exists %I on %I.%I',
+      v_trigger.trigger_name,
+      v_trigger.schema_name,
+      v_trigger.table_name
+    );
+  end loop;
+end
+$$;
 
 drop function if exists public.create_guest_migration_batch(text, text, jsonb);
 drop function if exists public.stage_guest_migration_items(uuid, jsonb);

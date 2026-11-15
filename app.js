@@ -291,6 +291,7 @@
     if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'account-required';
     state.dataState = kind;
     var chip = $('sync');
+    chip.hidden = kind === 'cloud-ready';
     var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
       : kind === 'cloud-synced' || kind === 'cloud-readonly' || kind === 'cloud-ready' ? 'cloud'
       : kind === 'cloud-error' || kind === 'cloud-load-error' || kind === 'session-error' || kind === 'offline' || kind === 'account-required' ? 'error'

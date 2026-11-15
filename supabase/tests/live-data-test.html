@@ -87,14 +87,19 @@ async function runAdapterTests(test){
    var loaded=await adapter.load(),pb=loaded.playbooks.find(x=>x.id===pbId),tr=loaded.trades.find(x=>x.id===tradeId);
    assert(pb&&pb.name==='Adapter test '+stamp&&pb.description==='updated through shared adapter'&&pb.rules.length===2,'Adapter did not create/update/map its playbook.');
    assert(tr&&tr.side==='sell'&&tr.pnl===8&&tr.playbook===pbId,'Adapter did not map trade values or playbook reference.');
+   var raw=await client.from('trades').select('id,notes').eq('user_id',uid).eq('legacy_id',tradeId).single();if(raw.error)throw raw.error;
+   var preservedNotes=Object.assign({},raw.data.notes||{},{__adapter_marker:stamp});
+   var noteUpdate=await client.from('trades').update({notes:preservedNotes}).eq('user_id',uid).eq('id',raw.data.id);if(noteUpdate.error)throw noteUpdate.error;
    await adapter.put('trades',{id:tradeId,date:dayDate,time:'10:15',asset:'TEST-ADAPTER',side:'sell',entry:'100',sl:'105',tp:'90',exit:'91',pnl:9,r:1.8,risk:5,playbook:pbId,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'adapter updated',shot:'',shotId:'',example:false});
    loaded=await adapter.load();tr=loaded.trades.find(x=>x.id===tradeId);
    assert(tr&&tr.pnl===9&&tr.exit==='91','Adapter trade update did not persist.');
   });
-  await test('Adapter safely deletes linked playbook and trade',async function(){
+  await test('Adapter atomically deletes linked playbook and preserves trade history',async function(){
    await adapter.del('playbooks',pbId);pbMade=false;
    var loaded=await adapter.load(),tr=loaded.trades.find(x=>x.id===tradeId);
    assert(tr&&tr.playbook===pbId,'Deleting a playbook did not preserve its trade history label.');
+   var afterDelete=await client.from('trades').select('notes').eq('user_id',uid).eq('legacy_id',tradeId).single();if(afterDelete.error)throw afterDelete.error;
+   assert(afterDelete.data.notes&&afterDelete.data.notes.__adapter_marker===stamp,'Playbook deletion did not preserve unrelated trade notes.');
    await adapter.del('trades',tradeId);tradeMade=false;
    loaded=await adapter.load();assert(!loaded.trades.some(x=>x.id===tradeId),'Adapter did not delete the test trade.');
   });

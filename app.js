@@ -635,7 +635,7 @@
     var detail = migrationPanel.querySelector('.migration-description');
     detail.textContent = records.length
       ? records.length + ' guest records or settings are available locally. Review a comparison with your account before deciding whether to migrate.'
-      : 'No personal guest records or settings were found in this browser. Example records are excluded.';
+      : 'No personal guest records or settings were found at this browser location. Example records are excluded. Guest storage is origin-specific: open the same GitHub Pages address where you created the records; a downloaded ZIP or file:// copy has separate storage.';
     var button = migrationPanel.querySelector('.migration-preview-btn');
     button.disabled = migrationBusy || !records.length || !migrationPanel.querySelector('.migration-consent-check').checked;
   }

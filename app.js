@@ -310,6 +310,9 @@
   var migrationPanel = null;
   var migrationBusy = false;
   var migrationConsentUserId = null;
+  var migrationWorkflowBatch = null;
+  var migrationWorkflowItems = [];
+  var migrationWorkflowAccounts = [];
   function setDataState(kind) {
     if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
     state.dataState = kind;
@@ -502,9 +505,11 @@
   }
   function migrationRenderPreview(batch, items) {
     if (!migrationPanel) return;
+    migrationWorkflowBatch = batch;
+    migrationWorkflowItems = items || [];
     var results = migrationPanel.querySelector('.migration-results');
     results.textContent = '';
-    var title = h('h3', { text: 'Preview ready — nothing imported' });
+    var title = h('h3', { text: batch.status === 'completed' ? 'Migration completed' : 'Preview ready — nothing imported yet' });
     var counts = h('div', { class: 'migration-counts' });
     [
       ['Total', batch.records_seen || 0], ['New', batch.records_new || 0],
@@ -514,18 +519,219 @@
       counts.appendChild(h('div', { class: 'migration-count' },
         h('strong', { text: String(entry[1]) }), h('span', { text: entry[0] })));
     });
-    var note = h('p', { class: 'migration-note', text: 'Preview only. These record details have been copied to private migration staging tables for this account; they have not been added to your cloud journal. Before a future import, each trade will need an explicit trading-account choice or confirmation to remain unassigned; settings need separate confirmation. Screenshot attachments require a separate upload step. Your original guest journal remains in this browser.' });
+    var note = h('p', { class: 'migration-note', text: 'This is a saved private preview. Nothing is imported until you separately authorize it below. Guest records in this browser are never deleted by migration. Screenshot attachments and unsupported record types need a separate workflow.' });
     var list = h('div', { class: 'migration-item-list' });
-    items.slice(0, 40).forEach(function (item) {
-      list.appendChild(h('div', { class: 'migration-item' },
-        h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }),
-        h('span', { class: 'migration-item-name', text: migrationDisplayName(item) }),
-        h('span', { class: 'migration-item-state', 'data-state': item.classification, text: item.classification })));
+    migrationWorkflowItems.forEach(function (item) {
+      var row = h('div', { class: 'migration-item migration-workflow-item' });
+      row.appendChild(h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }));
+      row.appendChild(h('span', { class: 'migration-item-name', text: migrationDisplayName(item) }));
+      row.appendChild(h('span', { class: 'migration-item-state', 'data-state': item.classification, text: item.classification + ' · ' + (item.import_status || 'pending') }));
+      var actions = h('div', { class: 'migration-item-actions' });
+      if (batch.status === 'importing' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status)) {
+        var accountSelect = null, unassignedCheck = null, settingsCheck = null;
+        if (item.entity_type === 'trade') {
+          accountSelect = h('select', { class: 'migration-account-select', 'aria-label': 'Trading account for ' + migrationDisplayName(item) });
+          accountSelect.appendChild(h('option', { value: '', text: 'Choose trading account…' }));
+          migrationWorkflowAccounts.forEach(function (account) {
+            accountSelect.appendChild(h('option', { value: account.id, text: account.account_name }));
+          });
+          unassignedCheck = h('input', { type: 'checkbox', class: 'migration-unassigned-check' });
+          actions.appendChild(accountSelect);
+          actions.appendChild(h('label', { class: 'migration-inline-check' }, unassignedCheck, h('span', { text: 'Leave unassigned' })));
+        }
+        if (item.entity_type === 'settings') {
+          settingsCheck = h('input', { type: 'checkbox', class: 'migration-settings-check' });
+          actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings into my account' })));
+        }
+        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: item.import_status === 'failed' ? 'Retry import' : 'Import this record', onclick: function () {
+          runMigrationItemAction(item, 'import', accountSelect, unassignedCheck, settingsCheck);
+        }}));
+      } else if (batch.status === 'importing' && item.import_status !== 'imported' && item.import_status !== 'skipped') {
+        actions.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Skip this record', onclick: function () {
+          runMigrationItemAction(item, 'skip');
+        }}));
+      }
+      if (item.import_error) actions.appendChild(h('p', { class: 'migration-item-error', text: item.import_error }));
+      if (actions.childNodes.length) row.appendChild(actions);
+      list.appendChild(row);
     });
-    if (items.length > 40) list.appendChild(h('p', { class: 'migration-note', text: 'Showing 40 of ' + items.length + ' records. All records are included in the saved preview.' }));
-    results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(list);
+    var workflow = h('div', { class: 'migration-workflow' });
+    workflow.appendChild(h('p', { class: 'migration-note', text: 'Import progress: ' + (batch.records_imported || 0) + ' imported · ' + (batch.records_skipped || 0) + ' skipped · ' + (batch.records_failed || 0) + ' failed. Every trade requires an account choice or explicit unassigned confirmation. Settings require separate confirmation.' }));
+    if (batch.status === 'previewed') {
+      var authorization = h('input', { type: 'checkbox', class: 'migration-import-authorize' });
+      workflow.appendChild(h('label', { class: 'migration-consent migration-import-consent' }, authorization,
+        h('span', { text: 'I have reviewed this preview and explicitly authorize importing the eligible new records into this signed-in account. I understand duplicates will not be copied, conflicts need review, and my original browser journal will remain unchanged.' })));
+      workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Begin controlled migration', onclick: function () {
+        if (!authorization.checked) { migrationPanel.querySelector('.migration-status').textContent = 'Confirm the migration authorization before starting.'; return; }
+        beginGuestMigrationImport();
+      }}));
+    } else if (batch.status === 'paused') {
+      workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Resume migration', onclick: resumeGuestMigrationImport }));
+    } else if (batch.status === 'importing') {
+      var unfinished = migrationWorkflowItems.some(function (item) { return ['pending', 'failed', 'needs_review'].includes(item.import_status); });
+      if (!unfinished) workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Finish migration', onclick: finalizeGuestMigrationImport }));
+      workflow.appendChild(h('button', { class: 'btn', type: 'button', text: 'Pause migration', onclick: pauseGuestMigrationImport }));
+    } else if (batch.status === 'completed') {
+      workflow.appendChild(h('p', { class: 'migration-note', text: 'The selected migration batch is complete. Your browser guest journal has not been deleted.' }));
+    }
+    results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(workflow); results.appendChild(list);
     results.hidden = false;
-
+  }
+  function migrationEnsureOwner(userId, token) {
+    if (!authUser || authUser.id !== userId || activeCloudUserId !== userId || authLoadToken !== token || state.mode !== 'cloud') {
+      throw new Error('The signed-in account changed. The migration action was stopped.');
+    }
+  }
+  async function migrationFetchWorkflow(batchId) {
+    if (!authUser || !authClient) throw new Error('Sign in before viewing migration progress.');
+    var userId = authUser.id, token = authLoadToken;
+    var batchQuery = authClient.from('guest_migration_batches')
+      .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
+      .eq('user_id', userId);
+    if (batchId) batchQuery = batchQuery.eq('id', batchId);
+    else batchQuery = batchQuery.in('status', ['previewed', 'importing', 'paused']).order('updated_at', { ascending: false }).limit(1);
+    var batchResult = batchId ? await batchQuery.single() : await batchQuery.maybeSingle();
+    if (batchResult.error) throw batchResult.error;
+    migrationEnsureOwner(userId, token);
+    if (!batchResult.data) return null;
+    var rows = await authClient.from('guest_migration_items')
+      .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
+      .eq('user_id', userId).eq('batch_id', batchResult.data.id)
+      .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true });
+    if (rows.error) throw rows.error;
+    migrationEnsureOwner(userId, token);
+    migrationWorkflowAccounts = [];
+    if ((rows.data || []).some(function (item) { return item.entity_type === 'trade' && item.classification === 'new'; })) {
+      var accounts = await authClient.from('trading_accounts').select('id,account_name')
+        .eq('user_id', userId).order('account_name', { ascending: true });
+      if (accounts.error) throw accounts.error;
+      migrationEnsureOwner(userId, token);
+      migrationWorkflowAccounts = accounts.data || [];
+    }
+    return { batch: batchResult.data, items: rows.data || [] };
+  }
+  async function restoreGuestMigrationWorkflow() {
+    if (migrationBusy || !authUser || state.mode !== 'cloud' || !activeCloudAdapter) return;
+    try {
+      var saved = await migrationFetchWorkflow(null);
+      if (saved) migrationRenderPreview(saved.batch, saved.items);
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Could not restore migration progress: ' + ((error && error.message) || 'Please refresh and try again.');
+    }
+  }
+  async function refreshGuestMigrationWorkflow(batchId) {
+    var saved = await migrationFetchWorkflow(batchId);
+    if (saved) migrationRenderPreview(saved.batch, saved.items);
+    return saved;
+  }
+  async function beginGuestMigrationImport() {
+    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
+    var batch = migrationWorkflowBatch, userId = authUser.id, token = authLoadToken;
+    try {
+      var currentItems = migrationBuildItems();
+      var currentHash = migrationHash(currentItems.map(function (x) { return [x.entity_type, x.source_record_key, x.fingerprint]; }));
+      if (!batch.manifest || currentHash !== batch.manifest.local_snapshot_hash) {
+        throw new Error('Your browser journal changed after this preview. Prepare a fresh preview before importing so the correct snapshot is reviewed.');
+      }
+      migrationBusy = true;
+      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batch.id, p_next_status: 'importing', p_error: null });
+      if (result.error) throw result.error;
+      migrationEnsureOwner(userId, token);
+      await refreshGuestMigrationWorkflow(batch.id);
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration started. Nothing is imported automatically; choose each record action below.';
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Could not start migration: ' + ((error && error.message) || 'Please try again.');
+    } finally {
+      migrationBusy = false;
+    }
+  }
+  async function resumeGuestMigrationImport() {
+    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
+    migrationBusy = true;
+    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
+    try {
+      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batchId, p_next_status: 'importing', p_error: null });
+      if (result.error) throw result.error;
+      migrationEnsureOwner(userId, token);
+      await refreshGuestMigrationWorkflow(batchId);
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration resumed. Review each remaining record below.';
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Could not resume migration: ' + ((error && error.message) || 'Please try again.');
+    } finally { migrationBusy = false; }
+  }
+  async function pauseGuestMigrationImport() {
+    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
+    migrationBusy = true;
+    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
+    try {
+      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batchId, p_next_status: 'paused', p_error: null });
+      if (result.error) throw result.error;
+      migrationEnsureOwner(userId, token);
+      await refreshGuestMigrationWorkflow(batchId);
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration paused. You can resume it later from this account.';
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Could not pause migration: ' + ((error && error.message) || 'Please try again.');
+    } finally { migrationBusy = false; }
+  }
+  async function runMigrationItemAction(item, action, accountSelect, unassignedCheck, settingsCheck) {
+    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
+    var accountId = accountSelect ? accountSelect.value || null : null;
+    var confirmUnassigned = !!(unassignedCheck && unassignedCheck.checked);
+    var confirmSettings = !!(settingsCheck && settingsCheck.checked);
+    if (action === 'import' && item.entity_type === 'trade' && !accountId && !confirmUnassigned) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Choose a trading account or explicitly confirm that this trade should remain unassigned.';
+      return;
+    }
+    if (action === 'import' && item.entity_type === 'settings' && !confirmSettings) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Confirm the settings import for this record before continuing.';
+      return;
+    }
+    migrationBusy = true;
+    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
+    try {
+      var result = action === 'skip'
+        ? await authClient.rpc('skip_guest_migration_item', { p_batch_id: batchId, p_item_id: item.id, p_reason: 'Skipped by the account owner in the migration review.' })
+        : await authClient.rpc('import_guest_migration_item', {
+            p_batch_id: batchId, p_item_id: item.id, p_account_id: accountId,
+            p_confirm_unassigned_account: confirmUnassigned, p_confirm_settings: confirmSettings
+          });
+      if (result.error) throw result.error;
+      migrationEnsureOwner(userId, token);
+      var saved = await refreshGuestMigrationWorkflow(batchId);
+      if (action === 'import' && result.data && result.data.status === 'imported') {
+        var cloud = await activeCloudAdapter.load();
+        migrationEnsureOwner(userId, token);
+        state.trades = (cloud.trades || []).map(normTrade);
+        state.playbooks = (cloud.playbooks || []).map(normPb);
+        state.days = (cloud.days || []).map(normDay);
+        state.settings = normSettings(cloud.settings);
+        applySettings(); renderAll();
+        migrationRenderPreview(saved.batch, saved.items);
+      }
+      migrationPanel.querySelector('.migration-status').textContent = action === 'skip'
+        ? 'Record marked as skipped. Your browser journal remains unchanged.'
+        : result.data && result.data.status === 'needs_review'
+          ? 'This record needs review and was not imported. You may explicitly skip it or leave the migration paused.'
+          : result.data && result.data.status === 'failed'
+            ? 'This record could not be imported. Review the message and retry or explicitly skip it.'
+            : 'Record import confirmed by the server.';
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration action failed: ' + ((error && error.message) || 'Please try again.');
+    } finally { migrationBusy = false; }
+  }
+  async function finalizeGuestMigrationImport() {
+    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
+    migrationBusy = true;
+    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
+    try {
+      var result = await authClient.rpc('finalize_guest_migration_import', { p_batch_id: batchId });
+      if (result.error) throw result.error;
+      migrationEnsureOwner(userId, token);
+      await refreshGuestMigrationWorkflow(batchId);
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration completed. Imported records are in your cloud journal; original guest records remain in this browser.';
+    } catch (error) {
+      migrationPanel.querySelector('.migration-status').textContent = 'Migration cannot be finalized yet: ' + ((error && error.message) || 'Resolve or explicitly skip every remaining record.');
+    } finally { migrationBusy = false; }
   }
   async function runGuestMigrationPreview() {
     if (migrationBusy) return;
@@ -577,7 +783,7 @@
       ensurePreviewOwner();
       var batchId = created.data;
       var batchResult = await authClient.from('guest_migration_batches')
-        .select('id,status,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid')
+        .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
         .eq('user_id', authUser.id).eq('id', batchId).single();
       if (batchResult.error) throw batchResult.error;
       ensurePreviewOwner();
@@ -598,12 +804,12 @@
         throw new Error('A previous preview for this exact snapshot is ' + batchResult.data.status + '. Change the guest journal or cloud journal, then prepare a fresh preview.');
       }
       var latest = await authClient.from('guest_migration_batches')
-        .select('id,status,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid')
+        .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
         .eq('user_id', authUser.id).eq('id', batchId).single();
       if (latest.error) throw latest.error;
       ensurePreviewOwner();
       var rows = await authClient.from('guest_migration_items')
-        .select('entity_type,source_record_key,classification,import_status,payload')
+        .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
         .eq('user_id', authUser.id).eq('batch_id', batchId)
         .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true });
       if (rows.error) throw rows.error;
@@ -721,6 +927,7 @@
       applySettings(); setDataState('cloud-ready'); renderAll();
       authNotice('Cloud journal loaded successfully. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
       refreshMigrationPanel();
+      restoreGuestMigrationWorkflow();
     } catch (error) {
       if (token !== authLoadToken) return;
       activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error'); renderAll();

@@ -162,7 +162,8 @@ async function runMigrationInfrastructureTests(test, uid, other, stamp){
   var a=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});if(a.error)throw a.error;assert(a.data==='importing','Could not start migration.');
   var b=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'paused',p_error:null});if(b.error)throw b.error;assert(b.data==='paused','Could not pause migration.');
   var c=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});if(c.error)throw c.error;assert(c.data==='importing','Could not resume migration.');
-  var d=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'cancelled',p_error:null});if(d.error)throw d.error;assert(d.data==='cancelled','Could not cancel test migration.');
+  var d=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'paused',p_error:null});if(d.error)throw d.error;assert(d.data==='paused','Could not pause the resumed migration.');
+  var e=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'cancelled',p_error:null});if(e.error)throw e.error;assert(e.data==='cancelled','Could not cancel the paused test migration.');
   var invalid=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'completed',p_error:null});assert(!!invalid.error,'Unsupported completion transition was accepted.');
   log('Cancelled migration test batch retained as audit evidence: '+batchId,'warn');
  });

@@ -1,6 +1,6 @@
 /* Maxi Trades Journal
    Guest journal data stays in this browser (localStorage).
-   Supabase accounts can load and save their own cloud journal; guest migration remains disabled. */
+   Supabase accounts can load and save their own cloud journal. Guest migration is preview-only; importing remains unavailable in the UI. */
 (function () {
   'use strict';
   var LS_KEY = 'trading-journal-pro-v1';
@@ -261,7 +261,7 @@
 
   /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
   // Stage 3 uses the shared adapter for authenticated cloud loading and writes.
-  // Guest migration and cloud screenshot storage remain separate later stages.
+  // Guest migration preview uses dedicated RPCs; import and screenshot upload require separate explicit workflows.
   function cloudAdapterFor(userId) {
     if (!window.MaxiCloudAdapterFactory) throw new Error('Supabase data adapter module did not load.');
     return window.MaxiCloudAdapterFactory(authClient, userId, {

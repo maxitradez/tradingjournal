@@ -683,7 +683,7 @@
       migrationPanel.querySelector('.migration-status').textContent = 'Migration resumed. Review each remaining record below.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Could not resume migration: ' + ((error && error.message) || 'Please try again.');
-    } finally { migrationBusy = false; }
+    } finally { migrationBusy = false; refreshMigrationPanel(); }
   }
   async function pauseGuestMigrationImport() {
     if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
@@ -697,7 +697,7 @@
       migrationPanel.querySelector('.migration-status').textContent = 'Migration paused. You can resume it later from this account.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Could not pause migration: ' + ((error && error.message) || 'Please try again.');
-    } finally { migrationBusy = false; }
+    } finally { migrationBusy = false; refreshMigrationPanel(); }
   }
   async function runMigrationItemAction(item, action, accountSelect, unassignedCheck, settingsCheck) {
     if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
@@ -743,7 +743,7 @@
             : 'Record import confirmed by the server.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Migration action failed: ' + ((error && error.message) || 'Please try again.');
-    } finally { migrationBusy = false; }
+    } finally { migrationBusy = false; refreshMigrationPanel(); }
   }
   async function finalizeGuestMigrationImport() {
     if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
@@ -757,7 +757,7 @@
       migrationPanel.querySelector('.migration-status').textContent = 'Migration completed. Imported records are in your cloud journal; original guest records remain in this browser.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Migration cannot be finalized yet: ' + ((error && error.message) || 'Resolve or explicitly skip every remaining record.');
-    } finally { migrationBusy = false; }
+    } finally { migrationBusy = false; refreshMigrationPanel(); }
   }
   async function runGuestMigrationPreview() {
     if (migrationBusy) return;

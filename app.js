@@ -286,6 +286,10 @@
       var found = await legacyRow(table, legacyId);
       if (found.error) throw found.error;
       if (found.data) {
+        if (table === 'trades' && payload.notes && typeof payload.notes === 'object') {
+          var existingNotes = found.data.notes && typeof found.data.notes === 'object' ? found.data.notes : {};
+          payload.notes = Object.assign({}, existingNotes, payload.notes);
+        }
         var updated = await api.from(table).update(payload).eq('id', found.data.id).eq('user_id', userId);
         if (updated.error) throw updated.error;
         return found.data.id;

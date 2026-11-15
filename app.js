@@ -214,15 +214,15 @@
   }
   var cloudWriteQueue = Promise.resolve();
   function cloudWrite(task, apply) {
-    var writeUserId = activeCloudUserId;
+    var writeUserId = activeCloudUserId, writeSessionToken = authLoadToken;
     var run = cloudWriteQueue.then(function () {
-      if (!writeUserId || !authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
+      if (!writeUserId || authLoadToken !== writeSessionToken || !authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
         throw new Error('Your account connection changed before this save started. Refresh the journal and try again.');
       }
       setDataState('cloud-syncing');
       return task();
     }).then(function (result) {
-      if (!authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
+      if (authLoadToken !== writeSessionToken || !authUser || authUser.id !== writeUserId || activeCloudUserId !== writeUserId || state.mode !== 'cloud') {
         throw new Error('Your account changed while this save was in progress. Sign in again and refresh to confirm the cloud result.');
       }
       apply(); renderAll(); setDataState('cloud-synced'); return result;
@@ -235,27 +235,27 @@
   }
   function put(kind, obj) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) return cloudWrite(function () { return activeCloudAdapter.put(kind, obj); }, function () {
+    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.put(kind, obj); }, function () {
       var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
       if (i >= 0) list[i] = obj; else list.push(obj);
-    });
+    }); }
     var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
     if (i >= 0) list[i] = obj; else list.push(obj);
     persistLocal(); renderAll(); return Promise.resolve();
   }
   function del(kind, id) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) return cloudWrite(function () { return activeCloudAdapter.del(kind, id); }, function () {
+    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.del(kind, id); }, function () {
       state[kind] = state[kind].filter(function (x) { return x.id !== id; });
-    });
+    }); }
     state[kind] = state[kind].filter(function (x) { return x.id !== id; });
     persistLocal(); renderAll(); return Promise.resolve();
   }
   function saveSettings(obj) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) return cloudWrite(function () { return activeCloudAdapter.saveSettings(obj); }, function () {
+    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.saveSettings(obj); }, function () {
       state.settings = obj; applySettings();
-    });
+    }); }
     state.settings = obj; applySettings(); persistLocal(); renderAll(); return Promise.resolve();
   }
 

@@ -561,7 +561,7 @@
     });
     return b;
   }
-  function delTrade(id) { if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; } var tr = state.trades.find(function (x) { return x.id === id; }); del('trades', id).then(function () { if (tr && tr.shotId) dropAsset(tr.shotId); toast('Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
+  function delTrade(id) { if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; } del('trades', id).then(function (result) { toast(result && result.screenshotCleanupError ? 'Trade deleted, but its screenshot could not be removed from storage. Contact support if it remains.' : 'Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
   function planPill(t) { return h('span', { class: 'pill ' + (t.followed ? 'win' : 'loss'), text: t.followed ? 'Plan kept' : 'Plan broken' }); }
   function emptyHero() {
     return h('div', { class: 'panel hero-empty' },
@@ -1366,7 +1366,8 @@
     if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
     if (state.dataState === 'cloud-loading') { toast('Please wait for the account journal to finish loading'); return; }
     var tr = state.trades.filter(function (t) { return t.example; }), pb = state.playbooks.filter(function (p) { return p.example; });
-    seq(tr, function (t) { return del('trades', t.id); }).then(function () { return seq(pb, function (p) { return del('playbooks', p.id); }); }).then(function () { return seq(state.days.filter(function (d) { return d.example; }), function (d) { return del('days', d.id); }); }).then(function () { if (state.settings.example) return saveSettings(normSettings(null)); }).then(function () { toast('Examples cleared'); }).catch(function (e) { toast(failMsg(e)); });
+    var screenshotCleanupFailures = 0;
+    seq(tr, function (t) { return del('trades', t.id).then(function (result) { if (result && result.screenshotCleanupError) screenshotCleanupFailures++; }); }).then(function () { return seq(pb, function (p) { return del('playbooks', p.id); }); }).then(function () { return seq(state.days.filter(function (d) { return d.example; }), function (d) { return del('days', d.id); }); }).then(function () { if (state.settings.example) return saveSettings(normSettings(null)); }).then(function () { toast(screenshotCleanupFailures ? 'Examples cleared, but ' + screenshotCleanupFailures + ' screenshot(s) could not be removed from storage.' : 'Examples cleared'); }).catch(function (e) { toast(failMsg(e)); });
   }
 
   /* ---------- routing + render ---------- */

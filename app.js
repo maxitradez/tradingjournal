@@ -425,7 +425,7 @@
         review: d.review || '', mood: d.mood == null ? null : Number(d.mood), example: false
       }});
     });
-    if (migrationHasSettings(localSnapshot.settings)) {
+    if (migrationHasSettings(localSnapshot.settings) && !localSnapshot.settings.example) {
       var s = localSnapshot.settings;
       records.push({ type: 'settings', key: 'guest-settings', payload: {
         balance: s.balance, currency: s.currency || '', riskPct: s.riskPct,

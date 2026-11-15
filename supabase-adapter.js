@@ -9,10 +9,6 @@
     var normPb = helpers.normPb, normTrade = helpers.normTrade;
     var normDay = helpers.normDay, normSettings = helpers.normSettings;
     var num = helpers.num;
-      if (!api || !userId) throw new Error('A signed-in Supabase user is required.');
-      var normPb = helpers.normPb, normTrade = helpers.normTrade;
-      var normDay = helpers.normDay, normSettings = helpers.normSettings;
-      var num = helpers.num;
       var ids = { playbooks: {} };
   
       function own(table) { return api.from(table).select('*').eq('user_id', userId); }

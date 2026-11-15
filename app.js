@@ -409,11 +409,11 @@
       state.days = (cloud.days || []).map(normDay);
       state.settings = normSettings(cloud.settings);
       state.mode = 'cloud'; state.readOnlyCloud = false;
-      applySettings(); renderAll(); setDataState('cloud-ready');
+      applySettings(); setDataState('cloud-ready'); renderAll();
       authNotice('Cloud journal loaded successfully. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
-      activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error');
+      activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error'); renderAll();
       authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your browser journal is preserved and unchanged.'), true);
     }
   }

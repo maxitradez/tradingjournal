@@ -1,7 +1,7 @@
 /* Maxi Trades Journal — Supabase data adapter
    Shared adapter implementation for the app and isolated live tests.
-   This file defines the adapter only; the app controls authentication and
-   activation. Guest migration and screenshot storage workflows remain separate. */
+   This file defines authenticated journal access, including private screenshot
+   storage. The app controls authentication and adapter activation. */
 (function (global) {
   'use strict';
   function createCloudAdapter(api, userId, helpers) {
@@ -15,9 +15,11 @@
 
     async function screenshotUrl(path) {
       if (!path || typeof path !== 'string' || path.indexOf(userId + '/') !== 0) return '';
-      var result = await api.storage.from(screenshotBucket).createSignedUrl(path, signedUrlLifetime);
-      if (result.error) return '';
-      return result.data && result.data.signedUrl ? result.data.signedUrl : '';
+      try {
+        var result = await api.storage.from(screenshotBucket).createSignedUrl(path, signedUrlLifetime);
+        if (result.error) return '';
+        return result.data && result.data.signedUrl ? result.data.signedUrl : '';
+      } catch (error) { return ''; }
     }
     async function removeScreenshot(path) {
       if (!path) return;
@@ -147,9 +149,11 @@
           if (results[3].error) throw results[3].error;
           var pbs = (results[0] || []).map(fromCloudPlaybook);
           var trs = (results[1] || []).map(fromCloudTrade);
-          await Promise.all(trs.map(async function (trade) {
-            trade.shotUrl = await screenshotUrl(trade.shotId);
-          }));
+          for (var shotOffset = 0; shotOffset < trs.length; shotOffset += 20) {
+            await Promise.all(trs.slice(shotOffset, shotOffset + 20).map(async function (trade) {
+              trade.shotUrl = await screenshotUrl(trade.shotId);
+            }));
+          }
           // Resolve playbook UUIDs to the journal's stable legacy IDs.
           (results[0] || []).forEach(function (p) { ids.playbooks[String(p.id)] = p.id; });
           trs.forEach(function (t) {

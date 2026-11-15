@@ -163,7 +163,14 @@
         if (result.error) msg.textContent = result.error.code === '23505' ? 'Username already taken.' : result.error.message;
         else { cachedProfile = result.data; msg.textContent = 'Profile updated.'; }
       });
-      card.appendChild(form); box.appendChild(card);
+      card.appendChild(el('p', { class: 'profile-message' }, 'Signed in as ' + (currentUser.email || 'your account')));
+      var signout = el('button', { class: 'btn', type: 'button' }, 'Sign out');
+      signout.addEventListener('click', async function () {
+        signout.disabled = true;
+        var result = await api.auth.signOut();
+        if (result.error) { signout.disabled = false; msg.textContent = result.error.message; }
+      });
+      card.appendChild(form); card.appendChild(signout); box.appendChild(card);
     }
   };
   if (!api || !api.auth) return;

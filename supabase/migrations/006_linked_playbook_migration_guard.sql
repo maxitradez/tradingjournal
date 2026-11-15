@@ -155,6 +155,7 @@ begin
                     select p.id into v_playbook_id
                       from public.playbooks p
                      where p.user_id = v_user_id
+                       and p.is_example = false
                        and (p.legacy_id = v_playbook_legacy or p.id::text = v_playbook_legacy)
                        and p.name = coalesce(nullif(v_playbook_item.payload->>'name', ''), 'Untitled')
                        and coalesce(p.description, '') = coalesce(v_playbook_item.payload->>'description', '')

@@ -828,18 +828,10 @@
       } else if (batchResult.data.status !== 'previewed') {
         throw new Error('A previous preview for this exact snapshot is ' + batchResult.data.status + '. Change the guest journal or cloud journal, then prepare a fresh preview.');
       }
-      var latest = await authClient.from('guest_migration_batches')
-        .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
-        .eq('user_id', authUser.id).eq('id', batchId).single();
-      if (latest.error) throw latest.error;
+      var savedPreview = await migrationFetchWorkflow(batchId);
+      if (!savedPreview) throw new Error('The staged migration preview could not be found.');
       ensurePreviewOwner();
-      var rows = await authClient.from('guest_migration_items')
-        .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
-        .eq('user_id', authUser.id).eq('batch_id', batchId)
-        .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true });
-      if (rows.error) throw rows.error;
-      ensurePreviewOwner();
-      migrationRenderPreview(latest.data, rows.data || []);
+      migrationRenderPreview(savedPreview.batch, savedPreview.items);
       migrationPanel.querySelector('.migration-status').textContent = 'Preview saved to private migration staging for this account. No journal records were imported; browser guest data is unchanged.';
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Preview could not be completed: ' + ((error && error.message) || 'Please try again.');

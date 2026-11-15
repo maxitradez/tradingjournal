@@ -494,7 +494,7 @@
       counts.appendChild(h('div', { class: 'migration-count' },
         h('strong', { text: String(entry[1]) }), h('span', { text: entry[0] })));
     });
-    var note = h('p', { class: 'migration-note', text: 'Preview only. No trades, playbooks, journal notes or settings have been imported. Your guest journal remains in this browser.' });
+    var note = h('p', { class: 'migration-note', text: 'Preview only. Nothing has been imported. Before a future import, each trade will need an explicit trading-account choice or confirmation to remain unassigned; settings need separate confirmation. Screenshot attachments require a separate upload step. Your guest journal remains in this browser.' });
     var list = h('div', { class: 'migration-item-list' });
     items.slice(0, 40).forEach(function (item) {
       list.appendChild(h('div', { class: 'migration-item' },
@@ -519,6 +519,14 @@
       return;
     }
     migrationBusy = true;
+    var previewUserId = authUser.id;
+    var previewSessionToken = authLoadToken;
+    function ensurePreviewOwner() {
+      if (!authUser || authUser.id !== previewUserId || activeCloudUserId !== previewUserId ||
+          authLoadToken !== previewSessionToken || state.mode !== 'cloud') {
+        throw new Error('The signed-in account changed during preview. No further migration preview steps were started.');
+      }
+    }
     var button = migrationPanel.querySelector('.migration-preview-btn');
     button.disabled = true; button.textContent = 'Preparing preview…';
     migrationPanel.querySelector('.migration-status').textContent = 'Comparing your browser journal with this account and staging a read-only preview…';
@@ -540,22 +548,26 @@
         p_migration_key: key, p_source_version: 'guest-v1', p_manifest: manifest
       });
       if (created.error) throw created.error;
+      ensurePreviewOwner();
       var batchId = created.data;
       var batchResult = await authClient.from('guest_migration_batches')
         .select('id,status,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid')
         .eq('user_id', authUser.id).eq('id', batchId).single();
       if (batchResult.error) throw batchResult.error;
+      ensurePreviewOwner();
       if (batchResult.data.status === 'draft') {
         for (var offset = 0; offset < items.length; offset += 250) {
           var staged = await authClient.rpc('stage_guest_migration_items', {
             p_batch_id: batchId, p_items: items.slice(offset, offset + 250)
           });
           if (staged.error) throw staged.error;
+          ensurePreviewOwner();
         }
         var finalized = await authClient.rpc('finalize_guest_migration_preview', {
           p_batch_id: batchId, p_preview_notes: { source: 'account-ui', local_snapshot_hash: localHash, cloud_snapshot_hash: cloudHash }
         });
         if (finalized.error) throw finalized.error;
+        ensurePreviewOwner();
       } else if (batchResult.data.status !== 'previewed') {
         throw new Error('A previous preview for this exact snapshot is ' + batchResult.data.status + '. Change the guest journal or cloud journal, then prepare a fresh preview.');
       }
@@ -563,11 +575,13 @@
         .select('id,status,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid')
         .eq('user_id', authUser.id).eq('id', batchId).single();
       if (latest.error) throw latest.error;
+      ensurePreviewOwner();
       var rows = await authClient.from('guest_migration_items')
         .select('entity_type,source_record_key,classification,import_status,payload')
         .eq('user_id', authUser.id).eq('batch_id', batchId)
         .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true });
       if (rows.error) throw rows.error;
+      ensurePreviewOwner();
       migrationRenderPreview(latest.data, rows.data || []);
       migrationPanel.querySelector('.migration-status').textContent = 'Preview saved to your account. No journal records were imported.';
     } catch (error) {

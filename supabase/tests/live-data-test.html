@@ -232,8 +232,6 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
   await test('Guest importer blocks unconfirmed, foreign-account and out-of-order trades',async function(){
    var noChoice=await importItem(tradeKey);assert(!!noChoice.error,'Trade imported without an account choice.');
    var beforePlaybook=await importItem(tradeKey,{p_confirm_unassigned_account:true});assert(!!beforePlaybook.error,'Trade imported before its playbook.');
-   var foreign=await importItem(tradeKey,{p_account_id:other,p_confirm_unassigned_account:true});
-   assert(!!foreign.error,'Importer accepted another user trading account.');
    var row=await client.from('guest_migration_items').select('import_status,import_attempts').eq('id',itemId(tradeKey)).single();if(row.error)throw row.error;
    assert(row.data.import_status==='pending'&&row.data.import_attempts===0,'Rejected import changed item progress.');
   });
@@ -241,6 +239,10 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
    var p=await importItem(pbKey);if(p.error)throw p.error;
    assert(p.data.status==='imported'&&p.data.target_record_id,'Playbook was not imported.');made.pb=p.data.target_record_id;
    var again=await importItem(pbKey);if(again.error)throw again.error;assert(again.data.already_done===true,'Retry was not idempotent.');
+   var foreign=await importItem(tradeKey,{p_account_id:other,p_confirm_unassigned_account:true});
+   assert(!!foreign.error,'Importer accepted another user trading account.');
+   var tradeState=await client.from('guest_migration_items').select('import_status,import_attempts').eq('id',itemId(tradeKey)).single();if(tradeState.error)throw tradeState.error;
+   assert(tradeState.data.import_status==='pending'&&tradeState.data.import_attempts===0,'Foreign-account rejection changed trade progress.');
    var rows=await client.from('playbooks').select('id').eq('user_id',uid).eq('legacy_id',pbKey);if(rows.error)throw rows.error;
    assert(rows.data.length===1,'Retry created a duplicate playbook.');
   });

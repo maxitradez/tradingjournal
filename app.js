@@ -501,6 +501,18 @@
       return [item.entity_type, item.source_record_key, item.fingerprint];
     }));
   }
+  function migrationCloudSnapshotHash(cloud) {
+    var trades = (cloud.trades || []).map(normTrade).map(function (x) { return migrationComparable('trade', x); })
+      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
+    var playbooks = (cloud.playbooks || []).map(normPb).map(function (x) { return migrationComparable('playbook', x); })
+      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
+    var days = (cloud.days || []).map(normDay).map(function (x) { return migrationComparable('daily_journal', x); })
+      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
+    return migrationHash({
+      trades: trades, playbooks: playbooks, days: days,
+      settings: migrationComparable('settings', normSettings(cloud.settings))
+    });
+  }
   function verifyGuestSnapshotUnchanged() {
     if (!localSnapshot) throw new Error('The original browser journal snapshot is unavailable. Refresh and sign in again before migrating.');
     var storedSnapshot = readStoredGuestSnapshot();
@@ -730,6 +742,11 @@
       if (!batch.manifest || currentHash !== batch.manifest.local_snapshot_hash) {
         throw new Error('Your browser journal changed after this preview. Prepare a fresh preview before importing so the correct snapshot is reviewed.');
       }
+      var latestCloud = await activeCloudAdapter.load();
+      migrationEnsureOwner(userId, token);
+      if (migrationCloudSnapshotHash(latestCloud) !== batch.manifest.cloud_snapshot_hash) {
+        throw new Error('Your cloud journal changed after this preview. Refresh the preview and review the updated comparison before importing.');
+      }
       migrationBusy = true;
       var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batch.id, p_next_status: 'importing', p_error: null });
       if (result.error) throw result.error;
@@ -868,11 +885,8 @@
     migrationPanel.querySelector('.migration-status').textContent = 'Comparing your browser journal with this account and staging a read-only preview…';
     try {
       var localHash = migrationHash(items.map(function (x) { return [x.entity_type, x.source_record_key, x.fingerprint]; }));
-      var cloudHash = migrationHash({
-        trades: (state.trades || []).map(function (x) { return migrationComparable('trade', x); }),
-        playbooks: (state.playbooks || []).map(function (x) { return migrationComparable('playbook', x); }),
-        days: (state.days || []).map(function (x) { return migrationComparable('daily_journal', x); }),
-        settings: migrationComparable('settings', state.settings)
+      var cloudHash = migrationCloudSnapshotHash({
+        trades: state.trades, playbooks: state.playbooks, days: state.days, settings: state.settings
       });
       var manifest = {
         source: 'maxi-trades-journal-local-browser', source_version: 'guest-v1',

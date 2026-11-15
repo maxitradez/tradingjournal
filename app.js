@@ -550,7 +550,11 @@
     migrationWorkflowItems = items || [];
     var results = migrationPanel.querySelector('.migration-results');
     results.textContent = '';
-    var title = h('h3', { text: batch.status === 'completed' ? 'Migration completed' : 'Preview ready — nothing imported yet' });
+    var titleText = batch.status === 'completed' ? 'Migration completed'
+      : batch.status === 'importing' ? 'Migration in progress'
+        : batch.status === 'paused' ? 'Migration paused'
+          : 'Preview ready — nothing imported yet';
+    var title = h('h3', { text: titleText });
     var counts = h('div', { class: 'migration-counts' });
     [
       ['Total', batch.records_seen || 0], ['New', batch.records_new || 0],

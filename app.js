@@ -435,6 +435,16 @@
     }
     return records;
   }
+  function migrationValidDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+    var date = new Date(String(value) + 'T00:00:00Z');
+    return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === String(value);
+  }
+  function migrationTradeCore(p) {
+    return { date: p.date || '', time: p.time || '', asset: p.asset || '', side: p.side || 'buy',
+      entry: p.entry == null ? '' : String(p.entry), sl: p.sl == null ? '' : String(p.sl),
+      tp: p.tp == null ? '' : String(p.tp), exit: p.exit == null ? '' : String(p.exit), pnl: Number(p.pnl) || 0 };
+  }
   function migrationClassify(record) {
     var type = record.type, p = record.payload, list, found = null;
     if (type === 'attachment') return 'conflict';
@@ -450,6 +460,11 @@
       found = (list || []).find(function (x) { return String(x.date || x.id) === String(p.date); });
     } else {
       found = (list || []).find(function (x) { return !x.example && String(x.id) === String(p.id); });
+      if (!found && type === 'trade') {
+        found = (list || []).find(function (x) {
+          return !x.example && migrationStableString(migrationTradeCore(x)) === migrationStableString(migrationTradeCore(p));
+        });
+      }
     }
     if (!found) {
       if (type === 'trade' && p.playbook) {

@@ -82,13 +82,21 @@ async function runAdapterTests(test){
   });
   await test('Adapter creates, loads and updates playbook/trade relationships',async function(){
    await adapter.put('playbooks',{id:pbId,name:'Adapter test '+stamp,description:'created through shared adapter',rules:['adapter rule'],example:false});pbMade=true;
+   await adapter.put('playbooks',{id:pbId,name:'Adapter test '+stamp,description:'updated through shared adapter',rules:['adapter rule','updated'],example:false});
    await adapter.put('trades',{id:tradeId,date:dayDate,time:'10:15',asset:'TEST-ADAPTER',side:'sell',entry:'100',sl:'105',tp:'90',exit:'92',pnl:8,r:1.6,risk:5,playbook:pbId,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'adapter test',shot:'',shotId:'',example:false});tradeMade=true;
    var loaded=await adapter.load(),pb=loaded.playbooks.find(x=>x.id===pbId),tr=loaded.trades.find(x=>x.id===tradeId);
-   assert(pb&&pb.name==='Adapter test '+stamp,'Adapter did not map its playbook.');
+   assert(pb&&pb.name==='Adapter test '+stamp&&pb.description==='updated through shared adapter'&&pb.rules.length===2,'Adapter did not create/update/map its playbook.');
    assert(tr&&tr.side==='sell'&&tr.pnl===8&&tr.playbook===pbId,'Adapter did not map trade values or playbook reference.');
    await adapter.put('trades',{id:tradeId,date:dayDate,time:'10:15',asset:'TEST-ADAPTER',side:'sell',entry:'100',sl:'105',tp:'90',exit:'91',pnl:9,r:1.8,risk:5,playbook:pbId,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'adapter updated',shot:'',shotId:'',example:false});
    loaded=await adapter.load();tr=loaded.trades.find(x=>x.id===tradeId);
    assert(tr&&tr.pnl===9&&tr.exit==='91','Adapter trade update did not persist.');
+  });
+  await test('Adapter safely deletes linked playbook and trade',async function(){
+   await adapter.del('playbooks',pbId);pbMade=false;
+   var loaded=await adapter.load(),tr=loaded.trades.find(x=>x.id===tradeId);
+   assert(tr&&tr.playbook===pbId,'Deleting a playbook did not preserve its trade history label.');
+   await adapter.del('trades',tradeId);tradeMade=false;
+   loaded=await adapter.load();assert(!loaded.trades.some(x=>x.id===tradeId),'Adapter did not delete the test trade.');
   });
   await test('Adapter daily journal create, lookup, update and delete',async function(){
    await adapter.put('days',{id:dayDate,date:dayDate,plan:'adapter plan '+stamp,review:'',mood:3,example:false});dayMade=true;
@@ -97,6 +105,8 @@ async function runAdapterTests(test){
    await adapter.put('days',{id:dayDate,date:dayDate,plan:'adapter plan '+stamp,review:'adapter review',mood:4,example:false});
    loaded=await adapter.load();day=loaded.days.find(x=>x.id===dayDate);
    assert(day&&day.review==='adapter review'&&day.mood===4,'Adapter daily journal update failed.');
+   await adapter.del('days',dayDate);dayMade=false;
+   loaded=await adapter.load();assert(!loaded.days.some(x=>x.id===dayDate),'Adapter did not delete the test daily journal.');
   });
   await test('Adapter settings update preserves unrelated account preferences',async function(){
    var snap=await client.from('user_settings').select('*').eq('user_id',uid).single();if(snap.error)throw snap.error;original=snap.data;

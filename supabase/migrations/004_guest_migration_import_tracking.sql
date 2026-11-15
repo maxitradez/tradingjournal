@@ -89,6 +89,38 @@ comment on column public.guest_migration_batches.records_failed is
 comment on column public.guest_migration_batches.records_skipped is
     'Count of duplicate or otherwise intentionally skipped migration items.';
 
+-- Keep classification and initial import eligibility aligned for every staged item,
+-- including items created after this migration is installed.
+create or replace function public.set_guest_migration_item_initial_status()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+    if tg_op = 'INSERT' or new.classification is distinct from old.classification then
+        new.import_status := case
+            when new.classification in ('duplicate', 'invalid') then 'skipped'
+            when new.classification = 'conflict' then 'needs_review'
+            else 'pending'
+        end;
+        new.target_record_id := null;
+        new.imported_at := null;
+        new.import_error := null;
+        new.import_attempts := 0;
+    end if;
+    return new;
+end;
+$;
+
+drop trigger if exists guest_migration_item_initial_status
+    on public.guest_migration_items;
+create trigger guest_migration_item_initial_status
+before insert or update of classification
+on public.guest_migration_items
+for each row execute function public.set_guest_migration_item_initial_status();
+
+revoke all on function public.set_guest_migration_item_initial_status() from public, anon, authenticated;
+
 -- Existing direct table-write restrictions and RLS remain unchanged.
 -- Import progress will be changed only by the authenticated, ownership-checked
 -- import RPCs introduced in the next implementation step.

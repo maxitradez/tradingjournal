@@ -193,7 +193,12 @@
   function lite(ts) { var n = ts.length, w = 0, tot = 0; ts.forEach(function (t) { tot += t.pnl; if (t.pnl > 0) w++; }); return { n: n, total: tot, winRate: n ? w / n : 0 }; }
 
   /* ---------- storage ---------- */
-  function persistLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ trades: state.trades, playbooks: state.playbooks, days: state.days, settings: state.settings })); } catch (e) {} }
+  function persistLocal() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ trades: state.trades, playbooks: state.playbooks, days: state.days, settings: state.settings }));
+      if (authUser && !state.readOnlyCloud) localSnapshot = captureLocalSnapshot();
+    } catch (e) {}
+  }
   function loadLocal() {
     try {
       var o = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
@@ -203,7 +208,7 @@
     applySettings();
   }
   function put(kind, obj) {
-    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
     if (state.mode === 'cloud') return state.cols[kind].doc(obj.id).set(obj);
     var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
     if (i >= 0) list[i] = obj; else list.push(obj);
@@ -1261,7 +1266,7 @@
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
   }
   function submitTrade(another) {
-    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     var msg = $('form-msg'); msg.textContent = '';
     var asset = $('f-asset').value.trim().toUpperCase(), pnl = num($('f-pnl').value), date = $('f-date').value;
     if (!asset) { msg.textContent = 'Enter the pair or asset you traded.'; $('f-asset').focus(); return; }
@@ -1292,7 +1297,7 @@
     openDrawer($('drawer-pb'), 'p-name');
   }
   function submitPb() {
-    if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; }
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     var name = $('p-name').value.trim(), msg = $('pb-msg'); msg.textContent = '';
     if (!name) { msg.textContent = 'Give the playbook a name.'; $('p-name').focus(); return; }
     if (state.mode === 'pending') { msg.textContent = 'Still connecting to your saved journal. Try again in a moment.'; return; }

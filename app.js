@@ -793,7 +793,12 @@
     if (state.mode === 'cloud') {
       if (!activeCloudAdapter) return Promise.reject(new Error('Your cloud connection is not ready. Refresh and try again.'));
       if (s.blob) return activeCloudAdapter.uploadScreenshot(s.blob, tradeId).then(function (path) {
-        return activeCloudAdapter.getScreenshotUrl(path).then(function (url) { return { id: path, drop: old, url: url }; });
+        return activeCloudAdapter.getScreenshotUrl(path).then(function (url) {
+          if (!url) throw new Error('Could not create a secure screenshot preview. Please try uploading again.');
+          return { id: path, drop: old, url: url };
+        }).catch(function (error) {
+          return activeCloudAdapter.deleteScreenshot(path).catch(function () {}).then(function () { throw error; });
+        });
       });
       if (s.remove) return Promise.resolve({ id: '', drop: old, url: '' });
       return Promise.resolve({ id: old, drop: '', url: existing ? (existing.shotUrl || '') : '' });
@@ -1403,7 +1408,7 @@
     var inp = this, f = inp.files && inp.files[0], msg = $('form-msg');
     if (!f) return;
     msg.textContent = '';
-    if (!/^image\\/(jpeg|png|webp)$/i.test(f.type)) { msg.textContent = 'Choose a JPEG, PNG or WebP image.'; inp.value = ''; return; }
+    if (!/^image\/(jpeg|png|webp)$/i.test(f.type)) { msg.textContent = 'Choose a JPEG, PNG or WebP image.'; inp.value = ''; return; }
     if (f.size > 25 * 1024 * 1024) { msg.textContent = 'That image is over 25 MB. Choose a smaller one.'; inp.value = ''; return; }
     shrinkImage(f).then(function (b) {
       if (b.size > 10 * 1024 * 1024) throw new Error('The compressed image is over the 10 MB storage limit. Choose a smaller image.');

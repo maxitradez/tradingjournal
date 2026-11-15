@@ -326,6 +326,7 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
   if(made.day){var b=await client.from('daily_journals').delete().eq('id',made.day).eq('user_id',uid);if(b.error)log('Cleanup warning (importer journal): '+b.error.message,'warn');}
   if(made.pb){var d=await client.from('playbooks').delete().eq('id',made.pb).eq('user_id',uid);if(d.error)log('Cleanup warning (importer playbook): '+d.error.message,'warn');}
   if(made.collision){var e=await client.from('playbooks').delete().eq('id',made.collision).eq('user_id',uid);if(e.error)log('Cleanup warning (collision playbook): '+e.error.message,'warn');}
+  var orphanTrades=await client.from('trades').delete().eq('user_id',uid).in('legacy_id',[linkedTradeKey,duplicateTradeKey]);if(orphanTrades.error)log('Cleanup warning (linked-playbook test trades): '+orphanTrades.error.message,'warn');
   if(made.duplicatePb){var f=await client.from('playbooks').delete().eq('id',made.duplicatePb).eq('user_id',uid);if(f.error)log('Cleanup warning (duplicate playbook): '+f.error.message,'warn');}
  }
 }

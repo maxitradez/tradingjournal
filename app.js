@@ -606,21 +606,29 @@
     if (batchResult.error) throw batchResult.error;
     migrationEnsureOwner(userId, token);
     if (!batchResult.data) return null;
-    var rows = await authClient.from('guest_migration_items')
-      .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
-      .eq('user_id', userId).eq('batch_id', batchResult.data.id)
-      .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true });
-    if (rows.error) throw rows.error;
-    migrationEnsureOwner(userId, token);
+    var rows = [], offset = 0, pageSize = 500;
+    while (true) {
+      var page = await authClient.from('guest_migration_items')
+        .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
+        .eq('user_id', userId).eq('batch_id', batchResult.data.id)
+        .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+      if (page.error) throw page.error;
+      migrationEnsureOwner(userId, token);
+      var pageItems = page.data || [];
+      rows = rows.concat(pageItems);
+      if (pageItems.length < pageSize) break;
+      offset += pageSize;
+    }
     migrationWorkflowAccounts = [];
-    if ((rows.data || []).some(function (item) { return item.entity_type === 'trade' && item.classification === 'new'; })) {
+    if (rows.some(function (item) { return item.entity_type === 'trade' && item.classification === 'new'; })) {
       var accounts = await authClient.from('trading_accounts').select('id,account_name')
         .eq('user_id', userId).order('account_name', { ascending: true });
       if (accounts.error) throw accounts.error;
       migrationEnsureOwner(userId, token);
       migrationWorkflowAccounts = accounts.data || [];
     }
-    return { batch: batchResult.data, items: rows.data || [] };
+    return { batch: batchResult.data, items: rows };
   }
   async function restoreGuestMigrationWorkflow() {
     if (migrationBusy || !authUser || state.mode !== 'cloud' || !activeCloudAdapter) return;

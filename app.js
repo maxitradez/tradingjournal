@@ -532,6 +532,7 @@
     });
     var note = h('p', { class: 'migration-note', text: 'This is a saved private preview. Nothing is imported until you separately authorize it below. Guest records in this browser are never deleted by migration. Screenshot attachments and unsupported record types need a separate workflow.' });
     var list = h('div', { class: 'migration-item-list' });
+    var playbooksPending = migrationWorkflowItems.some(function (item) { return item.entity_type === 'playbook' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status); });
     migrationWorkflowItems.forEach(function (item) {
       var row = h('div', { class: 'migration-item migration-workflow-item' });
       row.appendChild(h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }));
@@ -555,7 +556,8 @@
           settingsCheck = h('input', { type: 'checkbox', class: 'migration-settings-check' });
           actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings into my account' })));
         }
-        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: item.import_status === 'failed' ? 'Retry import' : 'Import this record', onclick: function () {
+        var tradeBlocked = item.entity_type === 'trade' && playbooksPending;
+        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Import playbooks first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlocked ? 'Import or explicitly skip all eligible playbooks before importing trades.' : '', onclick: function () {
           runMigrationItemAction(item, 'import', accountSelect, unassignedCheck, settingsCheck);
         }}));
       } else if (batch.status === 'importing' && item.import_status !== 'imported' && item.import_status !== 'skipped') {

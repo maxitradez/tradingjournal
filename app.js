@@ -588,6 +588,7 @@
     }
     results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(workflow); results.appendChild(list);
     results.hidden = false;
+    refreshMigrationPanel();
   }
   function migrationEnsureOwner(userId, token) {
     if (!authUser || authUser.id !== userId || activeCloudUserId !== userId || authLoadToken !== token || state.mode !== 'cloud') {
@@ -860,7 +861,8 @@
       ? records.length + ' guest records or settings are available locally. Review a comparison with your account before deciding whether to migrate.'
       : 'No personal guest records or settings were found at this browser location. Example records are excluded. Guest storage is origin-specific: open the same GitHub Pages address where you created the records; a downloaded ZIP or file:// copy has separate storage.';
     var button = migrationPanel.querySelector('.migration-preview-btn');
-    button.disabled = migrationBusy || !records.length || !migrationPanel.querySelector('.migration-consent-check').checked;
+    var workflowInProgress = migrationWorkflowBatch && ['importing', 'paused'].includes(migrationWorkflowBatch.status);
+    button.disabled = migrationBusy || workflowInProgress || !records.length || !migrationPanel.querySelector('.migration-consent-check').checked;
   }
   function buildMigrationPanel() {
     migrationPanel = h('section', { class: 'migration-panel', hidden: true, 'aria-label': 'Guest journal migration' },

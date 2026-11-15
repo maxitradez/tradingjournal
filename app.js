@@ -230,8 +230,17 @@
     var ids = { playbooks: {} };
 
     function own(table) { return api.from(table).select('*').eq('user_id', userId); }
-    function legacyRow(table, legacyId) {
-      return own(table).eq('legacy_id', String(legacyId)).maybeSingle();
+    async function legacyRow(table, legacyId) {
+      var key = String(legacyId);
+      var found = await own(table).eq('legacy_id', key).maybeSingle();
+      if (found.error || found.data) return found;
+      // Older cloud rows may predate legacy_id and use their database UUID
+      // as the journal ID. Resolve those rows by primary key without sending
+      // arbitrary non-UUID journal IDs to a UUID column.
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) {
+        return own(table).eq('id', key).maybeSingle();
+      }
+      return found;
     }
     function jsonArray(value) { return Array.isArray(value) ? value : []; }
 
@@ -396,14 +405,19 @@
         }
         var table = kind === 'trades' ? 'trades' : kind === 'days' ? 'daily_journals' : null;
         if (!table) throw new Error('Unsupported cloud record type: ' + kind);
-        var query = own(table);
-        if (kind === 'days') query = query.eq('journal_date', String(id));
-        else query = query.eq('legacy_id', String(id));
-        var found = await query.select('id');
+        if (kind === 'days') {
+          var dayRows = await own(table).eq('journal_date', String(id)).is('account_id', null).select('id');
+          if (dayRows.error) throw dayRows.error;
+          var dayIds = (dayRows.data || []).map(function (row) { return row.id; });
+          if (!dayIds.length) return;
+          var dayDelete = await api.from(table).delete().eq('user_id', userId).in('id', dayIds);
+          if (dayDelete.error) throw dayDelete.error;
+          return;
+        }
+        var found = await legacyRow(table, id);
         if (found.error) throw found.error;
-        var rowIds = (found.data || []).map(function (row) { return row.id; });
-        if (!rowIds.length) return;
-        var result = await api.from(table).delete().eq('user_id', userId).in('id', rowIds);
+        if (!found.data) return;
+        var result = await api.from(table).delete().eq('user_id', userId).eq('id', found.data.id);
         if (result.error) throw result.error;
       },
       async saveSettings(settings) {

@@ -30,7 +30,7 @@ button:disabled{opacity:.5;cursor:wait}#results{white-space:pre-wrap;font:13px/1
 </div>
 <div class="panel">
 <h2>2. Run isolated tests</h2>
-<p class="small">Tests: authenticated reads, playbook insert/update/delete, trade insert/update/delete with a playbook FK, daily journal insert/update/delete, private screenshot bucket upload/download/delete, cross-user filtered read and forged-owner insert rejection.</p>
+<p class="small">Tests: direct Supabase CRUD, RLS and private storage, plus the exact shared app adapter's load, mapping, create, update, delete and settings-preservation behavior.</p>
 <p class="warn small">Use only one of the dedicated test accounts. Do not enter your main account password. Never paste a Supabase secret/service-role key here.</p>
 <button id="run" disabled>Run live tests</button>
 <button id="clear" disabled>Clear output</button>
@@ -41,6 +41,7 @@ button:disabled{opacity:.5;cursor:wait}#results{white-space:pre-wrap;font:13px/1
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../../supabase-config.js"></script>
+<script src="../../supabase-adapter.js"></script>
 <script>
 (function(){
 'use strict';
@@ -60,6 +61,59 @@ async function signIn(){
 }
 async function signOut(){if(client)await client.auth.signOut();session=null;setButtons(false);status('Signed out.');}
 function dateToday(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+async function runAdapterTests(){
+ var user=(await client.auth.getUser()).data.user;
+ assert(user&&user.id,'No authenticated user found.');
+ var uid=user.id, stamp='maxi_adapter_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+ var pbId='adapter_pb_'+stamp, tradeId='adapter_trade_'+stamp;
+ var dayDate=new Date(Date.UTC(1970,0,1)+Math.floor(Math.random()*4102444800000)).toISOString().slice(0,10);
+ var adapter=window.MaxiCloudAdapterFactory(client,uid,{
+  num:function(v){if(v===''||v==null)return null;var n=parseFloat(v);return isFinite(n)?n:null;},
+  normTrade:function(t){return {id:String(t.id),date:String(t.date||''),time:String(t.time||''),asset:String(t.asset||''),side:t.side==='sell'?'sell':'buy',entry:t.entry==null?'':String(t.entry),sl:t.sl==null?'':String(t.sl),tp:t.tp==null?'':String(t.tp),exit:t.exit==null?'':String(t.exit),pnl:Number(t.pnl)||0,r:t.r==null||t.r===''?null:Number(t.r),risk:t.risk==null||t.risk===''||!isFinite(Number(t.risk))?null:Number(t.risk),playbook:String(t.playbook||''),emotion:String(t.emotion||''),followed:t.followed!==false,misses:Array.isArray(t.misses)?t.misses.map(String):[],lesson:String(t.lesson||''),shot:String(t.shot||''),shotId:String(t.shotId||''),mistakes:Array.isArray(t.mistakes)?t.mistakes.map(String):[],example:!!t.example,createdAt:Number(t.createdAt)||0};},
+  normPb:function(p){return {id:String(p.id),name:String(p.name||'Untitled'),description:String(p.description||''),rules:Array.isArray(p.rules)?p.rules.map(String):[],example:!!p.example,createdAt:Number(p.createdAt)||0};},
+  normDay:function(d){var m=Number(d.mood);return {id:String(d.id),date:String(d.date||d.id),plan:String(d.plan||''),review:String(d.review||''),mood:m>=1&&m<=5?Math.round(m):null,example:!!d.example};},
+  normSettings:function(o){o=o||{};var b=Number(o.balance),r=Number(o.riskPct);return {balance:o.balance!=null&&o.balance!==''&&isFinite(b)&&b>0?b:null,riskPct:o.riskPct!=null&&o.riskPct!==''&&isFinite(r)&&r>0?r:null,currency:String(o.currency||'').trim().slice(0,4),monthlyTarget:o.monthlyTarget==null?null:Number(o.monthlyTarget),maxTradesDay:o.maxTradesDay==null?null:Number(o.maxTradesDay),dailyLoss:o.dailyLoss==null?null:Number(o.dailyLoss),example:!!o.example};}
+ });
+ var pbMade=false,tradeMade=false,dayMade=false,original=null;
+ try{
+  await test('Adapter loads and maps existing account data',async function(){
+   var loaded=await adapter.load();assert(Array.isArray(loaded.trades)&&Array.isArray(loaded.playbooks)&&Array.isArray(loaded.days),'Adapter load did not return journal collections.');
+   assert(loaded.settings&&typeof loaded.settings==='object','Adapter did not map account settings.');
+  });
+  await test('Adapter creates, loads and updates playbook/trade relationships',async function(){
+   await adapter.put('playbooks',{id:pbId,name:'Adapter test '+stamp,description:'created through shared adapter',rules:['adapter rule'],example:false});pbMade=true;
+   await adapter.put('trades',{id:tradeId,date:dayDate,time:'10:15',asset:'TEST-ADAPTER',side:'sell',entry:'100',sl:'105',tp:'90',exit:'92',pnl:8,r:1.6,risk:5,playbook:pbId,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'adapter test',shot:'',shotId:'',example:false});tradeMade=true;
+   var loaded=await adapter.load(),pb=loaded.playbooks.find(x=>x.id===pbId),tr=loaded.trades.find(x=>x.id===tradeId);
+   assert(pb&&pb.name==='Adapter test '+stamp,'Adapter did not map its playbook.');
+   assert(tr&&tr.side==='sell'&&tr.pnl===8&&tr.playbook===pbId,'Adapter did not map trade values or playbook reference.');
+   await adapter.put('trades',{id:tradeId,date:dayDate,time:'10:15',asset:'TEST-ADAPTER',side:'sell',entry:'100',sl:'105',tp:'90',exit:'91',pnl:9,r:1.8,risk:5,playbook:pbId,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'adapter updated',shot:'',shotId:'',example:false});
+   loaded=await adapter.load();tr=loaded.trades.find(x=>x.id===tradeId);
+   assert(tr&&tr.pnl===9&&tr.exit==='91','Adapter trade update did not persist.');
+  });
+  await test('Adapter daily journal create, lookup, update and delete',async function(){
+   await adapter.put('days',{id:dayDate,date:dayDate,plan:'adapter plan '+stamp,review:'',mood:3,example:false});dayMade=true;
+   var loaded=await adapter.load(),day=loaded.days.find(x=>x.id===dayDate);
+   assert(day&&day.plan==='adapter plan '+stamp,'Adapter daily journal mapping failed.');
+   await adapter.put('days',{id:dayDate,date:dayDate,plan:'adapter plan '+stamp,review:'adapter review',mood:4,example:false});
+   loaded=await adapter.load();day=loaded.days.find(x=>x.id===dayDate);
+   assert(day&&day.review==='adapter review'&&day.mood===4,'Adapter daily journal update failed.');
+  });
+  await test('Adapter settings update preserves unrelated account preferences',async function(){
+   var snap=await client.from('user_settings').select('*').eq('user_id',uid).single();if(snap.error)throw snap.error;original=snap.data;
+   var prefs=original.preferences&&typeof original.preferences==='object'?original.preferences:{};
+   var settings={balance:original.default_starting_balance,currency:original.default_currency||'USD',riskPct:prefs.riskPct==null?1:prefs.riskPct,monthlyTarget:prefs.monthlyTarget==null?null:prefs.monthlyTarget,maxTradesDay:prefs.maxTradesDay==null?null:prefs.maxTradesDay,dailyLoss:prefs.dailyLoss==null?null:prefs.dailyLoss,example:!!prefs.example};
+   await adapter.saveSettings(settings);
+   var after=await client.from('user_settings').select('*').eq('user_id',uid).single();if(after.error)throw after.error;
+   assert(after.data.timezone===original.timezone,'Adapter changed timezone.');
+   Object.keys(prefs).forEach(k=>assert(after.data.preferences[k]===prefs[k],'Adapter overwrote unrelated preference '+k));
+  });
+ } finally {
+  if(original){var pref=original.preferences&&typeof original.preferences==='object'?original.preferences:{};var restore=await client.from('user_settings').update({default_currency:original.default_currency,default_starting_balance:original.default_starting_balance,timezone:original.timezone,preferences:pref,is_example:original.is_example}).eq('user_id',uid);if(restore.error)log('Cleanup warning (adapter settings): '+restore.error.message,'warn');else log('Cleanup: restored adapter settings snapshot.','warn');}
+  if(dayMade){try{await adapter.del('days',dayDate);log('Cleanup: removed adapter daily journal.','warn');}catch(e){log('Cleanup warning (adapter journal): '+e.message,'warn');}}
+  if(tradeMade){try{await adapter.del('trades',tradeId);log('Cleanup: removed adapter trade.','warn');}catch(e){log('Cleanup warning (adapter trade): '+e.message,'warn');}}
+  if(pbMade){try{await adapter.del('playbooks',pbId);log('Cleanup: removed adapter playbook.','warn');}catch(e){log('Cleanup warning (adapter playbook): '+e.message,'warn');}}
+ }
+}
 async function runTests(){
  $('run').disabled=true;out.textContent='';
  var user=(await client.auth.getUser()).data.user;
@@ -130,6 +184,7 @@ async function runTests(){
     assert(r.error&&r.error.code==='42501','Expected RLS error 42501; received '+(r.error?r.error.code:'no error'));
    });
   }else log('SKIP  Cross-user tests — add the other test account UUID above.','warn');
+  await runAdapterTests();
   log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
  }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
  finally{
@@ -145,7 +200,7 @@ $('login').addEventListener('click',function(){signIn().catch(e=>status('Sign-in
 $('logout').addEventListener('click',function(){signOut().catch(e=>status('Sign-out failed: '+e.message));});
 $('run').addEventListener('click',function(){runTests();});
 $('clear').addEventListener('click',function(){out.textContent='No tests run yet.';});
-if(!client){status('Supabase client unavailable. Check ../supabase-config.js and internet connection.');}
+if(!client){status('Supabase client unavailable. Check ../../supabase-config.js and internet connection.');}if(!window.MaxiCloudAdapterFactory){status('Adapter module unavailable. Check ../../supabase-adapter.js.');}
 })();
 </script>
 </body>

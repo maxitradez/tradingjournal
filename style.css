@@ -363,7 +363,7 @@ button.day:disabled { cursor: default; color: var(--fg); }
 .migration-item-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .migration-item-actions select { min-width: 190px; max-width: 100%; }
 .migration-inline-check { display: inline-flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 11px; line-height: 1.45; text-transform: none; letter-spacing: 0; }
-.migration-inline-check input { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--accent-hot); }
+.migration-inline-check input { flex: 0 0 18px; width: 18px; height: 18px; min-width: 18px; min-height: 0; margin: 2px 0 0; padding: 0; border: 0; accent-color: var(--accent-hot); }
 .migration-item-error { flex-basis: 100%; margin: 0; color: var(--loss); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 .migration-workflow-item { align-items: start; }
 .migration-workflow-item .migration-item-state { overflow-wrap: anywhere; }

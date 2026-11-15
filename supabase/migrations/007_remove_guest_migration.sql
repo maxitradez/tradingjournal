@@ -2,6 +2,18 @@
 -- This intentionally deletes its staging/audit rows and all guest-migration RPCs.
 -- It does not touch authenticated journal tables, user profiles, or trade data.
 
+-- Triggers depend on these trigger functions, so remove the triggers first.
+do $$
+begin
+  if to_regclass('public.guest_migration_items') is not null then
+    execute 'drop trigger if exists guest_migration_item_initial_status on public.guest_migration_items';
+  end if;
+  if to_regclass('public.guest_migration_batches') is not null then
+    execute 'drop trigger if exists guest_migration_batch_updated_at on public.guest_migration_batches';
+  end if;
+end
+$$;
+
 drop function if exists public.create_guest_migration_batch(text, text, jsonb);
 drop function if exists public.stage_guest_migration_items(uuid, jsonb);
 drop function if exists public.finalize_guest_migration_preview(uuid, jsonb);

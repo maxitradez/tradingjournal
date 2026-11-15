@@ -61,7 +61,7 @@ async function signIn(){
 }
 async function signOut(){if(client)await client.auth.signOut();session=null;setButtons(false);status('Signed out.');}
 function dateToday(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-async function runAdapterTests(){
+async function runAdapterTests(test){
  var user=(await client.auth.getUser()).data.user;
  assert(user&&user.id,'No authenticated user found.');
  var uid=user.id, stamp='maxi_adapter_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
@@ -184,7 +184,7 @@ async function runTests(){
     assert(r.error&&r.error.code==='42501','Expected RLS error 42501; received '+(r.error?r.error.code:'no error'));
    });
   }else log('SKIP  Cross-user tests — add the other test account UUID above.','warn');
-  await runAdapterTests();
+  await runAdapterTests(test);
   log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
  }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
  finally{

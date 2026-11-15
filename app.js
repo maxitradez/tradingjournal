@@ -235,28 +235,25 @@
   }
   function put(kind, obj) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.put(kind, obj); }, function () {
+    if (!cloudWriteReady()) return Promise.reject(new Error('Create an account or sign in before changing your journal.'));
+    { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.put(kind, obj); }, function () {
       var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
       if (i >= 0) list[i] = obj; else list.push(obj);
     }); }
-    var list = state[kind], i = list.findIndex(function (x) { return x.id === obj.id; });
-    if (i >= 0) list[i] = obj; else list.push(obj);
-    persistLocal(); renderAll(); return Promise.resolve();
   }
   function del(kind, id) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.del(kind, id); }, function () {
+    if (!cloudWriteReady()) return Promise.reject(new Error('Create an account or sign in before changing your journal.'));
+    { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.del(kind, id); }, function () {
       state[kind] = state[kind].filter(function (x) { return x.id !== id; });
     }); }
-    state[kind] = state[kind].filter(function (x) { return x.id !== id; });
-    persistLocal(); renderAll(); return Promise.resolve();
   }
   function saveSettings(obj) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
-    if (cloudWriteReady()) { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.saveSettings(obj); }, function () {
+    if (!cloudWriteReady()) return Promise.reject(new Error('Create an account or sign in before changing your journal.'));
+    { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.saveSettings(obj); }, function () {
       state.settings = obj; applySettings();
     }); }
-    state.settings = obj; applySettings(); persistLocal(); renderAll(); return Promise.resolve();
   }
 
   /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
@@ -284,7 +281,8 @@
     'cloud-load-error': 'Cloud journal unavailable · local preserved',
     offline: 'Offline · cloud unavailable',
     'cloud-readonly': 'Cloud journal · read-only',
-    'cloud-ready': 'Cloud journal · connected'
+    'cloud-ready': 'Cloud journal · connected',
+    'account-required': 'Sign in to access your journal'
   };
   var dataStateTitles = {
     'guest-local': 'Journal data is stored only in this browser. It is not backed up or synced to an account.',
@@ -297,7 +295,8 @@
     'cloud-load-error': 'The cloud journal could not be loaded. Your browser journal remains available and unchanged.',
     offline: 'Network unavailable. Cloud changes cannot currently be confirmed.',
     'cloud-readonly': 'You are viewing records loaded from your Supabase account. Editing, deleting and saving are disabled in this stage.',
-    'cloud-ready': 'Your account journal is loaded. New changes are saved to Supabase and confirmed before the screen updates.'
+    'cloud-ready': 'Your account journal is loaded. New changes are saved to Supabase and confirmed before the screen updates.',
+    'account-required': 'Create an account or sign in to access your private trading journal.'
   };
   var authClient = window.maxiSupabase || null;
   var authUser = null;
@@ -320,7 +319,7 @@
     var chip = $('sync');
     var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
       : kind === 'cloud-synced' || kind === 'cloud-readonly' || kind === 'cloud-ready' ? 'cloud'
-      : kind === 'cloud-error' || kind === 'cloud-load-error' || kind === 'session-error' || kind === 'offline' ? 'error'
+      : kind === 'cloud-error' || kind === 'cloud-load-error' || kind === 'session-error' || kind === 'offline' || kind === 'account-required' ? 'error'
       : kind === 'account-local' ? 'account-local' : 'local';
     chip.setAttribute('data-state', visualState);
     chip.setAttribute('aria-label', dataStateText[kind]);
@@ -330,6 +329,9 @@
   // Kept as a narrow alias for existing initialization call sites.
   function setSync(kind) {
     setDataState(kind === 'local' ? 'guest-local' : kind === 'account-local' ? 'account-local' : kind);
+  }
+  function setAccountGate(open) {
+    document.body.classList.toggle('account-required', !open);
   }
   function authNotice(message, isError) {
     if (!authPanel) return;
@@ -991,13 +993,13 @@
   function refreshAuthPanel() {
     if (!authPanel) return;
     var signedIn = !!authUser;
-    authPanel.querySelector('.auth-state-title').textContent = signedIn ? 'Account connected' : 'Guest mode';
+    authPanel.querySelector('.auth-state-title').textContent = signedIn ? 'Account connected' : 'Account required';
     authPanel.querySelector('.auth-state-detail').textContent = signedIn
       ? authUser.email || 'Signed-in account'
-      : 'Your journal is saved in this browser. Sign in or create an account to prepare for secure cloud sync.';
-    authPanel.querySelector('.auth-open').hidden = signedIn;
+      : 'Create a free account or sign in to access your private trading journal.';
+    authPanel.querySelector('.auth-open').hidden = true;
     authPanel.querySelector('.auth-signout').hidden = !signedIn;
-    authPanel.querySelector('.auth-form').hidden = true;
+    authPanel.querySelector('.auth-form').hidden = signedIn;
     if (signedIn) {
       if (state.mode === 'cloud-readonly') {
         authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled; your browser guest journal remains separate and untouched.', false);
@@ -1010,8 +1012,8 @@
         setDataState('account-local');
       }
     } else {
-      authNotice('Guest data stays on this device. Signing in does not upload, merge, overwrite or delete it.', false);
-      if (!state.readOnlyCloud) setDataState('guest-local');
+      authNotice('An account is required. Create a free account or sign in to open your journal.', false);
+      if (!state.readOnlyCloud) setDataState('account-required');
     }
     refreshMigrationPanel();
   }
@@ -1035,6 +1037,7 @@
     if (activeCloudUserId === user.id && (state.dataState === 'cloud-loading' || state.mode === 'cloud-readonly' || state.mode === 'cloud')) return;
     activeCloudUserId = user.id;
     activeCloudAdapter = null;
+    setAccountGate(false);
     var token = ++authLoadToken;
     if (!localSnapshot) localSnapshot = captureLocalSnapshot();
     state.mode = 'local'; state.readOnlyCloud = false;
@@ -1051,13 +1054,13 @@
       state.days = (cloud.days || []).map(normDay);
       state.settings = normSettings(cloud.settings);
       state.mode = 'cloud'; state.readOnlyCloud = false;
-      applySettings(); setDataState('cloud-ready'); renderAll();
+      applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
       authNotice('Cloud journal loaded successfully. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
       refreshMigrationPanel();
       restoreGuestMigrationWorkflow();
     } catch (error) {
       if (token !== authLoadToken) return;
-      activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error'); renderAll();
+      activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
       authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your browser journal is preserved and unchanged.'), true);
     }
   }
@@ -1067,13 +1070,15 @@
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
       migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
       if (migrationPanel) { var oldResults = migrationPanel.querySelector('.migration-results'); oldResults.textContent = ''; oldResults.hidden = true; }
-      restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); renderAll(); return;
+      state.mode = 'signed-out'; state.readOnlyCloud = false;
+      state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings();
+      setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll(); return;
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
       migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
       if (migrationPanel) { var switchedResults = migrationPanel.querySelector('.migration-results'); switchedResults.textContent = ''; switchedResults.hidden = true; }
-      restoreLocalSnapshot();
+      restoreLocalSnapshot(); setAccountGate(false);
     }
     authUser = nextUser; refreshAuthPanel(); loadCloudJournal(authUser);
   }
@@ -1121,8 +1126,8 @@
           : await authClient.auth.signInWithPassword({ email: email, password: password });
         if (result.error) throw result.error;
         if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
-          form.hidden = true;
-          authNotice('Account created. Check your email for the confirmation link, then return here and sign in. Your journal data has not been uploaded.', false);
+          showAuthForm('signin');
+          authNotice('Account created. Check your email for the confirmation link, then sign in here to open your journal.', false);
         } else {
           authUser = result.data && result.data.user ? result.data.user : null;
           form.hidden = true;
@@ -1145,13 +1150,14 @@
     refreshAuthPanel();
   }
   async function init() {
-    state.mode = 'local';
+    state.mode = 'signed-out';
     loadLocal();
+    localSnapshot = captureLocalSnapshot();
     buildAuthPanel();
     renderAll();
     if (!authClient || !authClient.auth) {
-      authNotice('Guest mode is available. Account access is unavailable because Supabase did not initialize.', true);
-      setDataState('guest-local');
+      authNotice('Account services are unavailable. Journal access is locked until a secure account connection can be established.', true);
+      setDataState('account-required'); setAccountGate(false);
       return;
     }
     authClient.auth.onAuthStateChange(function (_event, session) { handleAuthSession(session); });
@@ -1162,8 +1168,8 @@
     } catch (error) {
       authUser = null;
       refreshAuthPanel();
-      setDataState('session-error');
-      authNotice('Could not verify your account session: ' + (error && error.message ? error.message : 'Please refresh and try again. Your journal remains local.'), true);
+      setDataState('session-error'); setAccountGate(false);
+      authNotice('Could not verify your account session: ' + (error && error.message ? error.message : 'Please refresh and try again. Journal access remains locked.'), true);
     }
   }
 

@@ -1,6 +1,6 @@
 /* Maxi Trades Journal
    Account-first journal: authenticated users load and save their private Supabase journal.
-   No local-only journal or migration workflow is available. */
+   No local-only journal is available. */
 (function () {
   'use strict';
   var MINUS = '−';
@@ -363,7 +363,7 @@
     activeCloudAdapter = null;
     setAccountGate(false);
     var token = ++authLoadToken;
-    state.mode = 'local'; state.readOnlyCloud = false;
+    state.mode = 'pending'; state.readOnlyCloud = false;
     setDataState('cloud-loading');
     authNotice('Loading your private account journal…', false);
     renderAll();

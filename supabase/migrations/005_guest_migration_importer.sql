@@ -97,7 +97,8 @@ begin
             if exists (
                 select 1 from public.playbooks p
                  where p.user_id = v_user_id
-                   and p.legacy_id = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key)
+                   and (p.legacy_id = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key)
+                        or p.id::text = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key))
             ) then
                 update public.guest_migration_items
                    set import_status = 'needs_review',
@@ -123,7 +124,10 @@ begin
             if v_playbook_legacy is not null then
                 select p.id into v_playbook_id
                   from public.playbooks p
-                 where p.user_id = v_user_id and p.legacy_id = v_playbook_legacy;
+                 where p.user_id = v_user_id
+                   and (p.legacy_id = v_playbook_legacy or p.id::text = v_playbook_legacy)
+                 order by (p.legacy_id = v_playbook_legacy) desc
+                 limit 1;
                 if v_playbook_id is null then
                     update public.guest_migration_items
                        set import_status = 'needs_review',
@@ -136,13 +140,18 @@ begin
             if exists (
                 select 1 from public.trades t
                  where t.user_id = v_user_id
-                   and t.legacy_id = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key)
+                   and (t.legacy_id = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key)
+                        or t.id::text = coalesce(nullif(v_payload->>'id', ''), v_item.source_record_key))
             ) then
                 update public.guest_migration_items
                    set import_status = 'needs_review',
                        import_error = 'A cloud trade with this legacy ID now exists. Refresh the preview before deciding what to do.'
                  where id = p_item_id and user_id = v_user_id;
                 return jsonb_build_object('status', 'needs_review');
+            end if;
+
+            if lower(coalesce(v_payload->>'side', '')) not in ('buy', 'long', 'sell', 'short') then
+                raise exception 'Trade side must be buy, sell, long, or short.';
             end if;
 
             insert into public.trades (
@@ -157,7 +166,7 @@ begin
                 coalesce(nullif(v_payload->>'asset', ''), 'UNKNOWN'),
                 (v_payload->>'date')::date,
                 nullif(v_payload->>'time', '')::time,
-                case when lower(coalesce(v_payload->>'side', 'buy')) in ('sell', 'short') then 'sell' else 'buy' end,
+                case when lower(v_payload->>'side') in ('sell', 'short') then 'sell' else 'buy' end,
                 'closed',
                 nullif(v_payload->>'entry', '')::numeric,
                 nullif(v_payload->>'sl', '')::numeric,

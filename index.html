@@ -13,6 +13,16 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="account-required">
+<section class="public-home" id="public-home">
+  <div class="public-top"><a class="public-brand" href="#" aria-label="Maxi Trades Journal home"><span class="brand-mark">M</span><span>MAXI <b>TRADES</b><small>JOURNAL</small></span></a><span class="public-free">100% FREE · BUILT FOR TRADERS</span></div>
+  <div class="public-hero">
+    <div class="public-copy"><p class="eyebrow">TRADE WITH INTENTION. REVIEW WITH CLARITY.</p><h1>Your edge deserves<br><em>a record.</em></h1><p class="public-lede">A focused trading journal to track every decision, understand your performance, and build consistency—one trade at a time.</p><div class="public-points"><span>01 / Log every trade</span><span>02 / Measure what matters</span><span>03 / Learn your patterns</span></div><div class="public-actions"><button class="btn btn-primary" id="public-create" type="button">Create your free account</button><button class="btn" id="public-login" type="button">Log in</button></div><p class="public-note">Your journal is private. Your progress is yours.</p></div>
+    <div class="public-art" aria-hidden="true"><div class="art-label">THE TRADER'S LEDGER <span>MTJ / 001</span></div><div class="art-chart"><div class="chart-grid"></div><svg viewBox="0 0 520 310" role="img"><polyline points="12,248 70,218 110,235 155,162 198,188 245,110 285,142 335,72 380,103 435,35 505,55" fill="none" stroke="#e6d2aa" stroke-width="3"/><g stroke="#e6d2aa" stroke-width="2"><path d="M70 205v45m-7 -33h14M155 142v48m-7 -37h14M245 92v45m-7 -34h14M335 54v54m-7 -42h14M435 18v45m-7 -34h14"/></g></svg><div class="art-axis"><span>PROCESS</span><span>PRECISION</span><span>PROGRESS</span></div></div><div class="art-footer"><span>DISCIPLINE OVER IMPULSE</span><span>EST. 2026</span></div></div>
+  </div>
+  <div class="public-bottom"><span>ONE PLACE FOR YOUR TRADING JOURNEY</span><span>MAXI TRADES JOURNAL © 2026</span></div>
+  <div id="public-auth"></div>
+</section>
+<div id="profile-onboarding" class="profile-onboarding" hidden></div>
 <div class="wrap">
   <header class="masthead">
     <div class="brand">
@@ -29,6 +39,7 @@
     <a href="#reports" data-v="reports">Reports</a>
     <a href="#insights" data-v="insights">Insights</a>
     <a href="#settings" data-v="settings">Settings</a>
+    <a href="#profile" data-v="profile">Profile</a>
   </nav>
   <div class="banner" id="banner" hidden>
     <p>You are looking at example data so you can see how every page works. Clear it before you log your own trades.</p>
@@ -42,6 +53,7 @@
     <section id="v-reports" hidden></section>
     <section id="v-insights" hidden></section>
     <section id="v-settings" hidden></section>
+    <section id="v-profile" hidden></section>
   </main>
   <p class="foot">R-multiple is profit or loss measured in units of your starting risk. 1R is the distance from entry to stop loss. Weeks run Monday to Sunday. Nothing here is financial advice.</p>
 </div>
@@ -124,5 +136,6 @@
 <script src="supabase-config.js"></script>
 <script src="supabase-adapter.js"></script>
 <script src="app.js"></script>
+<script src="profile.js"></script>
 </body>
 </html>

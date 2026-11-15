@@ -358,8 +358,8 @@ begin
       from public.guest_migration_items
      where user_id = v_user_id and batch_id = p_batch_id;
 
-    if v_pending > 0 or v_failed > 0 then
-        raise exception 'Import is not complete: resolve or explicitly skip all pending and failed items.';
+    if v_pending > 0 or v_failed > 0 or v_review > 0 then
+        raise exception 'Import is not complete: import, resolve, or explicitly skip every pending, failed, and review item.';
     end if;
 
     update public.guest_migration_batches

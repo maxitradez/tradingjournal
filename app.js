@@ -93,7 +93,7 @@
       id: String(t.id), date: String(t.date || todayStr()), time: String(t.time || ''), asset: String(t.asset || ''), side: t.side === 'sell' ? 'sell' : 'buy',
       entry: t.entry == null ? '' : String(t.entry), sl: t.sl == null ? '' : String(t.sl), tp: t.tp == null ? '' : String(t.tp), exit: t.exit == null ? '' : String(t.exit),
       pnl: Number(t.pnl) || 0, r: t.r == null || t.r === '' ? null : Number(t.r), risk: t.risk == null || t.risk === '' || !isFinite(Number(t.risk)) ? null : Number(t.risk), playbook: String(t.playbook || ''), emotion: String(t.emotion || ''),
-      followed: t.followed !== false, misses: Array.isArray(t.misses) ? t.misses.map(String) : [], lesson: String(t.lesson || ''), shot: String(t.shot || ''), shotId: String(t.shotId || ''), mistakes: Array.isArray(t.mistakes) ? t.mistakes.map(String) : [],
+      followed: t.followed !== false, misses: Array.isArray(t.misses) ? t.misses.map(String) : [], lesson: String(t.lesson || ''), shot: String(t.shot || ''), shotId: String(t.shotId || ''), shotUrl: String(t.shotUrl || ''), mistakes: Array.isArray(t.mistakes) ? t.mistakes.map(String) : [],
       example: !!t.example, createdAt: Number(t.createdAt) || 0
     };
   }
@@ -345,7 +345,7 @@
         authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled.', false);
         setDataState('cloud-readonly');
       } else if (state.mode === 'cloud') {
-        authNotice('Your account journal is connected. Trade, playbook, daily-note and settings changes save to your account. Chart image uploads are not enabled yet.', false);
+        authNotice('Your account journal is connected. Trades, playbooks, daily notes, settings and private chart screenshots save to your account.', false);
         if (state.dataState !== 'cloud-syncing' && state.dataState !== 'cloud-error') setDataState('cloud-ready');
       } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error' && state.dataState !== 'cloud-load-error') {
         authNotice('Your account is authenticated. Your journal will open once cloud data has loaded.', false);
@@ -378,7 +378,7 @@
       state.settings = normSettings(cloud.settings);
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
-      authNotice('Your private journal is ready. Trades, playbooks, daily notes and settings save to your account. Chart image uploads are not enabled yet.', false);
+      authNotice('Your private journal is ready. Trades, playbooks, daily notes, settings and private chart screenshots save to your account.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
       activeCloudAdapter = null; state.mode = 'signed-out'; state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
@@ -561,7 +561,7 @@
     });
     return b;
   }
-  function delTrade(id) { if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; } var tr = state.trades.find(function (x) { return x.id === id; }); del('trades', id).then(function () { if (tr && state.mode !== 'cloud') dropAsset(tr.shotId); toast('Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
+  function delTrade(id) { if (state.readOnlyCloud) { toast('Cloud journal is read-only in this stage'); return; } var tr = state.trades.find(function (x) { return x.id === id; }); del('trades', id).then(function () { if (tr && tr.shotId) dropAsset(tr.shotId); toast('Trade deleted'); }).catch(function (e) { toast(failMsg(e)); }); }
   function planPill(t) { return h('span', { class: 'pill ' + (t.followed ? 'win' : 'loss'), text: t.followed ? 'Plan kept' : 'Plan broken' }); }
   function emptyHero() {
     return h('div', { class: 'panel hero-empty' },
@@ -593,7 +593,7 @@
       h('div', { class: 'asset' }, t.playbook ? h('span', { class: 'pill', text: pbName(t.playbook) }) : null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk' }) : null, t.emotion ? h('span', { class: 'pill', text: t.emotion }) : null),
       mistakeRow(t),
       t.lesson ? h('p', { text: t.lesson }) : null,
-      t.shotId ? h('a', { class: 'shotthumb', href: '/_blob/' + t.shotId, target: '_blank', rel: 'noopener' }, h('img', { src: '/_blob/' + t.shotId, alt: 'Chart screenshot for ' + t.asset, loading: 'lazy' })) : null,
+      t.shotUrl ? h('a', { class: 'shotthumb', href: t.shotUrl, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: t.shotUrl, alt: 'Chart screenshot for ' + t.asset, loading: 'lazy' })) : null,
       t.misses.length ? h('div', { class: 'cell-sub', text: 'Rules missed: ' + t.misses.join('; ') }) : null,
       h('div', { class: 'acts', style: 'justify-content:flex-start' },
         link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗', style: 'margin:0 8px 0 0;align-self:center' }) : null,
@@ -773,30 +773,39 @@
   }
   function renderShotPrev() {
     var box = $('shot-prev'), s = state.shot; box.textContent = '';
-    var src = s.preview || (s.existing && !s.remove ? '/_blob/' + s.existing : '');
-    if (!src) return;
-    box.appendChild(h('img', { src: src, alt: 'Chart screenshot preview' }));
+    var src = s.preview || (s.existing && !s.remove ? s.existingUrl : '');
+    if (src) box.appendChild(h('img', { src: src, alt: 'Chart screenshot preview' }));
+    if (!s.blob && !s.existing) return;
     box.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Remove', onclick: function () {
       if (s.preview) URL.revokeObjectURL(s.preview);
       s.blob = null; s.preview = ''; if (s.existing) s.remove = true;
       $('f-shotfile').value = ''; renderShotPrev();
     } }));
   }
-  function resetShot(existing) {
+  function resetShot(existing, existingUrl) {
     if (state.shot.preview) URL.revokeObjectURL(state.shot.preview);
-    state.shot = { blob: null, preview: '', existing: existing || '', remove: false };
+    state.shot = { blob: null, preview: '', existing: existing || '', existingUrl: existingUrl || '', remove: false };
     $('f-shotfile').value = ''; renderShotPrev();
   }
-  function shotPrep(existing) {
+  function shotPrep(existing, tradeId) {
     var s = state.shot, old = existing ? existing.shotId : '';
-    if (state.mode === 'cloud' && s.blob) return Promise.reject(new Error('Chart image uploads are not enabled for cloud journals yet. Close and reopen this trade form to clear the image selection, then save without an image.'));
-    if (state.mode === 'cloud') return Promise.resolve({ id: '', drop: '' });
+    if (state.mode === 'cloud') {
+      if (!activeCloudAdapter) return Promise.reject(new Error('Your cloud connection is not ready. Refresh and try again.'));
+      if (s.blob) return activeCloudAdapter.uploadScreenshot(s.blob, tradeId).then(function (path) { return { id: path, drop: old }; });
+      if (s.remove) return Promise.resolve({ id: '', drop: old });
+      return Promise.resolve({ id: old, drop: '' });
+    }
     if (s.blob && state.assets) return state.assets.upload(s.blob).then(function (res) { return { id: res.id, drop: old }; });
     if (s.remove) return Promise.resolve({ id: '', drop: old });
     return Promise.resolve({ id: old, drop: '' });
   }
   function dropAsset(id) {
-    if (!id || !state.assets || !state.assets.delete) return;
+    if (!id) return;
+    if (activeCloudAdapter && activeCloudAdapter.deleteScreenshot) {
+      try { Promise.resolve(activeCloudAdapter.deleteScreenshot(id)).catch(function () {}); } catch (e) {}
+      return;
+    }
+    if (!state.assets || !state.assets.delete) return;
     try { Promise.resolve(state.assets.delete(id)).catch(function () {}); } catch (e) {}
   }
   function pickedMistakes() { return Array.prototype.filter.call($('mchips').querySelectorAll('input'), function (c) { return c.checked; }).map(function (c) { return c.value; }); }
@@ -919,7 +928,7 @@
       body.appendChild(h('tr', null,
         h('td', { class: 'mono nowrap' }, fmtDate(t.date), t.time ? h('div', { class: 'cell-sub', text: t.time }) : null),
         h('td', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
-          prices ? h('div', { class: 'cell-sub', text: prices }) : null, t.shotId ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: '/_blob/' + t.shotId, target: '_blank', rel: 'noopener', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
+          prices ? h('div', { class: 'cell-sub', text: prices }) : null, t.shotUrl ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: t.shotUrl, target: '_blank', rel: 'noopener noreferrer', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
         h('td', { text: t.playbook ? pbName(t.playbook) : '—' }),
         h('td', { text: t.emotion || '—' }),
         h('td', null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk', style: 'margin-left:6px' }) : null, t.misses.length ? h('div', { class: 'cell-sub', text: t.misses.join('; ') }) : null, t.mistakes.length ? h('div', { class: 'cell-sub', text: t.mistakes.join(', ') }) : null),
@@ -1274,14 +1283,14 @@
       $('f-date').value = t.date; $('f-time').value = t.time; $('f-asset').value = t.asset; $(t.side === 'sell' ? 'side-sell' : 'side-buy').checked = true;
       $('f-pnl').value = t.pnl; $('f-risk').value = t.risk == null ? '' : t.risk; $('f-entry').value = t.entry; $('f-sl').value = t.sl; $('f-tp').value = t.tp; $('f-exit').value = t.exit; $('f-r').value = t.r == null ? '' : t.r;
       $('f-pb').value = state.playbooks.some(function (p) { return p.id === t.playbook; }) ? t.playbook : '';
-      $('f-emotion').value = t.emotion; setMistakes(t.mistakes); resetShot(t.shotId); $('f-lesson').value = t.lesson; $('f-shot').value = t.shot;
+      $('f-emotion').value = t.emotion; setMistakes(t.mistakes); resetShot(t.shotId, t.shotUrl); $('f-lesson').value = t.lesson; $('f-shot').value = t.shot;
       renderChecks(t.misses.length ? $('f-pb').value && state.playbooks.find(function (p) { return p.id === $('f-pb').value; }).rules.filter(function (r) { return t.misses.indexOf(r) < 0; }) : null);
       $(t.followed ? 'plan-yes' : 'plan-no').checked = true;
       $('sec-prices').open = !!(t.entry || t.sl || t.tp || t.exit || t.shot);
       $('dt-title').textContent = 'Edit trade'; $('btn-save').textContent = 'Update trade'; $('btn-another').hidden = true; updateRHint();
     }
-    $('shot-wrap').hidden = !state.assets || state.mode === 'cloud';
-    $('f-shotfile').disabled = state.mode === 'cloud';
+    $('shot-wrap').hidden = state.mode === 'cloud' ? !activeCloudAdapter : !state.assets;
+    $('f-shotfile').disabled = state.mode === 'cloud' ? !activeCloudAdapter : !state.assets;
     if (t && t.shotId) $('sec-prices').open = true;
     updateLimitWarn();
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
@@ -1303,10 +1312,18 @@
       playbook: $('f-pb').value, emotion: $('f-emotion').value, followed: $('plan-yes').checked, misses: misses, lesson: $('f-lesson').value.trim(), shot: $('f-shot').value.trim(), example: false, createdAt: existing ? existing.createdAt : Date.now()
     });
     var wasEdit = !!existing, b1 = $('btn-save'), b2 = $('btn-another'); b1.disabled = b2.disabled = true;
-    shotPrep(existing).then(function (sp) { t.shotId = sp.id; return put('trades', t).then(function () { dropAsset(sp.drop); }); }).then(function () {
+    var uploadedScreenshot = '';
+    shotPrep(existing, t.id).then(function (sp) {
+      t.shotId = sp.id;
+      if (sp.id && sp.id !== (existing ? existing.shotId : '')) uploadedScreenshot = sp.id;
+      return put('trades', t).then(function () { if (sp.drop) dropAsset(sp.drop); });
+    }).then(function () {
       toast(wasEdit ? 'Trade updated' : 'Trade saved');
       if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
-    }).catch(function (err) { msg.textContent = failMsg(err); }).then(function () { b1.disabled = b2.disabled = false; });
+    }).catch(function (err) {
+      if (uploadedScreenshot) dropAsset(uploadedScreenshot);
+      msg.textContent = failMsg(err);
+    }).then(function () { b1.disabled = b2.disabled = false; });
   }
 
   /* ---------- playbook form ---------- */
@@ -1383,8 +1400,10 @@
     var inp = this, f = inp.files && inp.files[0], msg = $('form-msg');
     if (!f) return;
     msg.textContent = '';
+    if (!/^image\\/(jpeg|png|webp)$/i.test(f.type)) { msg.textContent = 'Choose a JPEG, PNG or WebP image.'; inp.value = ''; return; }
     if (f.size > 25 * 1024 * 1024) { msg.textContent = 'That image is over 25 MB. Choose a smaller one.'; inp.value = ''; return; }
     shrinkImage(f).then(function (b) {
+      if (b.size > 10 * 1024 * 1024) throw new Error('The compressed image is over the 10 MB storage limit. Choose a smaller image.');
       var s = state.shot; if (s.preview) URL.revokeObjectURL(s.preview);
       s.blob = b; s.preview = URL.createObjectURL(b); s.remove = false; renderShotPrev();
     }).catch(function (e) { msg.textContent = (e && e.message) || 'Could not read that image.'; inp.value = ''; });

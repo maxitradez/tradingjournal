@@ -177,6 +177,7 @@
       passwordCard.appendChild(el('p', { class: 'profile-intro' }, 'Because you are signed in, you can set a new password here without requesting another email.'));
       var passwordForm = el('form', { class: 'profile-form' });
       var passwordGrid = el('div', { class: 'auth-fields' });
+      passwordGrid.appendChild(field('Current password', 'current_password', 'password', '', 'Enter your existing password'));
       passwordGrid.appendChild(field('New password', 'new_password', 'password', '', 'At least 8 characters'));
       passwordGrid.appendChild(field('Confirm new password', 'confirm_password', 'password', '', 'Enter it again'));
       passwordForm.appendChild(passwordGrid);
@@ -185,13 +186,16 @@
       passwordForm.appendChild(passwordMsg); passwordForm.appendChild(passwordSave);
       passwordForm.addEventListener('submit', async function (e) {
         e.preventDefault();
+        var currentPassword = passwordForm.querySelector('[name="current_password"]').value;
         var nextPassword = passwordForm.querySelector('[name="new_password"]').value;
         var confirmPassword = passwordForm.querySelector('[name="confirm_password"]').value;
+        if (!currentPassword) { passwordMsg.textContent = 'Enter your current password to verify your account.'; return; }
         if (nextPassword.length < 8) { passwordMsg.textContent = 'Use a password with at least 8 characters.'; return; }
         if (nextPassword !== confirmPassword) { passwordMsg.textContent = 'The passwords do not match.'; return; }
+        if (nextPassword === currentPassword) { passwordMsg.textContent = 'Choose a password different from your current one.'; return; }
         passwordSave.disabled = true; passwordMsg.textContent = 'Updating password…';
         try {
-          var changed = await api.auth.updateUser({ password: nextPassword });
+          var changed = await api.auth.updateUser({ password: nextPassword, current_password: currentPassword });
           if (changed.error) throw changed.error;
           passwordForm.reset();
           passwordMsg.textContent = 'Password updated successfully. Your account remains signed in.';

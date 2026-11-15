@@ -808,13 +808,12 @@
     return Promise.resolve({ id: old, drop: '', url: '' });
   }
   function dropAsset(id) {
-    if (!id) return;
+    if (!id) return Promise.resolve();
     if (activeCloudAdapter && activeCloudAdapter.deleteScreenshot) {
-      try { Promise.resolve(activeCloudAdapter.deleteScreenshot(id)).catch(function () {}); } catch (e) {}
-      return;
+      return Promise.resolve().then(function () { return activeCloudAdapter.deleteScreenshot(id); });
     }
-    if (!state.assets || !state.assets.delete) return;
-    try { Promise.resolve(state.assets.delete(id)).catch(function () {}); } catch (e) {}
+    if (!state.assets || !state.assets.delete) return Promise.resolve();
+    return Promise.resolve().then(function () { return state.assets.delete(id); });
   }
   function pickedMistakes() { return Array.prototype.filter.call($('mchips').querySelectorAll('input'), function (c) { return c.checked; }).map(function (c) { return c.value; }); }
   function setMistakes(list) { Array.prototype.forEach.call($('mchips').querySelectorAll('input'), function (c) { c.checked = list.indexOf(c.value) >= 0; }); }
@@ -1320,17 +1319,28 @@
       playbook: $('f-pb').value, emotion: $('f-emotion').value, followed: $('plan-yes').checked, misses: misses, lesson: $('f-lesson').value.trim(), shot: $('f-shot').value.trim(), example: false, createdAt: existing ? existing.createdAt : Date.now()
     });
     var wasEdit = !!existing, b1 = $('btn-save'), b2 = $('btn-another'); b1.disabled = b2.disabled = true;
-    var uploadedScreenshot = '';
+    var uploadedScreenshot = '', tradeSaved = false, screenshotCleanupFailed = false;
     shotPrep(existing, t.id).then(function (sp) {
       t.shotId = sp.id; t.shotUrl = sp.url || '';
       if (sp.id && sp.id !== (existing ? existing.shotId : '')) uploadedScreenshot = sp.id;
-      return put('trades', t).then(function () { if (sp.drop) dropAsset(sp.drop); });
+      return put('trades', t).then(function () {
+        tradeSaved = true;
+        if (sp.drop) return dropAsset(sp.drop).catch(function () { screenshotCleanupFailed = true; });
+      });
     }).then(function () {
-      toast(wasEdit ? 'Trade updated' : 'Trade saved');
+      toast(screenshotCleanupFailed
+        ? (wasEdit ? 'Trade updated, but the old screenshot could not be removed from storage.' : 'Trade saved, but an old screenshot could not be removed from storage.')
+        : (wasEdit ? 'Trade updated' : 'Trade saved'));
       if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
     }).catch(function (err) {
-      if (uploadedScreenshot) dropAsset(uploadedScreenshot);
-      msg.textContent = failMsg(err);
+      if (uploadedScreenshot && !tradeSaved) {
+        dropAsset(uploadedScreenshot).catch(function () { screenshotCleanupFailed = true; }).then(function () {
+          msg.textContent = failMsg(err) + (screenshotCleanupFailed ? ' The unused uploaded screenshot may still remain in storage.' : '');
+        });
+      } else if (tradeSaved) {
+        toast('Trade saved, but screenshot cleanup needs attention.');
+        resetTradeForm(false); closeDrawers();
+      } else msg.textContent = failMsg(err);
     }).then(function () { b1.disabled = b2.disabled = false; });
   }
 

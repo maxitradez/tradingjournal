@@ -251,7 +251,7 @@
         side: String(row.side).toLowerCase() === 'short' ? 'sell' : row.side,
         entry: row.entry_price, sl: row.stop_loss, tp: row.take_profit,
         exit: row.exit_price, pnl: row.net_pnl, r: row.r_multiple,
-        risk: row.risk_amount, playbook: row.playbook_id ? (extra.playbook_legacy_id || row.playbook_id) : '',
+        risk: row.risk_amount, playbook: row.playbook_id || extra.playbook_legacy_id || '',
         emotion: row.emotion, followed: row.followed_rules,
         misses: jsonArray(row.misses), mistakes: jsonArray(row.mistakes),
         lesson: row.lesson, shot: extra.legacy_shot || '',
@@ -261,7 +261,7 @@
     }
     function fromCloudDay(row) {
       return normDay({
-        id: String(row.legacy_id || row.journal_date), date: row.journal_date,
+        id: String(row.journal_date), date: row.journal_date,
         plan: row.plan, review: row.review, mood: row.mood, example: row.is_example
       });
     }
@@ -309,12 +309,11 @@
         // Resolve playbook UUIDs to the journal's stable legacy IDs.
         (results[0].data || []).forEach(function (p) { ids.playbooks[String(p.id)] = p.id; });
         trs.forEach(function (t) {
-          if (t.playbook && ids.playbooks[t.playbook]) return;
-          var row = (results[1].data || []).find(function (r) { return String(r.legacy_id || r.id) === t.id; });
-          if (row && row.playbook_id) {
-            var pbRow = (results[0].data || []).find(function (p) { return p.id === row.playbook_id; });
-            t.playbook = pbRow ? String(pbRow.legacy_id || pbRow.id) : '';
-          }
+          if (!t.playbook) return;
+          var pbRow = (results[0].data || []).find(function (p) {
+            return p.id === t.playbook || String(p.legacy_id || p.id) === t.playbook;
+          });
+          t.playbook = pbRow ? String(pbRow.legacy_id || pbRow.id) : '';
         });
         var settingsRow = results[3].data;
         var prefs = settingsRow && settingsRow.preferences && typeof settingsRow.preferences === 'object' ? settingsRow.preferences : {};
@@ -384,11 +383,14 @@
           maxTradesDay: settings.maxTradesDay, dailyLoss: settings.dailyLoss,
           example: !!settings.example
         };
-        var result = await api.from('user_settings').upsert({
-          user_id: userId, default_currency: settings.currency || 'USD',
+        // Signup creates this row. Update only fields owned by this app so
+        // future settings such as timezone are not reset by an upsert default.
+        var result = await api.from('user_settings').update({
+          default_currency: settings.currency || 'USD',
           default_starting_balance: settings.balance, preferences: prefs
-        }, { onConflict: 'user_id' });
+        }).eq('user_id', userId).select('user_id').maybeSingle();
         if (result.error) throw result.error;
+        if (!result.data) throw new Error('Your account settings row was not found. Please sign out and sign in again.');
       }
     };
   }

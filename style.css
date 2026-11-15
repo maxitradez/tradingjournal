@@ -335,3 +335,29 @@ button.day:disabled { cursor: default; color: var(--fg); }
   .auth-actions .btn, .auth-form-actions .btn { flex: 1 1 auto; }
   .auth-fields { grid-template-columns: 1fr; }
 }
+
+
+/* Guest migration preview — review only; importing is intentionally unavailable here. */
+.migration-panel { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+.migration-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.migration-heading strong { display: block; font: 700 13px/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.migration-description, .migration-status, .migration-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.migration-counts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.migration-count { min-width: 0; border: 1px solid var(--line); padding: 9px; display: grid; gap: 3px; }
+.migration-count strong { font: 700 20px/1 var(--font-display); }
+.migration-count span { color: var(--muted); font: 500 10px/1.3 var(--font-mono); text-transform: uppercase; }
+.migration-item-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+.migration-item { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; gap: 9px; border-bottom: 1px solid var(--line); padding: 7px 0; font-size: 12px; }
+.migration-item-type { color: var(--muted); text-transform: capitalize; }
+.migration-item-name { min-width: 0; overflow-wrap: anywhere; }
+.migration-item-state { font: 600 10px/1.3 var(--font-mono); text-transform: uppercase; }
+.migration-item-state[data-state="new"] { color: var(--accent-hot); }
+.migration-item-state[data-state="duplicate"] { color: var(--muted); }
+.migration-item-state[data-state="conflict"], .migration-item-state[data-state="invalid"] { color: var(--loss); }
+@media (max-width: 560px) {
+  .migration-heading { display: grid; }
+  .migration-heading .btn { width: 100%; }
+  .migration-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .migration-item { grid-template-columns: 78px minmax(0, 1fr); }
+  .migration-item-state { grid-column: 2; }
+}

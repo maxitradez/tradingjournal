@@ -313,7 +313,7 @@ button.day:disabled { cursor: default; color: var(--fg); }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
 
-/* Supabase account access — authentication only; journal data remains local in this phase. */
+/* Supabase account access and explicit guest migration preview. */
 .chip[data-state="account-local"] i { background: var(--accent-hot); }
 .auth-panel { display: grid; gap: 14px; margin: 0 0 18px; }
 .auth-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; }
@@ -339,6 +339,8 @@ button.day:disabled { cursor: default; color: var(--fg); }
 
 /* Guest migration preview — review only; importing is intentionally unavailable here. */
 .migration-panel { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+.migration-consent { display: flex; align-items: flex-start; gap: 9px; color: var(--muted); font-size: 12px; line-height: 1.5; cursor: pointer; }
+.migration-consent input { margin: 2px 0 0; flex: 0 0 auto; accent-color: var(--accent-hot); }
 .migration-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .migration-heading strong { display: block; font: 700 13px/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
 .migration-description, .migration-status, .migration-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }

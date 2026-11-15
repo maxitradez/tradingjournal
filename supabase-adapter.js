@@ -243,10 +243,19 @@
           }
           var found = await legacyRow(table, id);
           if (found.error) throw found.error;
-          if (!found.data) return;
+          if (!found.data) return { screenshotCleanupError: '' };
+          var screenshotPath = kind === 'trades' && found.data.notes && typeof found.data.notes === 'object'
+            ? found.data.notes.chart_screenshot_path || '' : '';
           var result = await api.from(table).delete().eq('user_id', userId).eq('id', found.data.id).select('id').maybeSingle();
           if (result.error) throw result.error;
           if (!result.data) throw new Error('The cloud record was not deleted. Refresh the journal and try again.');
+          if (screenshotPath) {
+            try { await removeScreenshot(screenshotPath); }
+            catch (cleanupError) {
+              return { screenshotCleanupError: cleanupError && cleanupError.message ? cleanupError.message : 'Storage removal failed' };
+            }
+          }
+          return { screenshotCleanupError: '' };
         },
         async saveSettings(settings) {
           var prefs = {

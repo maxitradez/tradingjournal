@@ -123,7 +123,7 @@ async function runTests(){
   if(other){
    await test('Cross-user read is blocked by RLS',async function(){
     assert(other!==uid,'Other account UUID must differ from signed-in account.');
-    var r=await client.from('playbooks').select('id').eq('user_id',other);if(r.error)throw r.error;assert((r.data||[]).length===0,'Rows from another account were visible.');
+    var r=await client.from('asset_classes').select('id').eq('user_id',other);if(r.error)throw r.error;assert((r.data||[]).length===0,'Other account asset classes were visible.');
    });
    await test('Forged owner insert is rejected by RLS',async function(){
     var r=await client.from('playbooks').insert({user_id:other,name:'SHOULD NEVER INSERT '+stamp,legacy_id:stamp+'_forged'}).select('id').maybeSingle();

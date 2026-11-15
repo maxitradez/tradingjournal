@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maxi Trades Journal — Supabase Live Test</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1530;--panel:#14213f;--gold:#d6b46a;--ink:#f2eadb;--muted:#a9b3c7;--line:#30405f;--ok:#77d6a0;--bad:#ff8c8c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif;padding:24px}
+main{max-width:820px;margin:auto}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
+h1,h2{margin:0 0 10px}h1{color:var(--gold)}p,.muted{color:var(--muted)}label{display:block;margin:12px 0 5px}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:#0b1530;color:var(--ink)}
+button{padding:11px 16px;border:0;border-radius:8px;background:var(--gold);color:#17213a;font-weight:700;cursor:pointer;margin:12px 8px 0 0}
+button:disabled{opacity:.5;cursor:wait}#results{white-space:pre-wrap;font:13px/1.6 ui-monospace,monospace;max-height:480px;overflow:auto}
+.pass{color:var(--ok)}.fail{color:var(--bad)}.warn{color:#f0ca7a}.small{font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Maxi Trades Journal</h1>
+<h2>Supabase live-data test harness</h2>
+<p>This is a temporary diagnostic page for the <b>audit-and-improvements</b> branch. It creates disposable records under the account you sign into, tests them, then attempts to delete them. It does not read, modify or migrate your journal trades.</p>
+<div class="panel">
+<h2>1. Sign in with a test account</h2>
+<label for="email">Test account email</label><input id="email" type="email" autocomplete="username">
+<label for="password">Password</label><input id="password" type="password" autocomplete="current-password">
+<label for="otherId">Other test account UUID (optional, for isolation check)</label><input id="otherId" type="text" placeholder="Paste the other test user's UUID">
+<button id="login">Sign in</button><button id="logout" disabled>Sign out</button>
+<p id="authStatus" class="muted">Not signed in.</p>
+</div>
+<div class="panel">
+<h2>2. Run isolated tests</h2>
+<p class="small">Tests: authenticated reads, playbook insert/update/delete, trade insert/update/delete with a playbook FK, daily journal insert/update/delete, private screenshot bucket upload/download/delete, cross-user filtered read and forged-owner insert rejection.</p>
+<p class="warn small">Use only one of the dedicated test accounts. Do not enter your main account password. Never paste a Supabase secret/service-role key here.</p>
+<button id="run" disabled>Run live tests</button>
+<button id="clear" disabled>Clear output</button>
+</div>
+<div class="panel">
+<h2>Results</h2><div id="results">No tests run yet.</div>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../supabase-config.js"></script>
+<script>
+(function(){
+'use strict';
+var client=window.maxiSupabase, session=null, out=document.getElementById('results');
+var $=function(id){return document.getElementById(id);};
+function log(msg,cls){var line=document.createElement('div');line.textContent=msg;if(cls)line.className=cls;out.appendChild(line);out.scrollTop=out.scrollHeight;}
+function status(msg){$('authStatus').textContent=msg;}
+function setButtons(on){$('run').disabled=!on;$('logout').disabled=!on;$('login').disabled=on;}
+function assert(ok,msg){if(!ok)throw new Error(msg);}
+async function signIn(){
+ if(!client)throw new Error('Supabase client did not initialize. Check the config script and internet connection.');
+ var email=$('email').value.trim(),password=$('password').value;
+ assert(email&&password,'Enter the test account email and password.');
+ var r=await client.auth.signInWithPassword({email:email,password:password});
+ if(r.error)throw r.error;session=r.data.session;setButtons(true);status('Signed in as '+r.data.user.email+' · '+r.data.user.id);
+ $('password').value='';
+}
+async function signOut(){if(client)await client.auth.signOut();session=null;setButtons(false);status('Signed out.');}
+function dateToday(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+async function runTests(){
+ $('run').disabled=true;out.textContent='';
+ var user=(await client.auth.getUser()).data.user;
+ assert(user&&user.id,'No authenticated user found.');
+ var uid=user.id, other=$('otherId').value.trim(), stamp='maxi_test_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+ var pbId=null,tradeId=null,dayId=null,storagePath=uid+'/__maxi_harness__/'+stamp+'.png',uploaded=false;
+ log('Running tests as '+user.email+' ('+uid+')');
+ async function test(name,fn){
+   try{await fn();log('PASS  '+name,'pass');}
+   catch(e){log('FAIL  '+name+' — '+(e.message||String(e)),'fail');throw e;}
+ }
+ try{
+  await test('Read own profile and settings',async function(){
+   var p=await client.from('profiles').select('id').eq('id',uid).maybeSingle();if(p.error)throw p.error;assert(p.data&&p.data.id===uid,'Own profile not returned.');
+   var s=await client.from('user_settings').select('user_id').eq('user_id',uid).maybeSingle();if(s.error)throw s.error;assert(s.data&&s.data.user_id===uid,'Own settings row not returned.');
+  });
+  await test('Read seeded asset classes',async function(){
+   var r=await client.from('asset_classes').select('id').eq('user_id',uid).limit(1);if(r.error)throw r.error;assert(Array.isArray(r.data),'Asset class query did not return an array.');
+  });
+  await test('Playbook create, read, update and delete',async function(){
+   var ins=await client.from('playbooks').insert({user_id:uid,name:'TEMP '+stamp,description:'Automated disposable test',rules:['test'],legacy_id:stamp}).select('id').single();
+   if(ins.error)throw ins.error;pbId=ins.data.id;
+   var read=await client.from('playbooks').select('id,name').eq('id',pbId).eq('user_id',uid).single();if(read.error)throw read.error;assert(read.data.name==='TEMP '+stamp,'Playbook read mismatch.');
+   var upd=await client.from('playbooks').update({description:'updated '+stamp}).eq('id',pbId).eq('user_id',uid).select('id').single();if(upd.error)throw upd.error;
+   var del=await client.from('playbooks').delete().eq('id',pbId).eq('user_id',uid);if(del.error)throw del.error;pbId=null;
+  });
+  await test('Trade create, read, update and delete with playbook FK',async function(){
+   var p=await client.from('playbooks').insert({user_id:uid,name:'TEMP FK '+stamp,legacy_id:stamp+'_pb'}).select('id').single();if(p.error)throw p.error;pbId=p.data.id;
+   var ins=await client.from('trades').insert({user_id:uid,playbook_id:pbId,instrument_symbol:'TEST-HARNESS',trade_date:dateToday(),side:'buy',status:'closed',net_pnl:0,legacy_id:stamp}).select('id').single();
+   if(ins.error)throw ins.error;tradeId=ins.data.id;
+   var read=await client.from('trades').select('id,playbook_id').eq('id',tradeId).eq('user_id',uid).single();if(read.error)throw read.error;assert(read.data.playbook_id===pbId,'Trade FK did not persist.');
+   var upd=await client.from('trades').update({net_pnl:1}).eq('id',tradeId).eq('user_id',uid).select('id').single();if(upd.error)throw upd.error;
+   var del=await client.from('trades').delete().eq('id',tradeId).eq('user_id',uid);if(del.error)throw del.error;tradeId=null;
+   var dp=await client.from('playbooks').delete().eq('id',pbId).eq('user_id',uid);if(dp.error)throw dp.error;pbId=null;
+  });
+  await test('Daily journal create, read, update and delete',async function(){
+   var ins=await client.from('daily_journals').insert({user_id:uid,journal_date:dateToday(),plan:'TEMP '+stamp,review:'',mood:3,legacy_id:stamp}).select('id').single();
+   if(ins.error)throw ins.error;dayId=ins.data.id;
+   var read=await client.from('daily_journals').select('id,journal_date').eq('id',dayId).eq('user_id',uid).single();if(read.error)throw read.error;assert(read.data.journal_date===dateToday(),'Journal date mismatch.');
+   var upd=await client.from('daily_journals').update({review:'updated '+stamp,mood:4}).eq('id',dayId).eq('user_id',uid).select('id').single();if(upd.error)throw upd.error;
+   var del=await client.from('daily_journals').delete().eq('id',dayId).eq('user_id',uid);if(del.error)throw del.error;dayId=null;
+  });
+  await test('Private screenshot storage upload, download and delete',async function(){
+   var png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pXcAAAAASUVORK5CYII='),c=>c.charCodeAt(0));
+   var up=await client.storage.from('trade-screenshots').upload(storagePath,png,{contentType:'image/png',upsert:false});if(up.error)throw up.error;uploaded=true;
+   var down=await client.storage.from('trade-screenshots').download(storagePath);if(down.error)throw down.error;assert(down.data&&down.data.size>0,'Downloaded file was empty.');
+   var rm=await client.storage.from('trade-screenshots').remove([storagePath]);if(rm.error)throw rm.error;uploaded=false;
+  });
+  if(other){
+   await test('Cross-user read is blocked by RLS',async function(){
+    assert(other!==uid,'Other account UUID must differ from signed-in account.');
+    var r=await client.from('playbooks').select('id').eq('user_id',other);if(r.error)throw r.error;assert((r.data||[]).length===0,'Rows from another account were visible.');
+   });
+   await test('Forged owner insert is rejected by RLS',async function(){
+    var r=await client.from('playbooks').insert({user_id:other,name:'SHOULD NEVER INSERT '+stamp,legacy_id:stamp+'_forged'}).select('id').maybeSingle();
+    assert(r.error&&r.error.code==='42501','Expected RLS error 42501; received '+(r.error?r.error.code:'no error'));
+   });
+  }else log('SKIP  Cross-user tests — add the other test account UUID above.','warn');
+  log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
+ }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
+ finally{
+  try{if(tradeId)await client.from('trades').delete().eq('id',tradeId).eq('user_id',uid);}catch(e){log('Cleanup warning (trade): '+e.message,'warn');}
+  try{if(pbId)await client.from('playbooks').delete().eq('id',pbId).eq('user_id',uid);}catch(e){log('Cleanup warning (playbook): '+e.message,'warn');}
+  try{if(dayId)await client.from('daily_journals').delete().eq('id',dayId).eq('user_id',uid);}catch(e){log('Cleanup warning (journal): '+e.message,'warn');}
+  if(uploaded){try{var rm=await client.storage.from('trade-screenshots').remove([storagePath]);if(rm.error)log('Cleanup warning (storage): '+rm.error.message,'warn');else log('Cleanup: removed temporary screenshot.','warn');}catch(e){log('Cleanup warning (storage): '+e.message,'warn');}}
+  $('run').disabled=false;
+ }
+}
+$('login').addEventListener('click',function(){signIn().catch(e=>status('Sign-in failed: '+e.message));});
+$('logout').addEventListener('click',function(){signOut().catch(e=>status('Sign-out failed: '+e.message));});
+$('run').addEventListener('click',function(){runTests();});
+$('clear').addEventListener('click',function(){out.textContent='No tests run yet.';});
+if(!client){status('Supabase client unavailable. Check ../supabase-config.js and internet connection.');}
+})();
+</script>
+</body>
+</html>

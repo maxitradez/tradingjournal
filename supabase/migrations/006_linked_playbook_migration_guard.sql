@@ -144,12 +144,27 @@ begin
                     return jsonb_build_object('status', 'needs_review');
                 end if;
 
-                select p.id into v_playbook_id
-                  from public.playbooks p
-                 where p.user_id = v_user_id
-                   and (p.legacy_id = v_playbook_legacy or p.id::text = v_playbook_legacy)
-                 order by (p.legacy_id = v_playbook_legacy) desc
-                 limit 1;
+                if v_playbook_item.classification = 'new' then
+                    -- Link to the exact row imported by this batch, not merely a matching legacy label.
+                    select p.id into v_playbook_id
+                      from public.playbooks p
+                     where p.id = v_playbook_item.target_record_id
+                       and p.user_id = v_user_id;
+                else
+                    -- A duplicate is safe only while its cloud content still matches the reviewed snapshot.
+                    select p.id into v_playbook_id
+                      from public.playbooks p
+                     where p.user_id = v_user_id
+                       and (p.legacy_id = v_playbook_legacy or p.id::text = v_playbook_legacy)
+                       and p.name = coalesce(nullif(v_playbook_item.payload->>'name', ''), 'Untitled')
+                       and coalesce(p.description, '') = coalesce(v_playbook_item.payload->>'description', '')
+                       and p.rules = case
+                           when jsonb_typeof(v_playbook_item.payload->'rules') = 'array' then v_playbook_item.payload->'rules'
+                           else '[]'::jsonb
+                       end
+                     order by (p.legacy_id = v_playbook_legacy) desc
+                     limit 1;
+                end if;
                 if v_playbook_id is null then
                     update public.guest_migration_items
                        set import_status = 'needs_review',

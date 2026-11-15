@@ -328,7 +328,7 @@
     toggle.textContent = mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account';
     toggle.hidden = mode === 'recovery';
     if (forgot) forgot.hidden = mode !== 'signin';
-    if (email) email.hidden = mode === 'recovery';
+    if (email) { email.hidden = mode === 'recovery'; email.required = mode !== 'recovery'; }
     form.hidden = false;
     authPanel.querySelector('.auth-message').textContent = '';
     if (email && mode !== 'recovery') email.focus();

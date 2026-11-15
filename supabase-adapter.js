@@ -9,7 +9,39 @@
     var normPb = helpers.normPb, normTrade = helpers.normTrade;
     var normDay = helpers.normDay, normSettings = helpers.normSettings;
     var num = helpers.num;
-      var ids = { playbooks: {} };
+    var ids = { playbooks: {} };
+    var screenshotBucket = 'trade-screenshots';
+    var signedUrlLifetime = 60 * 60 * 24 * 7;
+
+    async function screenshotUrl(path) {
+      if (!path || typeof path !== 'string' || path.indexOf(userId + '/') !== 0) return '';
+      var result = await api.storage.from(screenshotBucket).createSignedUrl(path, signedUrlLifetime);
+      if (result.error) return '';
+      return result.data && result.data.signedUrl ? result.data.signedUrl : '';
+    }
+    async function removeScreenshot(path) {
+      if (!path) return;
+      if (typeof path !== 'string' || path.indexOf(userId + '/') !== 0) {
+        throw new Error('Screenshot path does not belong to this account.');
+      }
+      var result = await api.storage.from(screenshotBucket).remove([path]);
+      if (result.error) throw result.error;
+    }
+    async function uploadScreenshot(blob, tradeId) {
+      if (!blob || blob.type !== 'image/jpeg') throw new Error('Please choose a supported image file.');
+      if (blob.size > 10 * 1024 * 1024) throw new Error('The compressed screenshot is over the 10 MB storage limit. Choose a smaller image.');
+      var safeTradeId = String(tradeId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+      if (!safeTradeId) throw new Error('Could not identify the trade for this screenshot.');
+      var nonce = global.crypto && global.crypto.randomUUID
+        ? global.crypto.randomUUID()
+        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+      var path = userId + '/' + safeTradeId + '/' + nonce + '.jpg';
+      var result = await api.storage.from(screenshotBucket).upload(path, blob, {
+        cacheControl: '3600', contentType: 'image/jpeg', upsert: false
+      });
+      if (result.error) throw result.error;
+      return path;
+    }
   
       function own(table) { return api.from(table).select('*').eq('user_id', userId); }
       async function legacyRow(table, legacyId) {
@@ -57,9 +89,7 @@
           emotion: row.emotion, followed: row.followed_rules,
           misses: jsonArray(row.misses), mistakes: jsonArray(row.mistakes),
           lesson: row.lesson, shot: extra.legacy_shot || '',
-          // Cloud screenshots are not wired into the app UI yet. Keep legacy
-          // metadata in notes, but do not render a local-only blob URL.
-          shotId: '', example: row.is_example,
+          shotId: extra.chart_screenshot_path || '', shotUrl: '', example: row.is_example,
           createdAt: row.created_at ? Date.parse(row.created_at) : 0
         });
       }
@@ -82,8 +112,8 @@
           emotion: t.emotion || null, followed_rules: !!t.followed,
           misses: jsonArray(t.misses), mistakes: jsonArray(t.mistakes),
           lesson: t.lesson || null, is_example: !!t.example,
-          notes: { legacy_shot: t.shot || '', legacy_shot_id: t.shotId || '',
-            playbook_legacy_id: t.playbook || '' }
+          notes: { legacy_shot: t.shot || '', legacy_shot_id: '',
+            chart_screenshot_path: t.shotId || null, playbook_legacy_id: t.playbook || '' }
         };
       }
       async function saveLegacyRow(table, legacyId, payload) {
@@ -105,6 +135,8 @@
       }
   
       return {
+        uploadScreenshot: uploadScreenshot,
+        deleteScreenshot: removeScreenshot,
         async load() {
           var results = await Promise.all([
             allOwned('playbooks', 'created_at'), allOwned('trades', 'trade_date'),
@@ -114,6 +146,9 @@
           if (results[3].error) throw results[3].error;
           var pbs = (results[0] || []).map(fromCloudPlaybook);
           var trs = (results[1] || []).map(fromCloudTrade);
+          await Promise.all(trs.map(async function (trade) {
+            trade.shotUrl = await screenshotUrl(trade.shotId);
+          }));
           // Resolve playbook UUIDs to the journal's stable legacy IDs.
           (results[0] || []).forEach(function (p) { ids.playbooks[String(p.id)] = p.id; });
           trs.forEach(function (t) {

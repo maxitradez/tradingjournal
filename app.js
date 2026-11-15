@@ -397,16 +397,17 @@
     };
     return p;
   }
-  function migrationSourceRecords() {
-    if (!localSnapshot) return [];
+  function migrationSourceRecords(snapshot) {
+    snapshot = snapshot || localSnapshot;
+    if (!snapshot) return [];
     var records = [];
-    (localSnapshot.playbooks || []).filter(function (p) { return !p.example; }).forEach(function (p) {
+    (snapshot.playbooks || []).filter(function (p) { return !p.example; }).forEach(function (p) {
       records.push({ type: 'playbook', key: String(p.id), payload: {
         id: String(p.id), name: p.name || 'Untitled', description: p.description || '',
         rules: Array.isArray(p.rules) ? p.rules.slice() : [], example: false
       }});
     });
-    (localSnapshot.trades || []).filter(function (t) { return !t.example; }).forEach(function (t) {
+    (snapshot.trades || []).filter(function (t) { return !t.example; }).forEach(function (t) {
       records.push({ type: 'trade', key: String(t.id), payload: {
         id: String(t.id), date: String(t.date || ''), time: String(t.time || ''),
         asset: String(t.asset || ''), side: t.side === 'sell' ? 'sell' : 'buy',
@@ -423,14 +424,14 @@
         }});
       }
     });
-    (localSnapshot.days || []).filter(function (d) { return !d.example && (d.plan || d.review || d.mood); }).forEach(function (d) {
+    (snapshot.days || []).filter(function (d) { return !d.example && (d.plan || d.review || d.mood); }).forEach(function (d) {
       records.push({ type: 'daily_journal', key: String(d.date || d.id), payload: {
         id: String(d.date || d.id), date: String(d.date || d.id), plan: d.plan || '',
         review: d.review || '', mood: d.mood == null ? null : Number(d.mood), example: false
       }});
     });
-    if (migrationHasSettings(localSnapshot.settings) && !localSnapshot.settings.example) {
-      var s = localSnapshot.settings;
+    if (migrationHasSettings(snapshot.settings) && !snapshot.settings.example) {
+      var s = snapshot.settings;
       records.push({ type: 'settings', key: 'guest-settings', payload: {
         balance: s.balance, currency: s.currency || '', riskPct: s.riskPct,
         monthlyTarget: s.monthlyTarget, maxTradesDay: s.maxTradesDay,
@@ -449,7 +450,8 @@
       entry: p.entry == null ? '' : String(p.entry), sl: p.sl == null ? '' : String(p.sl),
       tp: p.tp == null ? '' : String(p.tp), exit: p.exit == null ? '' : String(p.exit), pnl: Number(p.pnl) || 0 };
   }
-  function migrationClassify(record) {
+  function migrationClassify(record, snapshot) {
+    snapshot = snapshot || localSnapshot;
     var type = record.type, p = record.payload, list, found = null;
     if (type === 'attachment') return 'conflict';
     if (type === 'playbook') list = state.playbooks;
@@ -472,7 +474,7 @@
     }
     if (!found) {
       if (type === 'trade' && p.playbook) {
-        var guestPb = (localSnapshot.playbooks || []).some(function (x) { return !x.example && String(x.id) === p.playbook; });
+        var guestPb = (snapshot.playbooks || []).some(function (x) { return !x.example && String(x.id) === p.playbook; });
         var cloudPb = (state.playbooks || []).some(function (x) { return !x.example && String(x.id) === p.playbook; });
         if (!guestPb && !cloudPb) return 'conflict';
       }
@@ -481,8 +483,34 @@
     return migrationStableString(migrationComparable(type, p)) ===
       migrationStableString(migrationComparable(type, found)) ? 'duplicate' : 'conflict';
   }
-  function migrationBuildItems() {
-    return migrationSourceRecords().map(function (record) {
+  function readStoredGuestSnapshot() {
+    try {
+      var stored = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      return {
+        trades: (stored.trades || []).map(normTrade),
+        playbooks: (stored.playbooks || []).map(normPb),
+        days: (stored.days || []).map(normDay),
+        settings: normSettings(stored.settings)
+      };
+    } catch (error) {
+      throw new Error('The browser journal could not be rechecked. Do not migrate until local storage can be read safely.');
+    }
+  }
+  function migrationSnapshotHash(snapshot) {
+    return migrationHash(migrationBuildItems(snapshot).map(function (item) {
+      return [item.entity_type, item.source_record_key, item.fingerprint];
+    }));
+  }
+  function verifyGuestSnapshotUnchanged() {
+    if (!localSnapshot) throw new Error('The original browser journal snapshot is unavailable. Refresh and sign in again before migrating.');
+    var storedSnapshot = readStoredGuestSnapshot();
+    if (migrationSnapshotHash(storedSnapshot) !== migrationSnapshotHash(localSnapshot)) {
+      throw new Error('The browser journal changed after sign-in. Refresh this page and prepare a new preview so you review the latest guest data.');
+    }
+    return storedSnapshot;
+  }
+  function migrationBuildItems(snapshot) {
+    return migrationSourceRecords(snapshot).map(function (record) {
       var payload = record.payload;
       var invalid = !record.key || record.key.length > 240;
       if (record.type === 'trade') {
@@ -492,7 +520,7 @@
         if (!migrationValidDate(payload.date) || !payload.asset || !['buy', 'sell'].includes(payload.side) || !numericValid || !timeValid) invalid = true;
       }
       if (record.type === 'daily_journal' && (!migrationValidDate(payload.date) || (payload.mood != null && (!isFinite(Number(payload.mood)) || Number(payload.mood) % 1 !== 0 || Number(payload.mood) < 1 || Number(payload.mood) > 5)))) invalid = true;
-      var classification = invalid ? 'invalid' : migrationClassify(record);
+      var classification = invalid ? 'invalid' : migrationClassify(record, snapshot);
       var fingerprint = migrationHash(payload);
       return {
         entity_type: record.type, source_record_key: record.key,
@@ -681,8 +709,8 @@
     if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
     var batch = migrationWorkflowBatch, userId = authUser.id, token = authLoadToken;
     try {
-      var currentItems = migrationBuildItems();
-      var currentHash = migrationHash(currentItems.map(function (x) { return [x.entity_type, x.source_record_key, x.fingerprint]; }));
+      var storedSnapshot = verifyGuestSnapshotUnchanged();
+      var currentHash = migrationSnapshotHash(storedSnapshot);
       if (!batch.manifest || currentHash !== batch.manifest.local_snapshot_hash) {
         throw new Error('Your browser journal changed after this preview. Prepare a fresh preview before importing so the correct snapshot is reviewed.');
       }
@@ -797,7 +825,14 @@
       migrationPanel.querySelector('.migration-status').textContent = 'Please confirm that you want to copy a snapshot of these guest records into private migration staging for preview. No journal import will happen.';
       return;
     }
-    var items = migrationBuildItems();
+    var items;
+    try {
+      verifyGuestSnapshotUnchanged();
+      items = migrationBuildItems();
+    } catch (snapshotError) {
+      migrationPanel.querySelector('.migration-status').textContent = snapshotError.message;
+      return;
+    }
     if (!items.length) {
       migrationPanel.querySelector('.migration-status').textContent = 'No non-example guest records or personal settings were found in this browser.';
       migrationPanel.querySelector('.migration-results').hidden = true;

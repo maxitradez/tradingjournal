@@ -192,7 +192,7 @@ async function runMigrationInfrastructureTests(test, uid, other, stamp){
 
 async function runGuestMigrationImporterTests(test,uid,other,stamp){
  var batchId=null, ids={}, made={pb:null,trade:null,day:null,collision:null}, settings=null;
- var pbKey='gpb_'+stamp, tradeKey='gtr_'+stamp, collisionKey='gcol_'+stamp, journalDate='9998-12-31';
+ var pbKey='gpb_'+stamp, tradeKey='gtr_'+stamp, collisionKey='gcol_'+stamp, conflictPbKey='gpb_conflict_'+stamp, linkedTradeKey='gtr_linked_conflict_'+stamp, journalDate='9998-12-31';
  function itemId(key){return ids[key];}
  async function importItem(key,extra){
   var args=Object.assign({p_batch_id:batchId,p_item_id:itemId(key),p_account_id:null,p_confirm_unassigned_account:false,p_confirm_settings:false},extra||{});
@@ -216,16 +216,18 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
     {entity_type:'settings',source_record_key:'gsettings_'+stamp,fingerprint:'fp_settings_'+stamp,classification:'new',payload:{balance:9876.54,currency:'USD',riskPct:1.23,monthlyTarget:400,maxTradesDay:3,dailyLoss:2,example:false}},
     {entity_type:'playbook',source_record_key:collisionKey,fingerprint:'fp_'+collisionKey,classification:'new',payload:{id:collisionKey,name:'DO NOT OVERWRITE '+stamp,description:'collision',rules:[],example:false}},
     {entity_type:'attachment',source_record_key:'gattachment_'+stamp,fingerprint:'fp_attachment_'+stamp,classification:'new',payload:{fileName:'test.png'}},
-    {entity_type:'trade',source_record_key:'gconflict_'+stamp,fingerprint:'fp_conflict_'+stamp,classification:'conflict',payload:{id:'conflict_'+stamp,date:dateToday(),asset:'CONFLICT',side:'buy'}}
+    {entity_type:'trade',source_record_key:'gconflict_'+stamp,fingerprint:'fp_conflict_'+stamp,classification:'conflict',payload:{id:'conflict_'+stamp,date:dateToday(),asset:'CONFLICT',side:'buy'}},
+    {entity_type:'playbook',source_record_key:conflictPbKey,fingerprint:'fp_'+conflictPbKey,classification:'conflict',payload:{id:conflictPbKey,name:'CONFLICTING PLAYBOOK '+stamp,description:'different cloud version',rules:['guest rule'],example:false}},
+    {entity_type:'trade',source_record_key:linkedTradeKey,fingerprint:'fp_'+linkedTradeKey,classification:'new',payload:{id:linkedTradeKey,date:dateToday(),time:'11:15',asset:'TEST-LINKED-CONFLICT',side:'buy',entry:'100',sl:'95',tp:'110',exit:'108',pnl:8,r:1.6,risk:5,playbook:conflictPbKey,emotion:'Calm',followed:true,misses:[],mistakes:[],lesson:'linked conflict test',shot:'',shotId:'',example:false}}
    ];
    var staged=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:items});if(staged.error)throw staged.error;
    assert(staged.data===items.length,'Not all importer test records were staged.');
    var rows=await client.from('guest_migration_items').select('id,source_record_key').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;
    rows.data.forEach(function(x){ids[x.source_record_key]=x.id;});
-   [pbKey,tradeKey,'gday_'+stamp,'gsettings_'+stamp,collisionKey,'gattachment_'+stamp,'gconflict_'+stamp].forEach(function(k){assert(itemId(k),'Missing item '+k+'.');});
+   [pbKey,tradeKey,'gday_'+stamp,'gsettings_'+stamp,collisionKey,'gattachment_'+stamp,'gconflict_'+stamp,conflictPbKey,linkedTradeKey].forEach(function(k){assert(itemId(k),'Missing item '+k+'.');});
    var preview=await client.rpc('finalize_guest_migration_preview',{p_batch_id:batchId,p_preview_notes:{test:'stage5-importer'}});
    if(preview.error)throw preview.error;
-   assert(preview.data.records_new===6&&preview.data.records_conflict===1,'Unexpected importer preview counts.');
+   assert(preview.data.records_new===7&&preview.data.records_conflict===2,'Unexpected importer preview counts.');
    var start=await client.rpc('transition_guest_migration_batch',{p_batch_id:batchId,p_next_status:'importing',p_error:null});
    if(start.error)throw start.error;assert(start.data==='importing','Could not start importer test batch.');
   });
@@ -253,6 +255,14 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
    assert(result.data.status==='needs_review','New conflict was not held for review.');
    var check=await client.from('playbooks').select('name,description').eq('id',made.collision).eq('user_id',uid).single();if(check.error)throw check.error;
    assert(check.data.name==='EXISTING '+stamp&&check.data.description==='keep this','Existing cloud data was overwritten.');
+  });
+  await test('Guest importer blocks a trade linked to an unresolved conflicting playbook',async function(){
+   var result=await importItem(linkedTradeKey,{p_confirm_unassigned_account:true});if(result.error)throw result.error;
+   assert(result.data.status==='needs_review','Trade linked to a conflicting playbook was not held for review.');
+   var item=await client.from('guest_migration_items').select('import_status,import_error').eq('id',itemId(linkedTradeKey)).single();if(item.error)throw item.error;
+   assert(item.data.import_status==='needs_review'&&item.data.import_error,'Linked trade review status was not saved.');
+   var row=await client.from('trades').select('id').eq('user_id',uid).eq('legacy_id',linkedTradeKey);
+   if(row.error)throw row.error;assert((row.data||[]).length===0,'Trade was imported against a conflicting playbook.');
   });
   await test('Guest importer preserves trade-playbook relationship and explicit account choice',async function(){
    var result=await importItem(tradeKey,{p_confirm_unassigned_account:true});if(result.error)throw result.error;
@@ -284,12 +294,14 @@ async function runGuestMigrationImporterTests(test,uid,other,stamp){
    var blocked=await client.rpc('finalize_guest_migration_import',{p_batch_id:batchId});
    assert(!!blocked.error,'Batch finalized while review items were unresolved.');
    await skipItem('gconflict_'+stamp,'Explicitly skipped by importer test.');
+   await skipItem(conflictPbKey,'Conflicting guest playbook cannot be safely linked.');
+   await skipItem(linkedTradeKey,'Linked playbook conflict requires manual resolution.');
    await skipItem(collisionKey,'Existing cloud playbook must remain unchanged.');
    await skipItem('gattachment_'+stamp,'Attachment storage uses a separate workflow.');
    var done=await client.rpc('finalize_guest_migration_import',{p_batch_id:batchId});if(done.error)throw done.error;
-   assert(done.data.status==='completed'&&done.data.records_imported===4&&done.data.records_skipped===3,'Final import summary is incorrect.');
+   assert(done.data.status==='completed'&&done.data.records_imported===4&&done.data.records_skipped===5,'Final import summary is incorrect.');
    var b=await client.from('guest_migration_batches').select('status,records_imported,records_failed,records_skipped,import_started_at,import_completed_at').eq('id',batchId).eq('user_id',uid).single();if(b.error)throw b.error;
-   assert(b.data.status==='completed'&&b.data.records_imported===4&&b.data.records_failed===0&&b.data.records_skipped===3,'Completed batch counters are incorrect.');
+   assert(b.data.status==='completed'&&b.data.records_imported===4&&b.data.records_failed===0&&b.data.records_skipped===5,'Completed batch counters are incorrect.');
    assert(b.data.import_started_at&&b.data.import_completed_at,'Import timestamps were not recorded.');
    log('Completed importer test batch retained as audit evidence: '+batchId,'warn');
   });

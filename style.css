@@ -350,6 +350,8 @@ button.day:disabled { cursor: default; color: var(--fg); }
 .migration-count strong { font: 700 20px/1 var(--font-display); }
 .migration-count span { color: var(--muted); font: 500 10px/1.3 var(--font-mono); text-transform: uppercase; }
 .migration-item-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+.migration-page-nav { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 11px; }
+.migration-page-nav span { margin-right: auto; }
 .migration-item { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; gap: 9px; border-bottom: 1px solid var(--line); padding: 7px 0; font-size: 12px; }
 .migration-item-type { color: var(--muted); text-transform: capitalize; }
 .migration-item-name { min-width: 0; overflow-wrap: anywhere; }

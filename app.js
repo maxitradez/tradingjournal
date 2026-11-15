@@ -554,7 +554,7 @@
         }
         if (item.entity_type === 'settings') {
           settingsCheck = h('input', { type: 'checkbox', class: 'migration-settings-check' });
-          actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings into my account' })));
+          actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings and replacing matching account currency, balance and risk preferences. Unrelated preferences will be preserved.' })));
         }
         var tradeBlocked = item.entity_type === 'trade' && playbooksPending;
         actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Import playbooks first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlocked ? 'Import or explicitly skip all eligible playbooks before importing trades.' : '', onclick: function () {

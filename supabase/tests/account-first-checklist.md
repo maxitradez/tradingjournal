@@ -31,6 +31,7 @@ Run these checks on the `account-first` branch using a fresh ZIP. Do not merge o
 - [ ] Confirm the sign-in screen contains no guest mode or migration panel.
 - [ ] Confirm the app does not read, restore, or write a local guest journal.
 - [ ] Confirm the legacy `trading-journal-pro-v1` browser storage key is cleared on app startup.
+- [ ] Apply `supabase/migrations/007_remove_guest_migration.sql` in the Supabase SQL Editor; verify the two `guest_migration_*` tables and their RPCs are gone. This removes only the retired guest-migration staging/audit data, not account journal records.
 - [ ] Sign in normally and confirm no guest migration RPCs or migration prompts are triggered.
 
 ## Release boundary

@@ -313,7 +313,14 @@ button.day:disabled { cursor: default; color: var(--fg); }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
 
-/* Supabase account access and explicit guest migration preview. */
+/* Account-first access gate: no journal UI is exposed until cloud data loads. */
+body.account-required #nav,
+body.account-required main,
+body.account-required .foot,
+body.account-required #fab,
+body.account-required #banner { display: none !important; }
+
+/* Supabase account access and legacy guest-data recovery. */
 .chip[data-state="account-local"] i { background: var(--accent-hot); }
 .auth-panel { display: grid; gap: 14px; margin: 0 0 18px; }
 .auth-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; }

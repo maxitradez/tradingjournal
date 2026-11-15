@@ -145,26 +145,30 @@ async function runMigrationInfrastructureTests(test, uid, other, stamp){
   var rows=await client.from('guest_migration_items').select('id').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;
   assert((rows.data||[]).length===0,'A partial item remained after the atomic rollback.');
  });
- var stagedItems=[{entity_type:'trade',source_record_key:'trade_'+stamp,fingerprint:'trade_fp_'+stamp,classification:'new',payload:{symbol:'XAUUSD',note:'disposable preview'}},{entity_type:'daily_journal',source_record_key:'day_'+stamp,fingerprint:'day_fp_'+stamp,classification:'conflict',payload:{date:'2099-01-01',note:'conflict preview'}}];
+ var stagedItems=[{entity_type:'trade',source_record_key:'trade_'+stamp,fingerprint:'trade_fp_'+stamp,classification:'new',payload:{symbol:'XAUUSD',note:'disposable preview'}},{entity_type:'daily_journal',source_record_key:'day_'+stamp,fingerprint:'day_fp_'+stamp,classification:'conflict',payload:{date:'2099-01-01',note:'conflict preview'}},{entity_type:'playbook',source_record_key:'duplicate_'+stamp,fingerprint:'duplicate_fp_'+stamp,classification:'duplicate',payload:{name:'already exists'}},{entity_type:'trade',source_record_key:'invalid_'+stamp,fingerprint:'invalid_fp_'+stamp,classification:'invalid',payload:{reason:'invalid preview'}}];
  await test('Migration staging is idempotent and rejects changed source records',async function(){
-  var staged=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:stagedItems});if(staged.error)throw staged.error;assert(staged.data===2,'Expected two staged records.');
+  var staged=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:stagedItems});if(staged.error)throw staged.error;assert(staged.data===4,'Expected four staged records.');
   var retry=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:stagedItems});if(retry.error)throw retry.error;assert(retry.data===0,'Identical retry inserted duplicate records.');
   var changed=JSON.parse(JSON.stringify(stagedItems));changed[0].fingerprint='changed_'+stamp;
   var rejected=await client.rpc('stage_guest_migration_items',{p_batch_id:batchId,p_items:changed});assert(!!rejected.error,'Changed source record was accepted under the same idempotency key.');
-  var rows=await client.from('guest_migration_items').select('id').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;assert((rows.data||[]).length===2,'Staged records are missing or duplicated.');
+  var rows=await client.from('guest_migration_items').select('id').eq('user_id',uid).eq('batch_id',batchId);if(rows.error)throw rows.error;assert((rows.data||[]).length===4,'Staged records are missing or duplicated.');
  });
  await test('Migration preview reports accurate classifications',async function(){
   var preview=await client.rpc('finalize_guest_migration_preview',{p_batch_id:batchId,p_preview_notes:{test:'stage4'}});if(preview.error)throw preview.error;
-  assert(preview.data&&preview.data.records_seen===2,'Preview total is incorrect.');assert(preview.data.records_new===1&&preview.data.records_conflict===1,'Preview classifications are incorrect.');
-  var row=await client.from('guest_migration_batches').select('status,records_seen').eq('user_id',uid).eq('id',batchId).single();if(row.error)throw row.error;assert(row.data.status==='previewed'&&row.data.records_seen===2,'Preview status did not persist.');
+  assert(preview.data&&preview.data.records_seen===4,'Preview total is incorrect.');assert(preview.data.records_new===1&&preview.data.records_conflict===1&&preview.data.records_duplicate===1&&preview.data.records_invalid===1,'Preview classifications are incorrect.');
+  var row=await client.from('guest_migration_batches').select('status,records_seen').eq('user_id',uid).eq('id',batchId).single();if(row.error)throw row.error;assert(row.data.status==='previewed'&&row.data.records_seen===4,'Preview status did not persist.');
  });
  await test('Migration import tracking initializes safe per-item states',async function(){
   var rows=await client.from('guest_migration_items').select('entity_type,source_record_key,classification,import_status,target_record_id,imported_at,import_attempts').eq('user_id',uid).eq('batch_id',batchId);
-  if(rows.error)throw rows.error;assert(rows.data.length===2,'Expected two tracked migration items.');
+  if(rows.error)throw rows.error;assert(rows.data.length===4,'Expected four tracked migration items.');
   var fresh=rows.data.find(function(x){return x.classification==='new';});
   var conflict=rows.data.find(function(x){return x.classification==='conflict';});
   assert(fresh&&fresh.import_status==='pending'&&fresh.target_record_id===null&&fresh.imported_at===null&&fresh.import_attempts===0,'New item did not initialize as pending.');
   assert(conflict&&conflict.import_status==='needs_review','Conflict was not held for explicit review.');
+  var duplicate=rows.data.find(function(x){return x.classification==='duplicate';});
+  var invalid=rows.data.find(function(x){return x.classification==='invalid';});
+  assert(duplicate&&duplicate.import_status==='skipped','Duplicate was not initialized as skipped.');
+  assert(invalid&&invalid.import_status==='skipped','Invalid item was not initialized as skipped.');
   var batch=await client.from('guest_migration_batches').select('records_imported,records_failed,records_skipped,import_started_at,import_completed_at').eq('user_id',uid).eq('id',batchId).single();
   if(batch.error)throw batch.error;assert(batch.data.records_imported===0&&batch.data.records_failed===0&&batch.data.records_skipped===0,'New batch import counters were not zeroed.');
   assert(batch.data.import_started_at===null&&batch.data.import_completed_at===null,'Import timestamps should be empty before importing.');

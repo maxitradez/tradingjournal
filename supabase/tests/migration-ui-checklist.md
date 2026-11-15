@@ -6,6 +6,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 
 - Use the same browser profile and exact origin for creating guest data and testing migration. A GitHub Pages URL, a downloaded ZIP opened with `file://`, and localhost have separate browser storage.
 - Use the `audit-and-improvements` branch build. Do not test against or deploy to `main`.
+- Apply `supabase/migrations/006_linked_playbook_migration_guard.sql` after migrations 001–005 before running the updated live harness.
 - Sign in with a dedicated Supabase test account whose cloud journal can safely receive test records.
 - Keep a note of the test account and the disposable record names so they can be identified and cleaned up later.
 
@@ -33,6 +34,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Import the test playbook.
 - Import one trade after choosing a trading account, or explicitly confirming it should remain unassigned.
 - Import the linked trade and confirm the playbook relationship is preserved.
+- Confirm a trade linked to a conflicting or unresolved playbook is held for review and cannot attach itself to a different cloud playbook.
 - Import the daily journal note.
 - If testing settings, read the warning carefully, confirm the settings action, and verify only the described settings fields change.
 - Explicitly skip the remaining disposable record and confirm it is counted as skipped.
@@ -46,7 +48,7 @@ Use this checklist only with clearly labelled disposable test records and a dedi
 - Try to import settings without checking its confirmation; the UI should block it.
 - Confirm failed or conflicting records are not silently treated as imported.
 - Confirm a second account cannot see or operate the first account's migration batch.
-- Run the live Supabase test harness and confirm all 29 existing checks still pass.
+- Run the updated live Supabase test harness and confirm all 30 checks pass.
 - Test the account panel, journal views, trade/playbook editing, daily notes, settings, sign-out, and guest-local mode on desktop and a physical phone.
 
 ## Cleanup

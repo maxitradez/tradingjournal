@@ -251,6 +251,7 @@
     'cloud-syncing': 'Saving to your account',
     'cloud-synced': 'Synced to your account',
     'cloud-error': 'Cloud save not confirmed',
+    'cloud-load-error': 'Cloud journal unavailable · local preserved',
     offline: 'Offline · cloud unavailable',
     'cloud-readonly': 'Cloud journal · read-only'
   };
@@ -262,6 +263,7 @@
     'cloud-syncing': 'A journal change is being saved to your account.',
     'cloud-synced': 'The latest journal change was confirmed saved to your account.',
     'cloud-error': 'The latest cloud save was not confirmed. Do not assume this change is synced.',
+    'cloud-load-error': 'The cloud journal could not be loaded. Your browser journal remains available and unchanged.',
     offline: 'Network unavailable. Cloud changes cannot currently be confirmed.',
     'cloud-readonly': 'You are viewing records loaded from your Supabase account. Editing, deleting and saving are disabled in this stage.'
   };
@@ -278,7 +280,7 @@
     var chip = $('sync');
     var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
       : kind === 'cloud-synced' || kind === 'cloud-readonly' ? 'cloud'
-      : kind === 'cloud-error' || kind === 'session-error' || kind === 'offline' ? 'error'
+      : kind === 'cloud-error' || kind === 'cloud-load-error' || kind === 'session-error' || kind === 'offline' ? 'error'
       : kind === 'account-local' ? 'account-local' : 'local';
     chip.setAttribute('data-state', visualState);
     chip.setAttribute('aria-label', dataStateText[kind]);
@@ -326,7 +328,7 @@
       if (state.mode === 'cloud-readonly') {
         authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled; your browser guest journal remains separate and untouched.', false);
         setDataState('cloud-readonly');
-      } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error') {
+      } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error' && state.dataState !== 'cloud-load-error') {
         authNotice('Your account is authenticated. Your browser journal remains local unless the cloud journal has loaded successfully.', false);
         setDataState('account-local');
       }
@@ -371,7 +373,7 @@
       authNotice('Cloud journal loaded successfully. You are in read-only mode: no cloud or guest records can be edited, deleted or overwritten.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
-      restoreLocalSnapshot(); setDataState('cloud-error');
+      restoreLocalSnapshot(); setDataState('cloud-load-error');
       authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your browser journal is preserved and unchanged.'), true);
     }
   }

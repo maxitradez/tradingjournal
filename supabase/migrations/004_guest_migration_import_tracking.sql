@@ -97,7 +97,17 @@ language plpgsql
 set search_path = ''
 as $
 begin
-    if tg_op = 'INSERT' or new.classification is distinct from old.classification then
+    if tg_op = 'INSERT' then
+        new.import_status := case
+            when new.classification in ('duplicate', 'invalid') then 'skipped'
+            when new.classification = 'conflict' then 'needs_review'
+            else 'pending'
+        end;
+        new.target_record_id := null;
+        new.imported_at := null;
+        new.import_error := null;
+        new.import_attempts := 0;
+    elsif new.classification is distinct from old.classification then
         new.import_status := case
             when new.classification in ('duplicate', 'invalid') then 'skipped'
             when new.classification = 'conflict' then 'needs_review'

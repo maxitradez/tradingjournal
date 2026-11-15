@@ -65,7 +65,7 @@ async function runTests(){
  var user=(await client.auth.getUser()).data.user;
  assert(user&&user.id,'No authenticated user found.');
  var uid=user.id, other=$('otherId').value.trim(), stamp='maxi_test_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
- var pbId=null,tradeId=null,dayId=null,storagePath=uid+'/__maxi_harness__/'+stamp+'.png',uploaded=false;
+ var pbId=null,tradeId=null,dayId=null,settingsSnapshot=null,storagePath=uid+'/__maxi_harness__/'+stamp+'.png',uploaded=false;
  log('Running tests as '+user.email+' ('+uid+')');
  async function test(name,fn){
    try{await fn();log('PASS  '+name,'pass');}
@@ -74,7 +74,17 @@ async function runTests(){
  try{
   await test('Read own profile and settings',async function(){
    var p=await client.from('profiles').select('id').eq('id',uid).maybeSingle();if(p.error)throw p.error;assert(p.data&&p.data.id===uid,'Own profile not returned.');
-   var s=await client.from('user_settings').select('user_id').eq('user_id',uid).maybeSingle();if(s.error)throw s.error;assert(s.data&&s.data.user_id===uid,'Own settings row not returned.');
+   var s=await client.from('user_settings').select('*').eq('user_id',uid).maybeSingle();if(s.error)throw s.error;assert(s.data&&s.data.user_id===uid,'Own settings row not returned.');settingsSnapshot=s.data;
+  });
+  await test('Settings update preserves timezone and unrelated preferences',async function(){
+   var oldPrefs=settingsSnapshot.preferences&&typeof settingsSnapshot.preferences==='object'?settingsSnapshot.preferences:{};
+   var merged=Object.assign({},oldPrefs,{__maxi_harness_marker:stamp});
+   var upd=await client.from('user_settings').update({preferences:merged}).eq('user_id',uid).select('*').single();if(upd.error)throw upd.error;
+   assert(upd.data.timezone===settingsSnapshot.timezone,'Timezone was changed.');
+   assert(upd.data.preferences.__maxi_harness_marker===stamp,'Test preference was not written.');
+   Object.keys(oldPrefs).forEach(function(k){assert(upd.data.preferences[k]===oldPrefs[k],'Existing preference was overwritten: '+k);});
+   var restore=await client.from('user_settings').update({default_currency:settingsSnapshot.default_currency,default_starting_balance:settingsSnapshot.default_starting_balance,timezone:settingsSnapshot.timezone,preferences:settingsSnapshot.preferences,is_example:settingsSnapshot.is_example}).eq('user_id',uid);
+   if(restore.error)throw restore.error;settingsSnapshot=null;
   });
   await test('Read seeded asset classes',async function(){
    var r=await client.from('asset_classes').select('id').eq('user_id',uid).limit(1);if(r.error)throw r.error;assert(Array.isArray(r.data),'Asset class query did not return an array.');
@@ -95,11 +105,13 @@ async function runTests(){
    var del=await client.from('trades').delete().eq('id',tradeId).eq('user_id',uid);if(del.error)throw del.error;tradeId=null;
    var dp=await client.from('playbooks').delete().eq('id',pbId).eq('user_id',uid);if(dp.error)throw dp.error;pbId=null;
   });
-  await test('Daily journal create, read, update and delete',async function(){
-   var ins=await client.from('daily_journals').insert({user_id:uid,journal_date:dateToday(),plan:'TEMP '+stamp,review:'',mood:3,legacy_id:stamp}).select('id').single();
+  await test('Daily journal create, date lookup, update and delete',async function(){
+   var testDate=new Date(Date.UTC(1970,0,1)+Math.floor(Math.random()*4102444800000)).toISOString().slice(0,10);
+   var ins=await client.from('daily_journals').insert({user_id:uid,journal_date:testDate,plan:'TEMP '+stamp,review:'',mood:3,legacy_id:stamp}).select('id').single();
    if(ins.error)throw ins.error;dayId=ins.data.id;
-   var read=await client.from('daily_journals').select('id,journal_date').eq('id',dayId).eq('user_id',uid).single();if(read.error)throw read.error;assert(read.data.journal_date===dateToday(),'Journal date mismatch.');
+   var read=await client.from('daily_journals').select('id,journal_date').eq('user_id',uid).eq('journal_date',testDate).is('account_id',null).maybeSingle();if(read.error)throw read.error;assert(read.data&&read.data.id===dayId,'Date lookup did not return the inserted journal.');
    var upd=await client.from('daily_journals').update({review:'updated '+stamp,mood:4}).eq('id',dayId).eq('user_id',uid).select('id').single();if(upd.error)throw upd.error;
+   var again=await client.from('daily_journals').select('id').eq('user_id',uid).eq('journal_date',testDate).is('account_id',null).maybeSingle();if(again.error)throw again.error;assert(again.data&&again.data.id===dayId,'Repeated date lookup returned a different row.');
    var del=await client.from('daily_journals').delete().eq('id',dayId).eq('user_id',uid);if(del.error)throw del.error;dayId=null;
   });
   await test('Private screenshot storage upload, download and delete',async function(){
@@ -121,6 +133,7 @@ async function runTests(){
   log('ALL REQUESTED TESTS COMPLETED. Review every result above.','pass');
  }catch(e){log('TEST RUN STOPPED: '+(e.message||String(e)),'fail');}
  finally{
+  if(settingsSnapshot){try{var rs=await client.from('user_settings').update({default_currency:settingsSnapshot.default_currency,default_starting_balance:settingsSnapshot.default_starting_balance,timezone:settingsSnapshot.timezone,preferences:settingsSnapshot.preferences,is_example:settingsSnapshot.is_example}).eq('user_id',uid);if(rs.error)log('Cleanup warning (settings): '+rs.error.message,'warn');else log('Cleanup: restored original account settings.','warn');}catch(e){log('Cleanup warning (settings): '+e.message,'warn');}}
   try{if(tradeId)await client.from('trades').delete().eq('id',tradeId).eq('user_id',uid);}catch(e){log('Cleanup warning (trade): '+e.message,'warn');}
   try{if(pbId)await client.from('playbooks').delete().eq('id',pbId).eq('user_id',uid);}catch(e){log('Cleanup warning (playbook): '+e.message,'warn');}
   try{if(dayId)await client.from('daily_journals').delete().eq('id',dayId).eq('user_id',uid);}catch(e){log('Cleanup warning (journal): '+e.message,'warn');}

@@ -638,11 +638,21 @@
     if (migrationBusy || !authUser || state.mode !== 'cloud' || !activeCloudAdapter) return;
     try {
       var saved = await migrationFetchWorkflow(null);
-      if (saved) migrationRenderPreview(saved.batch, saved.items);
-      else {
+      if (saved) {
+        migrationRenderPreview(saved.batch, saved.items);
+        var restoredMessage = saved.batch.status === 'importing'
+          ? 'Your migration was restored in progress. Review remaining records below.'
+          : saved.batch.status === 'paused'
+            ? 'Your migration is paused. Resume it when you are ready.'
+            : saved.batch.status === 'completed'
+              ? 'Your previous migration is complete. Your browser guest journal remains unchanged.'
+              : 'Your saved preview was restored. No journal records have been imported.';
+        migrationPanel.querySelector('.migration-status').textContent = restoredMessage;
+      } else {
         migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
         var results = migrationPanel.querySelector('.migration-results');
         results.textContent = ''; results.hidden = true;
+        migrationPanel.querySelector('.migration-status').textContent = 'No saved migration preview exists for this account yet.';
       }
     } catch (error) {
       migrationPanel.querySelector('.migration-status').textContent = 'Could not restore migration progress: ' + ((error && error.message) || 'Please refresh and try again.');

@@ -524,7 +524,13 @@
   function migrationBuildItems(snapshot) {
     return migrationSourceRecords(snapshot).map(function (record) {
       var payload = record.payload;
-      var invalid = !record.key || record.key.length > 240;
+      var sourceKey = String(record.key == null ? '' : record.key);
+      var invalid = !sourceKey.trim() || sourceKey.length > 240;
+      if (!sourceKey.trim()) {
+        sourceKey = 'invalid-empty-key-' + migrationHash(payload);
+      } else if (sourceKey.length > 240) {
+        sourceKey = 'invalid-long-key-' + migrationHash(sourceKey + '|' + migrationStableString(payload));
+      }
       if (record.type === 'trade') {
         var numericFields = [payload.entry, payload.sl, payload.tp, payload.exit, payload.pnl, payload.risk, payload.r];
         var numericValid = numericFields.every(function (value) { return value == null || value === '' || isFinite(Number(value)); });
@@ -535,7 +541,7 @@
       var classification = invalid ? 'invalid' : migrationClassify(record, snapshot);
       var fingerprint = migrationHash(payload);
       return {
-        entity_type: record.type, source_record_key: record.key,
+        entity_type: record.type, source_record_key: sourceKey,
         fingerprint: fingerprint, classification: classification, payload: payload
       };
     });

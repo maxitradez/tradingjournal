@@ -57,7 +57,9 @@
           emotion: row.emotion, followed: row.followed_rules,
           misses: jsonArray(row.misses), mistakes: jsonArray(row.mistakes),
           lesson: row.lesson, shot: extra.legacy_shot || '',
-          shotId: extra.legacy_shot_id || '', example: row.is_example,
+          // Cloud screenshots are not wired into the app UI yet. Keep legacy
+          // metadata in notes, but do not render a local-only blob URL.
+          shotId: '', example: row.is_example,
           createdAt: row.created_at ? Date.parse(row.created_at) : 0
         });
       }
@@ -92,8 +94,9 @@
             var existingNotes = found.data.notes && typeof found.data.notes === 'object' ? found.data.notes : {};
             payload.notes = Object.assign({}, existingNotes, payload.notes);
           }
-          var updated = await api.from(table).update(payload).eq('id', found.data.id).eq('user_id', userId);
+          var updated = await api.from(table).update(payload).eq('id', found.data.id).eq('user_id', userId).select('id').maybeSingle();
           if (updated.error) throw updated.error;
+          if (!updated.data) throw new Error('The cloud record was not updated. Refresh the journal and try again.');
           return found.data.id;
         }
         var inserted = await api.from(table).insert(payload).select('id').single();
@@ -164,9 +167,10 @@
               is_example: !!obj.example
             };
             var result = existing.data
-              ? await api.from('daily_journals').update(payload).eq('id', existing.data.id).eq('user_id', userId)
-              : await api.from('daily_journals').insert(payload);
+              ? await api.from('daily_journals').update(payload).eq('id', existing.data.id).eq('user_id', userId).select('id').maybeSingle()
+              : await api.from('daily_journals').insert(payload).select('id').single();
             if (result.error) throw result.error;
+            if (!result.data) throw new Error('The daily journal entry was not saved. Refresh and try again.');
             return;
           }
           throw new Error('Unsupported cloud record type: ' + kind);
@@ -176,23 +180,13 @@
             var playbook = await legacyRow('playbooks', id);
             if (playbook.error) throw playbook.error;
             if (!playbook.data) return;
-            var linked = await api.from('trades').select('id,notes')
-              .eq('user_id', userId).eq('playbook_id', playbook.data.id);
-            if (linked.error) throw linked.error;
-            // The database protects referenced playbooks with ON DELETE RESTRICT.
-            // Detach each trade but retain its legacy label for historical display.
-            for (var i = 0; i < (linked.data || []).length; i++) {
-              var trade = linked.data[i];
-              var notes = trade.notes && typeof trade.notes === 'object' ? trade.notes : {};
-              notes.playbook_legacy_id = String(id);
-              var detached = await api.from('trades').update({
-                playbook_id: null, notes: notes
-              }).eq('user_id', userId).eq('id', trade.id);
-              if (detached.error) throw detached.error;
-            }
-            var removed = await api.from('playbooks').delete()
-              .eq('user_id', userId).eq('id', playbook.data.id);
-            if (removed.error) throw removed.error;
+            // This RPC detaches linked trades and deletes the playbook in one
+            // database transaction, preserving the historical legacy label.
+            var removedPlaybook = await api.rpc('delete_playbook_preserve_trades', {
+              p_playbook_id: playbook.data.id
+            });
+            if (removedPlaybook.error) throw removedPlaybook.error;
+            delete ids.playbooks[String(id)];
             return;
           }
           var table = kind === 'trades' ? 'trades' : kind === 'days' ? 'daily_journals' : null;
@@ -202,15 +196,17 @@
             if (dayRows.error) throw dayRows.error;
             var dayIds = (dayRows.data || []).map(function (row) { return row.id; });
             if (!dayIds.length) return;
-            var dayDelete = await api.from(table).delete().eq('user_id', userId).in('id', dayIds);
+            var dayDelete = await api.from(table).delete().eq('user_id', userId).in('id', dayIds).select('id');
             if (dayDelete.error) throw dayDelete.error;
+            if (dayDelete.data.length !== dayIds.length) throw new Error('The daily journal entry was not fully deleted. Refresh and check the cloud journal.');
             return;
           }
           var found = await legacyRow(table, id);
           if (found.error) throw found.error;
           if (!found.data) return;
-          var result = await api.from(table).delete().eq('user_id', userId).eq('id', found.data.id);
+          var result = await api.from(table).delete().eq('user_id', userId).eq('id', found.data.id).select('id').maybeSingle();
           if (result.error) throw result.error;
+          if (!result.data) throw new Error('The cloud record was not deleted. Refresh the journal and try again.');
         },
         async saveSettings(settings) {
           var prefs = {

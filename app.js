@@ -216,14 +216,14 @@
     return Promise.resolve();
   }
   function del(kind, id) {
-    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
     if (state.mode === 'cloud') return state.cols[kind].doc(id).delete();
     state[kind] = state[kind].filter(function (x) { return x.id !== id; });
     persistLocal(); renderAll();
     return Promise.resolve();
   }
   function saveSettings(obj) {
-    if (state.readOnlyCloud) return Promise.reject(new Error('The cloud journal is read-only in this stage.'));
+    if (state.readOnlyCloud || state.dataState === 'cloud-loading') return Promise.reject(new Error(state.readOnlyCloud ? 'The cloud journal is read-only in this stage.' : 'The cloud journal is still loading. Please wait before making changes.'));
     if (state.mode === 'cloud') return state.cols.settings.doc('main').set(obj);
     state.settings = obj; applySettings(); persistLocal(); renderAll();
     return Promise.resolve();

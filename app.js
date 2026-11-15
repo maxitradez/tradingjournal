@@ -500,6 +500,14 @@
     try { localStorage.removeItem('trading-journal-pro-v1'); } catch (e) {}
     buildAuthPanel();
     renderAll();
+    // Supabase recovery links return a recovery type in the URL fragment. Preserve
+    // recovery mode even if the auth event is delivered as a generic sign-in event.
+    var recoveryLink = false;
+    try { recoveryLink = new URLSearchParams((window.location.hash || '').replace(/^#/, '')).get('type') === 'recovery'; } catch (e) {}
+    if (recoveryLink) {
+      showAuthForm('recovery');
+      authNotice('Choose a new password for your account.', false);
+    }
     if (!authClient || !authClient.auth) {
       authNotice('Account services are unavailable. Journal access is locked until a secure account connection can be established.', true);
       setDataState('account-required'); setAccountGate(false);

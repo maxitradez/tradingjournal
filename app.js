@@ -919,6 +919,11 @@
         if (migrationSnapshotHash(latestGuestSnapshot) !== localHash) {
           throw new Error('Your browser journal changed while the preview was being prepared. No records were imported. Refresh and prepare a new preview.');
         }
+        var latestCloudForPreview = await activeCloudAdapter.load();
+        ensurePreviewOwner();
+        if (migrationCloudSnapshotHash(latestCloudForPreview) !== cloudHash) {
+          throw new Error('Your cloud journal changed while the preview was being prepared. No records were imported. Prepare a fresh preview to compare against the latest account data.');
+        }
         var finalized = await authClient.rpc('finalize_guest_migration_preview', {
           p_batch_id: batchId, p_preview_notes: { source: 'account-ui', local_snapshot_hash: localHash, cloud_snapshot_hash: cloudHash }
         });

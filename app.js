@@ -1,9 +1,8 @@
 /* Maxi Trades Journal
    Account-first journal: authenticated users load and save their private Supabase journal.
-   Legacy browser guest records are read only as an optional migration source; they are never used as an active journal or overwritten by cloud saves. */
+   No local-only journal or migration workflow is available. */
 (function () {
   'use strict';
-  var LS_KEY = 'trading-journal-pro-v1';
   var MINUS = '−';
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -15,7 +14,7 @@
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'local', readOnlyCloud: false, dataState: 'guest-local', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -192,21 +191,6 @@
   }
   function lite(ts) { var n = ts.length, w = 0, tot = 0; ts.forEach(function (t) { tot += t.pnl; if (t.pnl > 0) w++; }); return { n: n, total: tot, winRate: n ? w / n : 0 }; }
 
-  /* ---------- storage ---------- */
-  function persistLocal() {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ trades: state.trades, playbooks: state.playbooks, days: state.days, settings: state.settings }));
-      if (authUser && !state.readOnlyCloud) localSnapshot = captureLocalSnapshot();
-    } catch (e) {}
-  }
-  function loadLocal() {
-    try {
-      var o = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-      state.trades = (o.trades || []).map(normTrade); state.playbooks = (o.playbooks || []).map(normPb);
-      state.days = (o.days || []).map(normDay); state.settings = normSettings(o.settings);
-    } catch (e) { state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); }
-    applySettings();
-  }
   function cloudWriteReady() {
     if (state.mode !== 'cloud') return false;
     if (!authUser || !activeCloudUserId || authUser.id !== activeCloudUserId || !activeCloudAdapter) throw new Error('Your account connection changed. Refresh the journal before trying again.');
@@ -258,7 +242,7 @@
 
   /* ---------- Supabase journal data adapter (Phase 2A/2B) ---------- */
   // Stage 3 uses the shared adapter for authenticated cloud loading and writes.
-  // Guest migration uses dedicated ownership-checked RPCs; screenshot upload remains a separate workflow.
+  // Authenticated journal access uses the shared Supabase adapter.
   function cloudAdapterFor(userId) {
     if (!window.MaxiCloudAdapterFactory) throw new Error('Supabase data adapter module did not load.');
     return window.MaxiCloudAdapterFactory(authClient, userId, {
@@ -271,7 +255,6 @@
   function failMsg(e) { return 'Could not save: ' + ((e && e.message) || 'try again'); }
   // Explicit data states distinguish local storage, cloud loading and read-only cloud viewing.
   var dataStateText = {
-    'guest-local': 'Saved in this browser only',
     'account-local': 'Account connected · data still local',
     'session-error': 'Account status unavailable · journal local',
     'cloud-loading': 'Loading account journal',
@@ -285,7 +268,6 @@
     'account-required': 'Sign in to access your journal'
   };
   var dataStateTitles = {
-    'guest-local': 'Journal data is stored only in this browser. It is not backed up or synced to an account.',
     'account-local': 'You are signed in, but journal data remains local to this browser. No cloud journal data has been loaded or saved.',
     'session-error': 'The journal remains local. We could not verify the account session; refresh and try again.',
     'cloud-loading': 'Account journal data is being loaded.',
@@ -302,19 +284,11 @@
   var authUser = null;
   var authPanel = null;
   var authFormMode = 'signin';
-  var localSnapshot = null;
   var authLoadToken = 0;
   var activeCloudUserId = null;
   var activeCloudAdapter = null;
-  var migrationPanel = null;
-  var migrationBusy = false;
-  var migrationConsentUserId = null;
-  var migrationWorkflowBatch = null;
-  var migrationWorkflowItems = [];
-  var migrationWorkflowAccounts = [];
-  var migrationWorkflowPage = 0;
   function setDataState(kind) {
-    if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
+    if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'account-required';
     state.dataState = kind;
     var chip = $('sync');
     var visualState = kind === 'cloud-loading' || kind === 'cloud-syncing' ? 'loading'
@@ -328,7 +302,7 @@
   }
   // Kept as a narrow alias for existing initialization call sites.
   function setSync(kind) {
-    setDataState(kind === 'local' ? 'guest-local' : kind === 'account-local' ? 'account-local' : kind);
+    setDataState(kind === 'local' ? 'account-required' : kind);
   }
   function setAccountGate(open) {
     document.body.classList.toggle('account-required', !open);
@@ -356,642 +330,6 @@
     if (email) email.focus();
     if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password'); }
   }
-  function migrationStableString(value) {
-    if (value === null || typeof value !== 'object') return JSON.stringify(value);
-    if (Array.isArray(value)) return '[' + value.map(migrationStableString).join(',') + ']';
-    return '{' + Object.keys(value).sort().map(function (key) {
-      return JSON.stringify(key) + ':' + migrationStableString(value[key]);
-    }).join(',') + '}';
-  }
-  function migrationHash(value) {
-    var input = typeof value === 'string' ? value : migrationStableString(value);
-    function hash(seed) {
-      var h = seed >>> 0;
-      for (var i = 0; i < input.length; i++) {
-        h ^= input.charCodeAt(i);
-        h = Math.imul(h, 16777619) >>> 0;
-      }
-      return ('00000000' + h.toString(16)).slice(-8);
-    }
-    return hash(2166136261) + hash(2246822519);
-  }
-  function migrationHasSettings(s) {
-    s = s || {};
-    return s.balance != null || s.riskPct != null || !!s.currency ||
-      s.monthlyTarget != null || s.maxTradesDay != null || s.dailyLoss != null;
-  }
-  function migrationComparable(type, p) {
-    if (type === 'playbook') return { name: p.name || '', description: p.description || '', rules: p.rules || [] };
-    if (type === 'trade') return {
-      date: p.date || '', time: p.time || '', asset: p.asset || '', side: p.side || 'buy',
-      entry: p.entry == null ? '' : String(p.entry), sl: p.sl == null ? '' : String(p.sl),
-      tp: p.tp == null ? '' : String(p.tp), exit: p.exit == null ? '' : String(p.exit),
-      pnl: Number(p.pnl) || 0, r: p.r == null ? null : Number(p.r), risk: p.risk == null ? null : Number(p.risk),
-      playbook: p.playbook || '', emotion: p.emotion || '', followed: p.followed !== false,
-      misses: p.misses || [], mistakes: p.mistakes || [], lesson: p.lesson || ''
-    };
-    if (type === 'daily_journal') return { date: p.date || p.id || '', plan: p.plan || '', review: p.review || '', mood: p.mood == null ? null : Number(p.mood) };
-    if (type === 'settings') return {
-      balance: p.balance == null ? null : Number(p.balance), riskPct: p.riskPct == null ? null : Number(p.riskPct),
-      currency: p.currency || '', monthlyTarget: p.monthlyTarget == null ? null : Number(p.monthlyTarget),
-      maxTradesDay: p.maxTradesDay == null ? null : Number(p.maxTradesDay),
-      dailyLoss: p.dailyLoss == null ? null : Number(p.dailyLoss)
-    };
-    return p;
-  }
-  function migrationSourceRecords(snapshot) {
-    snapshot = snapshot || localSnapshot;
-    if (!snapshot) return [];
-    var records = [];
-    (snapshot.playbooks || []).filter(function (p) { return !p.example; }).forEach(function (p) {
-      records.push({ type: 'playbook', key: String(p.id), payload: {
-        id: String(p.id), name: p.name || 'Untitled', description: p.description || '',
-        rules: Array.isArray(p.rules) ? p.rules.slice() : [], example: false
-      }});
-    });
-    (snapshot.trades || []).filter(function (t) { return !t.example; }).forEach(function (t) {
-      records.push({ type: 'trade', key: String(t.id), payload: {
-        id: String(t.id), date: String(t.date || ''), time: String(t.time || ''),
-        asset: String(t.asset || ''), side: t.side === 'sell' ? 'sell' : 'buy',
-        entry: t.entry, sl: t.sl, tp: t.tp, exit: t.exit, pnl: Number(t.pnl) || 0,
-        r: t.r, risk: t.risk, playbook: String(t.playbook || ''), emotion: String(t.emotion || ''),
-        followed: t.followed !== false, misses: Array.isArray(t.misses) ? t.misses.slice() : [],
-        mistakes: Array.isArray(t.mistakes) ? t.mistakes.slice() : [], lesson: String(t.lesson || ''),
-        shot: '', shotId: '', example: false
-      }});
-      if (t.shot || t.shotId) {
-        records.push({ type: 'attachment', key: 'attachment_' + String(t.id), payload: {
-          trade_id: String(t.id), has_local_image: !!t.shot, has_legacy_image_id: !!t.shotId,
-          storage_upload_required: true
-        }});
-      }
-    });
-    (snapshot.days || []).filter(function (d) { return !d.example && (d.plan || d.review || d.mood); }).forEach(function (d) {
-      records.push({ type: 'daily_journal', key: String(d.date || d.id), payload: {
-        id: String(d.date || d.id), date: String(d.date || d.id), plan: d.plan || '',
-        review: d.review || '', mood: d.mood == null ? null : Number(d.mood), example: false
-      }});
-    });
-    if (migrationHasSettings(snapshot.settings) && !snapshot.settings.example) {
-      var s = snapshot.settings;
-      records.push({ type: 'settings', key: 'guest-settings', payload: {
-        balance: s.balance, currency: s.currency || '', riskPct: s.riskPct,
-        monthlyTarget: s.monthlyTarget, maxTradesDay: s.maxTradesDay,
-        dailyLoss: s.dailyLoss, example: false
-      }});
-    }
-    return records;
-  }
-  function migrationValidDate(value) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
-    var date = new Date(String(value) + 'T00:00:00Z');
-    return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === String(value);
-  }
-  function migrationTradeCore(p) {
-    return { date: p.date || '', time: p.time || '', asset: p.asset || '', side: p.side || 'buy',
-      entry: p.entry == null ? '' : String(p.entry), sl: p.sl == null ? '' : String(p.sl),
-      tp: p.tp == null ? '' : String(p.tp), exit: p.exit == null ? '' : String(p.exit), pnl: Number(p.pnl) || 0 };
-  }
-  function migrationClassify(record, snapshot) {
-    snapshot = snapshot || localSnapshot;
-    var type = record.type, p = record.payload, list, found = null;
-    if (type === 'attachment') return 'conflict';
-    if (type === 'playbook') list = state.playbooks;
-    else if (type === 'trade') list = state.trades;
-    else if (type === 'daily_journal') list = state.days;
-    if (type === 'settings') {
-      if (!migrationHasSettings(state.settings)) return 'new';
-      return migrationStableString(migrationComparable('settings', p)) ===
-        migrationStableString(migrationComparable('settings', state.settings)) ? 'duplicate' : 'conflict';
-    }
-    if (type === 'daily_journal') {
-      found = (list || []).find(function (x) { return !x.example && String(x.date || x.id) === String(p.date); });
-    } else {
-      found = (list || []).find(function (x) { return !x.example && String(x.id) === String(p.id); });
-      if (!found && type === 'trade') {
-        found = (list || []).find(function (x) {
-          return !x.example && migrationStableString(migrationTradeCore(x)) === migrationStableString(migrationTradeCore(p));
-        });
-      }
-    }
-    if (!found) {
-      if (type === 'trade' && p.playbook) {
-        var guestPb = (snapshot.playbooks || []).some(function (x) { return !x.example && String(x.id) === p.playbook; });
-        var cloudPb = (state.playbooks || []).some(function (x) { return !x.example && String(x.id) === p.playbook; });
-        if (!guestPb && !cloudPb) return 'conflict';
-      }
-      return 'new';
-    }
-    return migrationStableString(migrationComparable(type, p)) ===
-      migrationStableString(migrationComparable(type, found)) ? 'duplicate' : 'conflict';
-  }
-  function readStoredGuestSnapshot() {
-    try {
-      var stored = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-      return {
-        trades: (stored.trades || []).map(normTrade),
-        playbooks: (stored.playbooks || []).map(normPb),
-        days: (stored.days || []).map(normDay),
-        settings: normSettings(stored.settings)
-      };
-    } catch (error) {
-      throw new Error('The browser journal could not be rechecked. Do not migrate until local storage can be read safely.');
-    }
-  }
-  function migrationSnapshotHash(snapshot) {
-    return migrationHash(migrationBuildItems(snapshot).map(function (item) {
-      return [item.entity_type, item.source_record_key, item.fingerprint];
-    }));
-  }
-  function migrationCloudSnapshotHash(cloud) {
-    var trades = (cloud.trades || []).map(normTrade).map(function (x) { return migrationComparable('trade', x); })
-      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
-    var playbooks = (cloud.playbooks || []).map(normPb).map(function (x) { return migrationComparable('playbook', x); })
-      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
-    var days = (cloud.days || []).map(normDay).map(function (x) { return migrationComparable('daily_journal', x); })
-      .sort(function (a, b) { return migrationStableString(a).localeCompare(migrationStableString(b)); });
-    return migrationHash({
-      trades: trades, playbooks: playbooks, days: days,
-      settings: migrationComparable('settings', normSettings(cloud.settings))
-    });
-  }
-  function verifyGuestSnapshotUnchanged() {
-    if (!localSnapshot) throw new Error('The original browser journal snapshot is unavailable. Refresh and sign in again before migrating.');
-    var storedSnapshot = readStoredGuestSnapshot();
-    if (migrationSnapshotHash(storedSnapshot) !== migrationSnapshotHash(localSnapshot)) {
-      throw new Error('The browser journal changed after sign-in. Refresh this page and prepare a new preview so you review the latest guest data.');
-    }
-    return storedSnapshot;
-  }
-  function migrationBuildItems(snapshot) {
-    return migrationSourceRecords(snapshot).map(function (record) {
-      var payload = record.payload;
-      var sourceKey = String(record.key == null ? '' : record.key);
-      var invalid = !sourceKey.trim() || sourceKey.length > 240;
-      if (!sourceKey.trim()) {
-        sourceKey = 'invalid-empty-key-' + migrationHash(payload);
-      } else if (sourceKey.length > 240) {
-        sourceKey = 'invalid-long-key-' + migrationHash(sourceKey + '|' + migrationStableString(payload));
-      }
-      if (record.type === 'trade') {
-        var numericFields = [payload.entry, payload.sl, payload.tp, payload.exit, payload.pnl, payload.risk, payload.r];
-        var numericValid = numericFields.every(function (value) { return value == null || value === '' || isFinite(Number(value)); });
-        var timeValid = !payload.time || /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(payload.time);
-        if (!migrationValidDate(payload.date) || !payload.asset || !['buy', 'sell'].includes(payload.side) || !numericValid || !timeValid) invalid = true;
-      }
-      if (record.type === 'daily_journal' && (!migrationValidDate(payload.date) || (payload.mood != null && (!isFinite(Number(payload.mood)) || Number(payload.mood) % 1 !== 0 || Number(payload.mood) < 1 || Number(payload.mood) > 5)))) invalid = true;
-      var classification = invalid ? 'invalid' : migrationClassify(record, snapshot);
-      var fingerprint = migrationHash(payload);
-      return {
-        entity_type: record.type, source_record_key: sourceKey,
-        fingerprint: fingerprint, classification: classification, payload: payload
-      };
-    });
-  }
-  function migrationDisplayName(item) {
-    var p = item.payload || {};
-    return p.name || p.asset || p.date || p.trade_id || item.source_record_key;
-  }
-  function migrationItemSummary(item) {
-    var p = item.payload || {};
-    function val(v) { return v == null || v === '' ? '—' : String(v); }
-    function short(v) { v = String(v || '').trim(); return v.length > 150 ? v.slice(0, 147) + '…' : v; }
-    if (item.entity_type === 'trade') return [val(p.date), val(p.time), val(p.side).toUpperCase(), val(p.asset),
-      'Entry ' + val(p.entry), 'Exit ' + val(p.exit), 'P&L ' + val(p.pnl), p.playbook ? 'Playbook ' + val(p.playbook) : 'No playbook'].join(' · ');
-    if (item.entity_type === 'playbook') return short(p.description) + (Array.isArray(p.rules) ? ' · ' + p.rules.length + ' rules' : '');
-    if (item.entity_type === 'daily_journal') return [val(p.date || p.id), short(p.plan), short(p.review), p.mood == null ? '' : 'Mood ' + val(p.mood)].filter(Boolean).join(' · ');
-    if (item.entity_type === 'settings') return ['Currency ' + val(p.currency), 'Balance ' + val(p.balance), 'Risk ' + val(p.riskPct) + '%', 'Daily loss ' + val(p.dailyLoss)].join(' · ');
-    return short(p.name || p.filename || p.fileName || item.source_record_key);
-  }
-  function migrationRenderPreview(batch, items) {
-    if (!migrationPanel) return;
-    migrationPanel.hidden = false;
-    if (!migrationWorkflowBatch || migrationWorkflowBatch.id !== batch.id) migrationWorkflowPage = 0;
-    migrationWorkflowBatch = batch;
-    migrationWorkflowItems = items || [];
-    var results = migrationPanel.querySelector('.migration-results');
-    results.textContent = '';
-    var titleText = batch.status === 'completed' ? 'Migration completed'
-      : batch.status === 'importing' ? 'Migration in progress'
-        : batch.status === 'paused' ? 'Migration paused'
-          : 'Preview ready — nothing imported yet';
-    var title = h('h3', { text: titleText });
-    var counts = h('div', { class: 'migration-counts' });
-    [
-      ['Total', batch.records_seen || 0], ['New', batch.records_new || 0],
-      ['Duplicates', batch.records_duplicate || 0], ['Conflicts', batch.records_conflict || 0],
-      ['Invalid', batch.records_invalid || 0]
-    ].forEach(function (entry) {
-      counts.appendChild(h('div', { class: 'migration-count' },
-        h('strong', { text: String(entry[1]) }), h('span', { text: entry[0] })));
-    });
-    var note = h('p', { class: 'migration-note', text: 'This is a saved private preview. Nothing is imported until you separately authorize it below. Guest records in this browser are never deleted by migration. Screenshot attachments and unsupported record types need a separate workflow.' });
-    var list = h('div', { class: 'migration-item-list' });
-    var playbooksPending = migrationWorkflowItems.some(function (item) { return item.entity_type === 'playbook' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status); });
-    var pageSize = 50, pageCount = Math.max(1, Math.ceil(migrationWorkflowItems.length / pageSize));
-    migrationWorkflowPage = Math.min(Math.max(0, migrationWorkflowPage), pageCount - 1);
-    var pageStart = migrationWorkflowPage * pageSize;
-    migrationWorkflowItems.slice(pageStart, pageStart + pageSize).forEach(function (item) {
-      var row = h('div', { class: 'migration-item migration-workflow-item' });
-      row.appendChild(h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }));
-      row.appendChild(h('span', { class: 'migration-item-name', text: migrationDisplayName(item) }));
-      row.appendChild(h('span', { class: 'migration-item-state', 'data-state': item.classification, text: item.classification + ' · ' + (item.import_status || 'pending') }));
-      row.appendChild(h('span', { class: 'migration-item-summary', text: migrationItemSummary(item) }));
-      var actions = h('div', { class: 'migration-item-actions' });
-      if (batch.status === 'importing' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status)) {
-        var accountSelect = null, unassignedCheck = null, settingsCheck = null;
-        if (item.entity_type === 'trade') {
-          accountSelect = h('select', { class: 'migration-account-select', 'aria-label': 'Trading account for ' + migrationDisplayName(item), onchange: function () { if (accountSelect.value && unassignedCheck) unassignedCheck.checked = false; } });
-          accountSelect.appendChild(h('option', { value: '', text: 'Choose trading account…' }));
-          migrationWorkflowAccounts.forEach(function (account) {
-            accountSelect.appendChild(h('option', { value: account.id, text: account.account_name }));
-          });
-          unassignedCheck = h('input', { type: 'checkbox', class: 'migration-unassigned-check', onchange: function () { if (unassignedCheck.checked && accountSelect) accountSelect.value = ''; } });
-          actions.appendChild(accountSelect);
-          actions.appendChild(h('label', { class: 'migration-inline-check' }, unassignedCheck, h('span', { text: 'Leave unassigned' })));
-        }
-        if (item.entity_type === 'settings') {
-          settingsCheck = h('input', { type: 'checkbox', class: 'migration-settings-check' });
-          actions.appendChild(h('label', { class: 'migration-inline-check' }, settingsCheck, h('span', { text: 'I confirm importing these guest settings and replacing matching account currency, balance and risk preferences. Unrelated preferences will be preserved.' })));
-        }
-        var linkedPlaybook = item.entity_type === 'trade' && item.payload && item.payload.playbook
-          ? migrationWorkflowItems.find(function (candidate) {
-              return candidate.entity_type === 'playbook' && candidate.source_record_key === item.payload.playbook;
-            }) : null;
-        var linkedPlaybookBlocked = item.entity_type === 'trade' && !!item.payload.playbook &&
-          (!linkedPlaybook || !(linkedPlaybook.classification === 'duplicate' ||
-            (linkedPlaybook.classification === 'new' && linkedPlaybook.import_status === 'imported')));
-        var tradeBlocked = item.entity_type === 'trade' && (playbooksPending || linkedPlaybookBlocked);
-        var tradeBlockTitle = playbooksPending
-          ? 'Import all eligible new playbooks before importing trades.'
-          : linkedPlaybookBlocked
-            ? 'This trade is linked to a playbook that is unresolved, conflicting, or not imported. Resolve the playbook first, or skip this trade.'
-            : '';
-        actions.appendChild(h('button', { class: 'btn btn-sm btn-primary', type: 'button', text: tradeBlocked ? 'Resolve linked playbook first' : item.import_status === 'failed' ? 'Retry import' : 'Import this record', disabled: tradeBlocked, title: tradeBlockTitle, onclick: function () {
-          runMigrationItemAction(item, 'import', accountSelect, unassignedCheck, settingsCheck);
-        }}));
-      }
-      if (batch.status === 'importing' && item.import_status !== 'imported' && item.import_status !== 'skipped') {
-        actions.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Skip this record', onclick: function () {
-          runMigrationItemAction(item, 'skip');
-        }}));
-      }
-      if (item.import_error) actions.appendChild(h('p', { class: 'migration-item-error', text: item.import_error }));
-      if (actions.childNodes.length) row.appendChild(actions);
-      list.appendChild(row);
-    });
-    var workflow = h('div', { class: 'migration-workflow' });
-    workflow.appendChild(h('p', { class: 'migration-note', text: 'Import progress: ' + (batch.records_imported || 0) + ' imported · ' + (batch.records_skipped || 0) + ' skipped · ' + (batch.records_failed || 0) + ' failed. Every trade requires an account choice or explicit unassigned confirmation. Settings require separate confirmation.' }));
-    if (batch.status === 'previewed') {
-      var authorization = h('input', { type: 'checkbox', class: 'migration-import-authorize' });
-      workflow.appendChild(h('label', { class: 'migration-consent migration-import-consent' }, authorization,
-        h('span', { text: 'I have reviewed this preview and explicitly authorize importing the eligible new records into this signed-in account. I understand duplicates will not be copied, conflicts need review, and my original browser journal will remain unchanged.' })));
-      workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Begin controlled migration', onclick: function () {
-        if (!authorization.checked) { migrationPanel.querySelector('.migration-status').textContent = 'Confirm the migration authorization before starting.'; return; }
-        beginGuestMigrationImport();
-      }}));
-    } else if (batch.status === 'paused') {
-      workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Resume migration', onclick: resumeGuestMigrationImport }));
-    } else if (batch.status === 'importing') {
-      var unfinished = migrationWorkflowItems.some(function (item) { return ['pending', 'failed', 'needs_review'].includes(item.import_status); });
-      if (!unfinished) workflow.appendChild(h('button', { class: 'btn btn-primary', type: 'button', text: 'Finish migration', onclick: finalizeGuestMigrationImport }));
-      workflow.appendChild(h('button', { class: 'btn', type: 'button', text: 'Pause migration', onclick: pauseGuestMigrationImport }));
-    } else if (batch.status === 'completed') {
-      workflow.appendChild(h('p', { class: 'migration-note', text: 'The selected migration batch is complete. Your browser guest journal has not been deleted.' }));
-    }
-    var pageNav = h('div', { class: 'migration-page-nav' });
-    pageNav.appendChild(h('span', { text: 'Showing ' + (migrationWorkflowItems.length ? pageStart + 1 : 0) + '–' + Math.min(pageStart + pageSize, migrationWorkflowItems.length) + ' of ' + migrationWorkflowItems.length + ' records' }));
-    pageNav.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Previous', disabled: migrationWorkflowPage <= 0, onclick: function () { migrationWorkflowPage--; migrationRenderPreview(migrationWorkflowBatch, migrationWorkflowItems); } }));
-    pageNav.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Next', disabled: migrationWorkflowPage >= pageCount - 1, onclick: function () { migrationWorkflowPage++; migrationRenderPreview(migrationWorkflowBatch, migrationWorkflowItems); } }));
-    results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(workflow); results.appendChild(pageNav); results.appendChild(list);
-    results.hidden = false;
-    refreshMigrationPanel();
-  }
-  function migrationEnsureOwner(userId, token) {
-    if (!authUser || authUser.id !== userId || activeCloudUserId !== userId || authLoadToken !== token || state.mode !== 'cloud') {
-      throw new Error('The signed-in account changed. The migration action was stopped.');
-    }
-  }
-  async function migrationFetchWorkflow(batchId) {
-    if (!authUser || !authClient) throw new Error('Sign in before viewing migration progress.');
-    var userId = authUser.id, token = authLoadToken;
-    var batchQuery = authClient.from('guest_migration_batches')
-      .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
-      .eq('user_id', userId);
-    if (batchId) batchQuery = batchQuery.eq('id', batchId);
-    else batchQuery = batchQuery.in('status', ['previewed', 'importing', 'paused', 'completed']).order('updated_at', { ascending: false }).limit(1);
-    var batchResult = batchId ? await batchQuery.single() : await batchQuery.maybeSingle();
-    if (batchResult.error) throw batchResult.error;
-    migrationEnsureOwner(userId, token);
-    if (!batchResult.data) return null;
-    var rows = [], offset = 0, pageSize = 500;
-    while (true) {
-      var page = await authClient.from('guest_migration_items')
-        .select('id,entity_type,source_record_key,classification,import_status,payload,import_error,import_attempts,target_record_id')
-        .eq('user_id', userId).eq('batch_id', batchResult.data.id)
-        .order('entity_type', { ascending: true }).order('source_record_key', { ascending: true })
-        .range(offset, offset + pageSize - 1);
-      if (page.error) throw page.error;
-      migrationEnsureOwner(userId, token);
-      var pageItems = page.data || [];
-      rows = rows.concat(pageItems);
-      if (pageItems.length < pageSize) break;
-      offset += pageSize;
-    }
-    migrationWorkflowAccounts = [];
-    if (rows.some(function (item) { return item.entity_type === 'trade' && item.classification === 'new'; })) {
-      var accounts = await authClient.from('trading_accounts').select('id,account_name')
-        .eq('user_id', userId).order('account_name', { ascending: true });
-      if (accounts.error) throw accounts.error;
-      migrationEnsureOwner(userId, token);
-      migrationWorkflowAccounts = accounts.data || [];
-    }
-    return { batch: batchResult.data, items: rows };
-  }
-  async function restoreGuestMigrationWorkflow() {
-    if (migrationBusy || !authUser || state.mode !== 'cloud' || !activeCloudAdapter) return;
-    try {
-      var saved = await migrationFetchWorkflow(null);
-      if (saved) {
-        migrationRenderPreview(saved.batch, saved.items);
-        var restoredMessage = saved.batch.status === 'importing'
-          ? 'Your migration was restored in progress. Review remaining records below.'
-          : saved.batch.status === 'paused'
-            ? 'Your migration is paused. Resume it when you are ready.'
-            : saved.batch.status === 'completed'
-              ? 'Your previous migration is complete. Your browser guest journal remains unchanged.'
-              : 'Your saved preview was restored. No journal records have been imported.';
-        migrationPanel.querySelector('.migration-status').textContent = restoredMessage;
-      } else {
-        migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
-        var results = migrationPanel.querySelector('.migration-results');
-        results.textContent = ''; results.hidden = true;
-        migrationPanel.querySelector('.migration-status').textContent = 'No saved migration preview exists for this account yet.';
-      }
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Could not restore migration progress: ' + ((error && error.message) || 'Please refresh and try again.');
-    }
-  }
-  async function refreshGuestMigrationWorkflow(batchId) {
-    var saved = await migrationFetchWorkflow(batchId);
-    if (saved) migrationRenderPreview(saved.batch, saved.items);
-    return saved;
-  }
-  function finishMigrationAction() {
-    migrationBusy = false;
-    refreshMigrationPanel();
-    if (authUser && state.mode === 'cloud' && !migrationWorkflowBatch) restoreGuestMigrationWorkflow();
-  }
-  async function beginGuestMigrationImport() {
-    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
-    var batch = migrationWorkflowBatch, userId = authUser.id, token = authLoadToken;
-    migrationBusy = true;
-    try {
-      var storedSnapshot = verifyGuestSnapshotUnchanged();
-      var currentHash = migrationSnapshotHash(storedSnapshot);
-      if (!batch.manifest || currentHash !== batch.manifest.local_snapshot_hash) {
-        throw new Error('Your browser journal changed after this preview. Prepare a fresh preview before importing so the correct snapshot is reviewed.');
-      }
-      var latestCloud = await activeCloudAdapter.load();
-      migrationEnsureOwner(userId, token);
-      if (migrationCloudSnapshotHash(latestCloud) !== batch.manifest.cloud_snapshot_hash) {
-        throw new Error('Your cloud journal changed after this preview. Refresh the preview and review the updated comparison before importing.');
-      }
-      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batch.id, p_next_status: 'importing', p_error: null });
-      if (result.error) throw result.error;
-      migrationEnsureOwner(userId, token);
-      await refreshGuestMigrationWorkflow(batch.id);
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration started. Nothing is imported automatically; choose each record action below.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Could not start migration: ' + ((error && error.message) || 'Please try again.');
-    } finally {
-      finishMigrationAction();
-    }
-  }
-  async function resumeGuestMigrationImport() {
-    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
-    migrationBusy = true;
-    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
-    try {
-      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batchId, p_next_status: 'importing', p_error: null });
-      if (result.error) throw result.error;
-      migrationEnsureOwner(userId, token);
-      await refreshGuestMigrationWorkflow(batchId);
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration resumed. Review each remaining record below.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Could not resume migration: ' + ((error && error.message) || 'Please try again.');
-    } finally { finishMigrationAction(); }
-  }
-  async function pauseGuestMigrationImport() {
-    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
-    migrationBusy = true;
-    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
-    try {
-      var result = await authClient.rpc('transition_guest_migration_batch', { p_batch_id: batchId, p_next_status: 'paused', p_error: null });
-      if (result.error) throw result.error;
-      migrationEnsureOwner(userId, token);
-      await refreshGuestMigrationWorkflow(batchId);
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration paused. You can resume it later from this account.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Could not pause migration: ' + ((error && error.message) || 'Please try again.');
-    } finally { finishMigrationAction(); }
-  }
-  async function runMigrationItemAction(item, action, accountSelect, unassignedCheck, settingsCheck) {
-    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
-    var accountId = accountSelect ? accountSelect.value || null : null;
-    var confirmUnassigned = !!(unassignedCheck && unassignedCheck.checked);
-    var confirmSettings = !!(settingsCheck && settingsCheck.checked);
-    if (action === 'import' && item.entity_type === 'trade' && !accountId && !confirmUnassigned) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Choose a trading account or explicitly confirm that this trade should remain unassigned.';
-      return;
-    }
-    if (action === 'import' && item.entity_type === 'settings' && !confirmSettings) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Confirm the settings import for this record before continuing.';
-      return;
-    }
-    migrationBusy = true;
-    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
-    try {
-      var result = action === 'skip'
-        ? await authClient.rpc('skip_guest_migration_item', { p_batch_id: batchId, p_item_id: item.id, p_reason: 'Skipped by the account owner in the migration review.' })
-        : await authClient.rpc('import_guest_migration_item', {
-            p_batch_id: batchId, p_item_id: item.id, p_account_id: accountId,
-            p_confirm_unassigned_account: confirmUnassigned, p_confirm_settings: confirmSettings
-          });
-      if (result.error) throw result.error;
-      migrationEnsureOwner(userId, token);
-      var saved = await refreshGuestMigrationWorkflow(batchId);
-      if (action === 'import' && result.data && result.data.status === 'imported') {
-        var cloud = await activeCloudAdapter.load();
-        migrationEnsureOwner(userId, token);
-        state.trades = (cloud.trades || []).map(normTrade);
-        state.playbooks = (cloud.playbooks || []).map(normPb);
-        state.days = (cloud.days || []).map(normDay);
-        state.settings = normSettings(cloud.settings);
-        applySettings(); renderAll();
-        migrationRenderPreview(saved.batch, saved.items);
-      }
-      migrationPanel.querySelector('.migration-status').textContent = action === 'skip'
-        ? 'Record marked as skipped. Your browser journal remains unchanged.'
-        : result.data && result.data.status === 'needs_review'
-          ? 'This record needs review and was not imported. You may explicitly skip it or leave the migration paused.'
-          : result.data && result.data.status === 'failed'
-            ? 'This record could not be imported. Review the message and retry or explicitly skip it.'
-            : 'Record import confirmed by the server.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration action failed: ' + ((error && error.message) || 'Please try again.');
-    } finally { finishMigrationAction(); }
-  }
-  async function finalizeGuestMigrationImport() {
-    if (migrationBusy || !migrationWorkflowBatch || !authUser) return;
-    migrationBusy = true;
-    var userId = authUser.id, token = authLoadToken, batchId = migrationWorkflowBatch.id;
-    try {
-      var result = await authClient.rpc('finalize_guest_migration_import', { p_batch_id: batchId });
-      if (result.error) throw result.error;
-      migrationEnsureOwner(userId, token);
-      await refreshGuestMigrationWorkflow(batchId);
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration completed. Imported records are in your cloud journal; original guest records remain in this browser.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Migration cannot be finalized yet: ' + ((error && error.message) || 'Resolve or explicitly skip every remaining record.');
-    } finally { finishMigrationAction(); }
-  }
-  async function runGuestMigrationPreview() {
-    if (migrationBusy) return;
-    if (!authUser || !activeCloudAdapter || state.mode !== 'cloud' || !localSnapshot) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Sign in and wait for your cloud journal to finish loading before preparing a preview.';
-      return;
-    }
-    var consent = migrationPanel.querySelector('.migration-consent-check');
-    if (!consent || !consent.checked) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Please confirm that you want to copy a snapshot of these guest records into private migration staging for preview. No journal import will happen.';
-      return;
-    }
-    var items;
-    try {
-      verifyGuestSnapshotUnchanged();
-      items = migrationBuildItems();
-    } catch (snapshotError) {
-      migrationPanel.querySelector('.migration-status').textContent = snapshotError.message;
-      return;
-    }
-    if (!items.length) {
-      migrationPanel.querySelector('.migration-status').textContent = 'No non-example guest records or personal settings were found in this browser.';
-      migrationPanel.querySelector('.migration-results').hidden = true;
-      return;
-    }
-    migrationBusy = true;
-    var previewUserId = authUser.id;
-    var previewSessionToken = authLoadToken;
-    function ensurePreviewOwner() {
-      if (!authUser || authUser.id !== previewUserId || activeCloudUserId !== previewUserId ||
-          authLoadToken !== previewSessionToken || state.mode !== 'cloud') {
-        throw new Error('The signed-in account changed during preview. No further migration preview steps were started.');
-      }
-    }
-    var button = migrationPanel.querySelector('.migration-preview-btn');
-    button.disabled = true; button.textContent = 'Preparing preview…';
-    migrationPanel.querySelector('.migration-status').textContent = 'Comparing your browser journal with this account and staging a read-only preview…';
-    try {
-      var localHash = migrationHash(items.map(function (x) { return [x.entity_type, x.source_record_key, x.fingerprint]; }));
-      var cloudHash = migrationCloudSnapshotHash({
-        trades: state.trades, playbooks: state.playbooks, days: state.days, settings: state.settings
-      });
-      var manifest = {
-        source: 'maxi-trades-journal-local-browser', source_version: 'guest-v1',
-        local_snapshot_hash: localHash, cloud_snapshot_hash: cloudHash,
-        counts: items.reduce(function (out, x) { out[x.entity_type] = (out[x.entity_type] || 0) + 1; return out; }, {})
-      };
-      var key = 'guest-v1-' + migrationHash({ local: localHash, cloud: cloudHash });
-      var created = await authClient.rpc('create_guest_migration_batch', {
-        p_migration_key: key, p_source_version: 'guest-v1', p_manifest: manifest
-      });
-      if (created.error) throw created.error;
-      ensurePreviewOwner();
-      var batchId = created.data;
-      var batchResult = await authClient.from('guest_migration_batches')
-        .select('id,status,manifest,summary,records_seen,records_new,records_duplicate,records_conflict,records_invalid,records_imported,records_failed,records_skipped')
-        .eq('user_id', authUser.id).eq('id', batchId).single();
-      if (batchResult.error) throw batchResult.error;
-      ensurePreviewOwner();
-      if (batchResult.data.status === 'draft') {
-        for (var offset = 0; offset < items.length; offset += 250) {
-          var staged = await authClient.rpc('stage_guest_migration_items', {
-            p_batch_id: batchId, p_items: items.slice(offset, offset + 250)
-          });
-          if (staged.error) throw staged.error;
-          ensurePreviewOwner();
-        }
-        // Recheck after network staging, not only before it: another tab may have
-        // changed the guest journal while a large preview was being uploaded.
-        var latestGuestSnapshot = verifyGuestSnapshotUnchanged();
-        if (migrationSnapshotHash(latestGuestSnapshot) !== localHash) {
-          throw new Error('Your browser journal changed while the preview was being prepared. No records were imported. Refresh and prepare a new preview.');
-        }
-        var latestCloudForPreview = await activeCloudAdapter.load();
-        ensurePreviewOwner();
-        if (migrationCloudSnapshotHash(latestCloudForPreview) !== cloudHash) {
-          throw new Error('Your cloud journal changed while the preview was being prepared. No records were imported. Prepare a fresh preview to compare against the latest account data.');
-        }
-        var finalized = await authClient.rpc('finalize_guest_migration_preview', {
-          p_batch_id: batchId, p_preview_notes: { source: 'account-ui', local_snapshot_hash: localHash, cloud_snapshot_hash: cloudHash }
-        });
-        if (finalized.error) throw finalized.error;
-        ensurePreviewOwner();
-      } else if (batchResult.data.status !== 'previewed') {
-        throw new Error('A previous preview for this exact snapshot is ' + batchResult.data.status + '. Change the guest journal or cloud journal, then prepare a fresh preview.');
-      }
-      var savedPreview = await migrationFetchWorkflow(batchId);
-      if (!savedPreview) throw new Error('The staged migration preview could not be found.');
-      ensurePreviewOwner();
-      migrationRenderPreview(savedPreview.batch, savedPreview.items);
-      migrationPanel.querySelector('.migration-status').textContent = 'Preview saved to private migration staging for this account. No journal records were imported; browser guest data is unchanged.';
-    } catch (error) {
-      migrationPanel.querySelector('.migration-status').textContent = 'Preview could not be completed: ' + ((error && error.message) || 'Please try again.');
-    } finally {
-      button.textContent = 'Prepare / refresh migration preview';
-      finishMigrationAction();
-    }
-  }
-  function refreshMigrationPanel() {
-    if (!migrationPanel) return;
-    if (!authUser) {
-      migrationConsentUserId = null;
-      migrationPanel.querySelector('.migration-consent-check').checked = false;
-    }
-    var ready = !!authUser && state.mode === 'cloud' && !!activeCloudAdapter && !state.readOnlyCloud;
-    migrationPanel.hidden = !ready;
-    if (!ready) return;
-    if (migrationConsentUserId !== authUser.id) {
-      migrationPanel.querySelector('.migration-consent-check').checked = false;
-      migrationConsentUserId = authUser.id;
-    }
-    var records = migrationSourceRecords();
-    if (!records.length && !migrationWorkflowBatch) { migrationPanel.hidden = true; return; }
-    var detail = migrationPanel.querySelector('.migration-description');
-    detail.textContent = records.length
-      ? records.length + ' guest records or settings are available locally. Review a comparison with your account before deciding whether to migrate.'
-      : 'No personal guest records or settings were found at this browser location. Example records are excluded. Guest storage is origin-specific: open the same GitHub Pages address where you created the records; a downloaded ZIP or file:// copy has separate storage.';
-    var button = migrationPanel.querySelector('.migration-preview-btn');
-    var workflowInProgress = migrationWorkflowBatch && ['importing', 'paused'].includes(migrationWorkflowBatch.status);
-    button.disabled = migrationBusy || workflowInProgress || !records.length || !migrationPanel.querySelector('.migration-consent-check').checked;
-  }
-  function buildMigrationPanel() {
-    migrationPanel = h('section', { class: 'migration-panel', hidden: true, 'aria-label': 'Guest journal migration' },
-      h('div', { class: 'migration-heading' },
-        h('div', {}, h('strong', { text: 'Guest journal migration' }),
-          h('p', { class: 'migration-description', text: 'Your browser journal stays separate until you explicitly choose to prepare a preview.' })),
-        h('button', { class: 'btn btn-primary migration-preview-btn', type: 'button', text: 'Prepare migration preview', disabled: true, onclick: function () {
-          runGuestMigrationPreview();
-        }})),
-      h('label', { class: 'migration-consent' },
-        h('input', { class: 'migration-consent-check', type: 'checkbox', onchange: function () { refreshMigrationPanel(); } }),
-        h('span', { text: 'I understand this copies a snapshot of my guest records into private migration staging tables for preview only. It will not add records to my cloud journal or delete my browser data.' })),
-      h('p', { class: 'migration-status', role: 'status', 'aria-live': 'polite', text: 'Preparing a preview will not import or change any journal records.' }),
-      h('div', { class: 'migration-results', hidden: true })
-    );
-    return migrationPanel;
-  }
   function refreshAuthPanel() {
     if (!authPanel) return;
     var signedIn = !!authUser;
@@ -1004,35 +342,19 @@
     authPanel.querySelector('.auth-form').hidden = signedIn;
     if (signedIn) {
       if (state.mode === 'cloud-readonly') {
-        authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled; your browser guest journal remains separate and untouched.', false);
+        authNotice('Your cloud journal is loaded in read-only mode. Changes are disabled.', false);
         setDataState('cloud-readonly');
       } else if (state.mode === 'cloud') {
-        authNotice('Your account journal is connected. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
+        authNotice('Your account journal is connected. Trade, playbook, daily-note and settings changes save to your account. Chart image uploads are not enabled yet.', false);
         if (state.dataState !== 'cloud-syncing' && state.dataState !== 'cloud-error') setDataState('cloud-ready');
       } else if (state.dataState !== 'cloud-loading' && state.dataState !== 'cloud-error' && state.dataState !== 'cloud-load-error') {
-        authNotice('Your account is authenticated. Your browser journal remains local unless the cloud journal has loaded successfully.', false);
+        authNotice('Your account is authenticated. Your journal will open once cloud data has loaded.', false);
         setDataState('account-local');
       }
     } else {
       authNotice('An account is required. Create a free account or sign in to open your journal.', false);
       if (!state.readOnlyCloud) setDataState('account-required');
     }
-    refreshMigrationPanel();
-  }
-  function captureLocalSnapshot() {
-    return {
-      trades: state.trades.map(normTrade), playbooks: state.playbooks.map(normPb),
-      days: state.days.map(normDay), settings: normSettings(state.settings)
-    };
-  }
-  function restoreLocalSnapshot() {
-    if (!localSnapshot) return;
-    state.mode = 'local'; state.readOnlyCloud = false;
-    state.trades = localSnapshot.trades.map(normTrade);
-    state.playbooks = localSnapshot.playbooks.map(normPb);
-    state.days = localSnapshot.days.map(normDay);
-    state.settings = normSettings(localSnapshot.settings);
-    applySettings(); renderAll();
   }
   async function loadCloudJournal(user) {
     if (!user || !user.id) return;
@@ -1041,10 +363,9 @@
     activeCloudAdapter = null;
     setAccountGate(false);
     var token = ++authLoadToken;
-    if (!localSnapshot) localSnapshot = captureLocalSnapshot();
     state.mode = 'local'; state.readOnlyCloud = false;
     setDataState('cloud-loading');
-    authNotice('Loading your account journal. Your browser guest data is preserved separately.', false);
+    authNotice('Loading your private account journal…', false);
     renderAll();
     try {
       var adapter = cloudAdapterFor(user.id);
@@ -1057,30 +378,24 @@
       state.settings = normSettings(cloud.settings);
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
-      authNotice('Cloud journal loaded successfully. Trade, playbook, daily-note and settings changes save to your account. Guest data remains separate. Chart image uploads are not enabled yet.', false);
-      refreshMigrationPanel();
-      restoreGuestMigrationWorkflow();
+      authNotice('Your private journal is ready. Trades, playbooks, daily notes and settings save to your account. Chart image uploads are not enabled yet.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
-      activeCloudAdapter = null; restoreLocalSnapshot(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
-      authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your browser journal is preserved and unchanged.'), true);
+      activeCloudAdapter = null; state.mode = 'signed-out'; state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
+      authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your journal remains locked; refresh or sign out and try again.'), true);
     }
   }
   function handleAuthSession(session) {
     var nextUser = session && session.user ? session.user : null;
     if (!nextUser) {
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
-      if (migrationPanel) { var oldResults = migrationPanel.querySelector('.migration-results'); oldResults.textContent = ''; oldResults.hidden = true; }
       state.mode = 'signed-out'; state.readOnlyCloud = false;
       state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings();
       setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll(); return;
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
-      if (migrationPanel) { var switchedResults = migrationPanel.querySelector('.migration-results'); switchedResults.textContent = ''; switchedResults.hidden = true; }
-      restoreLocalSnapshot(); setAccountGate(false);
+      state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings(); setAccountGate(false);
     }
     authUser = nextUser; refreshAuthPanel(); loadCloudJournal(authUser);
   }
@@ -1089,8 +404,8 @@
     authPanel = h('section', { id: 'auth-panel', class: 'auth-panel panel', 'aria-label': 'Account access' });
     var summary = h('div', { class: 'auth-summary' },
       h('div', { class: 'auth-copy' },
-        h('strong', { class: 'auth-state-title', text: 'Guest mode' }),
-        h('p', { class: 'auth-state-detail', text: 'Your journal is saved in this browser.' })),
+        h('strong', { class: 'auth-state-title', text: 'Account required' }),
+        h('p', { class: 'auth-state-detail', text: 'Sign in or create an account to access your private journal.' })),
       h('div', { class: 'auth-actions' },
         h('button', { class: 'btn btn-primary auth-open', type: 'button', text: 'Sign in / Create account', onclick: function () { showAuthForm('signin'); } }),
         h('button', { class: 'btn auth-signout', type: 'button', text: 'Sign out', hidden: true, onclick: async function () {
@@ -1100,7 +415,7 @@
           var result = await authClient.auth.signOut();
           b.disabled = false;
           if (result.error) authNotice('Could not sign out: ' + result.error.message, true);
-          else { handleAuthSession(null); authNotice('You are signed out. Your local journal has not been changed.', false); }
+          else { handleAuthSession(null); authNotice('You are signed out. Sign in to access your account journal.', false); }
         } })),
     );
     var form = h('form', { class: 'auth-form', hidden: true, novalidate: true });
@@ -1134,7 +449,7 @@
           form.hidden = true;
           if (result.data && result.data.session) handleAuthSession(result.data.session);
           else refreshAuthPanel();
-          authNotice('Signed in successfully. Your account journal is being checked; browser guest data remains separate.', false);
+          authNotice('Signed in successfully. Loading your account journal…', false);
         }
       } catch (error) {
         authNotice('Authentication failed: ' + (error && error.message ? error.message : 'Please try again.'), true);
@@ -1143,7 +458,6 @@
       }
     });
     authPanel.appendChild(summary);
-    authPanel.appendChild(buildMigrationPanel());
     authPanel.appendChild(form);
     authPanel.appendChild(h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' }));
     var masthead = document.querySelector('.masthead');
@@ -1152,8 +466,8 @@
   }
   async function init() {
     state.mode = 'signed-out';
-    loadLocal();
-    localSnapshot = captureLocalSnapshot();
+    state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings();
+    try { localStorage.removeItem('trading-journal-pro-v1'); } catch (e) {}
     buildAuthPanel();
     renderAll();
     if (!authClient || !authClient.auth) {
@@ -1470,7 +784,7 @@
   }
   function shotPrep(existing) {
     var s = state.shot, old = existing ? existing.shotId : '';
-    if (state.mode === 'cloud' && s.blob) return Promise.reject(new Error('Chart image uploads are not enabled for cloud journals yet. Close and reopen this trade form to clear the guest image selection, then save without an image.'));
+    if (state.mode === 'cloud' && s.blob) return Promise.reject(new Error('Chart image uploads are not enabled for cloud journals yet. Close and reopen this trade form to clear the image selection, then save without an image.'));
     if (state.mode === 'cloud') return Promise.resolve({ id: '', drop: '' });
     if (s.blob && state.assets) return state.assets.upload(s.blob).then(function (res) { return { id: res.id, drop: old }; });
     if (s.remove) return Promise.resolve({ id: '', drop: old });

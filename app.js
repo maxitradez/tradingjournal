@@ -313,6 +313,7 @@
   var migrationWorkflowBatch = null;
   var migrationWorkflowItems = [];
   var migrationWorkflowAccounts = [];
+  var migrationWorkflowPage = 0;
   function setDataState(kind) {
     if (!Object.prototype.hasOwnProperty.call(dataStateText, kind)) kind = 'guest-local';
     state.dataState = kind;
@@ -516,6 +517,7 @@
   }
   function migrationRenderPreview(batch, items) {
     if (!migrationPanel) return;
+    if (!migrationWorkflowBatch || migrationWorkflowBatch.id !== batch.id) migrationWorkflowPage = 0;
     migrationWorkflowBatch = batch;
     migrationWorkflowItems = items || [];
     var results = migrationPanel.querySelector('.migration-results');
@@ -533,7 +535,10 @@
     var note = h('p', { class: 'migration-note', text: 'This is a saved private preview. Nothing is imported until you separately authorize it below. Guest records in this browser are never deleted by migration. Screenshot attachments and unsupported record types need a separate workflow.' });
     var list = h('div', { class: 'migration-item-list' });
     var playbooksPending = migrationWorkflowItems.some(function (item) { return item.entity_type === 'playbook' && item.classification === 'new' && ['pending', 'failed'].includes(item.import_status); });
-    migrationWorkflowItems.forEach(function (item) {
+    var pageSize = 50, pageCount = Math.max(1, Math.ceil(migrationWorkflowItems.length / pageSize));
+    migrationWorkflowPage = Math.min(Math.max(0, migrationWorkflowPage), pageCount - 1);
+    var pageStart = migrationWorkflowPage * pageSize;
+    migrationWorkflowItems.slice(pageStart, pageStart + pageSize).forEach(function (item) {
       var row = h('div', { class: 'migration-item migration-workflow-item' });
       row.appendChild(h('span', { class: 'migration-item-type', text: item.entity_type.replace('_', ' ') }));
       row.appendChild(h('span', { class: 'migration-item-name', text: migrationDisplayName(item) }));
@@ -589,7 +594,11 @@
     } else if (batch.status === 'completed') {
       workflow.appendChild(h('p', { class: 'migration-note', text: 'The selected migration batch is complete. Your browser guest journal has not been deleted.' }));
     }
-    results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(workflow); results.appendChild(list);
+    var pageNav = h('div', { class: 'migration-page-nav' });
+    pageNav.appendChild(h('span', { text: 'Showing ' + (migrationWorkflowItems.length ? pageStart + 1 : 0) + '–' + Math.min(pageStart + pageSize, migrationWorkflowItems.length) + ' of ' + migrationWorkflowItems.length + ' records' }));
+    pageNav.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Previous', disabled: migrationWorkflowPage <= 0, onclick: function () { migrationWorkflowPage--; migrationRenderPreview(migrationWorkflowBatch, migrationWorkflowItems); } }));
+    pageNav.appendChild(h('button', { class: 'btn btn-sm', type: 'button', text: 'Next', disabled: migrationWorkflowPage >= pageCount - 1, onclick: function () { migrationWorkflowPage++; migrationRenderPreview(migrationWorkflowBatch, migrationWorkflowItems); } }));
+    results.appendChild(title); results.appendChild(counts); results.appendChild(note); results.appendChild(workflow); results.appendChild(pageNav); results.appendChild(list);
     results.hidden = false;
     refreshMigrationPanel();
   }
@@ -649,7 +658,7 @@
               : 'Your saved preview was restored. No journal records have been imported.';
         migrationPanel.querySelector('.migration-status').textContent = restoredMessage;
       } else {
-        migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+        migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
         var results = migrationPanel.querySelector('.migration-results');
         results.textContent = ''; results.hidden = true;
         migrationPanel.querySelector('.migration-status').textContent = 'No saved migration preview exists for this account yet.';
@@ -974,13 +983,13 @@
     var nextUser = session && session.user ? session.user : null;
     if (!nextUser) {
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
       if (migrationPanel) { var oldResults = migrationPanel.querySelector('.migration-results'); oldResults.textContent = ''; oldResults.hidden = true; }
       restoreLocalSnapshot(); localSnapshot = null; refreshAuthPanel(); renderAll(); return;
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = [];
+      migrationWorkflowBatch = null; migrationWorkflowItems = []; migrationWorkflowAccounts = []; migrationWorkflowPage = 0;
       if (migrationPanel) { var switchedResults = migrationPanel.querySelector('.migration-results'); switchedResults.textContent = ''; switchedResults.hidden = true; }
       restoreLocalSnapshot();
     }

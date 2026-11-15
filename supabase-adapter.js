@@ -25,6 +25,17 @@
         return found;
       }
       function jsonArray(value) { return Array.isArray(value) ? value : []; }
+      async function allOwned(table, orderColumn) {
+        var rows = [], offset = 0, pageSize = 1000;
+        while (true) {
+          var page = await own(table).order(orderColumn, { ascending: true }).range(offset, offset + pageSize - 1);
+          if (page.error) throw page.error;
+          var batch = page.data || []; rows = rows.concat(batch);
+          if (batch.length < pageSize) break;
+          offset += pageSize;
+        }
+        return rows;
+      }
   
       function fromCloudPlaybook(row) {
         ids.playbooks[String(row.legacy_id || row.id)] = row.id;
@@ -93,19 +104,17 @@
       return {
         async load() {
           var results = await Promise.all([
-            own('playbooks').order('created_at', { ascending: true }),
-            own('trades').order('trade_date', { ascending: true }),
-            own('daily_journals').order('journal_date', { ascending: true }),
+            allOwned('playbooks', 'created_at'), allOwned('trades', 'trade_date'),
+            allOwned('daily_journals', 'journal_date'),
             api.from('user_settings').select('*').eq('user_id', userId).maybeSingle()
           ]);
-          results.forEach(function (r) { if (r.error) throw r.error; });
-          var pbs = (results[0].data || []).map(fromCloudPlaybook);
-          var trs = (results[1].data || []).map(fromCloudTrade);
+          var pbs = (results[0] || []).map(fromCloudPlaybook);
+          var trs = (results[1] || []).map(fromCloudTrade);
           // Resolve playbook UUIDs to the journal's stable legacy IDs.
-          (results[0].data || []).forEach(function (p) { ids.playbooks[String(p.id)] = p.id; });
+          (results[0] || []).forEach(function (p) { ids.playbooks[String(p.id)] = p.id; });
           trs.forEach(function (t) {
             if (!t.playbook) return;
-            var pbRow = (results[0].data || []).find(function (p) {
+            var pbRow = (results[0] || []).find(function (p) {
               return p.id === t.playbook || String(p.legacy_id || p.id) === t.playbook;
             });
             // Keep an unresolved legacy reference so the UI can label it
@@ -116,7 +125,7 @@
           var prefs = settingsRow && settingsRow.preferences && typeof settingsRow.preferences === 'object' ? settingsRow.preferences : {};
           return {
             trades: trs, playbooks: pbs,
-            days: (results[2].data || []).map(fromCloudDay),
+            days: (results[2] || []).map(fromCloudDay),
             settings: normSettings({
               balance: settingsRow ? settingsRow.default_starting_balance : null,
               currency: settingsRow ? settingsRow.default_currency : '',

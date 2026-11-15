@@ -899,6 +899,12 @@
           if (staged.error) throw staged.error;
           ensurePreviewOwner();
         }
+        // Recheck after network staging, not only before it: another tab may have
+        // changed the guest journal while a large preview was being uploaded.
+        var latestGuestSnapshot = verifyGuestSnapshotUnchanged();
+        if (migrationSnapshotHash(latestGuestSnapshot) !== localHash) {
+          throw new Error('Your browser journal changed while the preview was being prepared. No records were imported. Refresh and prepare a new preview.');
+        }
         var finalized = await authClient.rpc('finalize_guest_migration_preview', {
           p_batch_id: batchId, p_preview_notes: { source: 'account-ui', local_snapshot_hash: localHash, cloud_snapshot_hash: cloudHash }
         });

@@ -170,7 +170,38 @@
         var result = await api.auth.signOut();
         if (result.error) { signout.disabled = false; msg.textContent = result.error.message; }
       });
-      card.appendChild(form); card.appendChild(signout); box.appendChild(card);
+      card.appendChild(form);
+
+      var passwordCard = el('section', { class: 'profile-card' });
+      passwordCard.appendChild(el('h3', {}, 'Change password'));
+      passwordCard.appendChild(el('p', { class: 'profile-intro' }, 'Because you are signed in, you can set a new password here without requesting another email.'));
+      var passwordForm = el('form', { class: 'profile-form' });
+      var passwordGrid = el('div', { class: 'auth-fields' });
+      passwordGrid.appendChild(field('New password', 'new_password', 'password', '', 'At least 8 characters'));
+      passwordGrid.appendChild(field('Confirm new password', 'confirm_password', 'password', '', 'Enter it again'));
+      passwordForm.appendChild(passwordGrid);
+      var passwordMsg = el('p', { class: 'profile-message', role: 'status' });
+      var passwordSave = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Update password');
+      passwordForm.appendChild(passwordMsg); passwordForm.appendChild(passwordSave);
+      passwordForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var nextPassword = passwordForm.querySelector('[name="new_password"]').value;
+        var confirmPassword = passwordForm.querySelector('[name="confirm_password"]').value;
+        if (nextPassword.length < 8) { passwordMsg.textContent = 'Use a password with at least 8 characters.'; return; }
+        if (nextPassword !== confirmPassword) { passwordMsg.textContent = 'The passwords do not match.'; return; }
+        passwordSave.disabled = true; passwordMsg.textContent = 'Updating password…';
+        try {
+          var changed = await api.auth.updateUser({ password: nextPassword });
+          if (changed.error) throw changed.error;
+          passwordForm.reset();
+          passwordMsg.textContent = 'Password updated successfully. Your account remains signed in.';
+        } catch (error) {
+          passwordMsg.textContent = 'Could not update password: ' + (error && error.message ? error.message : 'Please try again.');
+        } finally { passwordSave.disabled = false; }
+      });
+      passwordCard.appendChild(passwordForm);
+      card.appendChild(passwordCard);
+      card.appendChild(signout); box.appendChild(card);
     }
   };
   if (!api || !api.auth) return;

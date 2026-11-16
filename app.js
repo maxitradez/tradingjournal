@@ -1889,6 +1889,32 @@
       if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', 'false');
     }
   });
+  var sidebarCollapse = $('sidebar-collapse');
+  if (sidebarCollapse) sidebarCollapse.addEventListener('click', function () {
+    var collapsed = document.body.classList.toggle('sidebar-collapsed');
+    sidebarCollapse.textContent = collapsed ? '›' : '‹';
+    sidebarCollapse.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    sidebarCollapse.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  });
+  document.addEventListener('keydown', function (e) {
+    var target = e.target, tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+    var typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable);
+    if (e.key && e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !typing && !openDrawerEl && !e.repeat) {
+      e.preventDefault();
+      openTradeForm(null);
+    }
+  });
+  document.addEventListener('paste', function (e) {
+    if (!$('drawer-trade') || $('drawer-trade').hidden || !e.clipboardData) return;
+    var text = (e.clipboardData.getData('text/plain') || '').trim();
+    if (!text || !/^(https?:\\/\\/)?(www\\.)?tradingview\\.com\\//i.test(text)) return;
+    var link = safeUrl(text);
+    if (!link) return;
+    e.preventDefault();
+    $('f-shot').value = link;
+    $('sec-prices').open = true;
+    toast('TradingView chart link added');
+  });
   window.addEventListener('hashchange', function () { setView(location.hash.replace('#', '')); });
   var lastW = 0, raf = 0;
   if (window.ResizeObserver) {

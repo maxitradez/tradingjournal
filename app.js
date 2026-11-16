@@ -1891,16 +1891,19 @@
     else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
-  var mobileMenuButton = $('mobile-menu-toggle');
+  var mobileMenuButton = $('mobile-menu-toggle'), navScrim = $('nav-scrim');
+  function toggleMobileNav(open) {
+    document.body.classList.toggle('mobile-nav-open', !!open);
+    if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', String(!!open));
+    if (navScrim) navScrim.hidden = !open;
+  }
   if (mobileMenuButton) mobileMenuButton.addEventListener('click', function () {
-    var open = !document.body.classList.contains('mobile-nav-open');
-    document.body.classList.toggle('mobile-nav-open', open);
-    mobileMenuButton.setAttribute('aria-expanded', String(open));
+    toggleMobileNav(!document.body.classList.contains('mobile-nav-open'));
   });
+  if (navScrim) navScrim.addEventListener('click', function () { toggleMobileNav(false); });
   $('nav').addEventListener('click', function (event) {
     if (event.target.closest('a[data-v]')) {
-      document.body.classList.remove('mobile-nav-open');
-      if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', 'false');
+      toggleMobileNav(false);
     }
   });
   var sidebarCollapse = $('sidebar-collapse');

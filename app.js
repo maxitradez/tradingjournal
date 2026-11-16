@@ -1235,22 +1235,27 @@
     var ts = filteredTrades(); box.textContent = '';
     count.textContent = ts.length === state.trades.length ? ts.length + (ts.length === 1 ? ' trade' : ' trades') : ts.length + ' of ' + state.trades.length;
     if (!ts.length) { box.appendChild(h('p', { class: 'empty', text: 'No trades match these filters.' })); return; }
-    var tbl = h('table', { class: 'tbl-log' }, h('thead', null, h('tr', null, h('th', { text: 'Date' }), h('th', { text: 'Asset' }), h('th', { text: 'Playbook' }), h('th', { text: 'Emotion' }), h('th', { text: 'Plan' }), h('th', { class: 'num', text: 'P&L' }), h('th', { class: 'num', text: 'R' }), h('th', { text: '' }))));
+    var tbl = h('table', { class: 'dash-blotter-table full-blotter-table' }, h('thead', null, h('tr', null,
+      h('th', { text: 'Date / time' }), h('th', { text: 'Session' }), h('th', { text: 'Pair' }),
+      h('th', { text: 'Direction' }), h('th', { text: 'Setup tag' }), h('th', { text: 'R:R' }),
+      h('th', { class: 'num', text: 'Pips' }), h('th', { class: 'num', text: 'Net P&L' }), h('th', { text: 'Chart' }))));
     var body = h('tbody');
     ts.forEach(function (t) {
-      var link = safeUrl(t.shot), prices = (t.entry || t.exit) ? (t.entry || '—') + ' → ' + (t.exit || '—') : '';
-      body.appendChild(h('tr', null,
-        h('td', { class: 'mono nowrap' }, fmtDate(t.date), t.time ? h('div', { class: 'cell-sub', text: t.time }) : null),
-        h('td', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
-          prices ? h('div', { class: 'cell-sub', text: prices }) : null, screenshotSource(t) ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: screenshotSource(t), target: '_blank', rel: 'noopener noreferrer', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
-        h('td', { text: t.playbook ? pbName(t.playbook) : '—' }),
-        h('td', { text: t.emotion || '—' }),
-        h('td', null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk', style: 'margin-left:6px' }) : null, t.misses.length ? h('div', { class: 'cell-sub', text: t.misses.join('; ') }) : null, t.mistakes.length ? h('div', { class: 'cell-sub', text: t.mistakes.join(', ') }) : null),
-        h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }),
-        h('td', { class: 'num ' + (t.r != null ? cls(t.r) : ''), text: fmtR(t.r) }),
-        h('td', null, h('div', { class: 'acts' }, h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })))));
+      var row = h('tr', { tabindex: '0', role: 'button', 'aria-label': 'Open trade details for ' + t.asset + ' on ' + t.date });
+      row.appendChild(h('td', null, h('strong', { text: fmtDate(t.date) }), h('span', { class: 'blotter-sub', text: t.time || 'Time not set' })));
+      row.appendChild(h('td', { text: t.session || '—' }));
+      row.appendChild(h('td', null, h('strong', { text: t.asset })));
+      row.appendChild(h('td', null, h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })));
+      row.appendChild(h('td', { text: t.setupTags.length ? t.setupTags.slice(0,2).join(', ') : t.playbook ? pbName(t.playbook) : '—' }));
+      row.appendChild(h('td', { text: t.r == null ? '—' : (t.r > 0 ? '1:' + fmt(t.r,1) : fmtR(t.r)) }));
+      row.appendChild(h('td', { class: 'num ' + (t.pips == null ? '' : cls(t.pips)), text: t.pips == null ? '—' : fmtPips(t.pips) }));
+      row.appendChild(h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }));
+      row.appendChild(h('td', { class: 'chart-indicator', text: screenshotSource(t) || safeUrl(t.shot) ? '▧' : '—' }));
+      row.addEventListener('click', function () { openTradeDetail(t); });
+      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTradeDetail(t); } });
+      body.appendChild(row);
     });
-    tbl.appendChild(body); box.appendChild(h('div', { class: 'tablewrap' }, tbl));
+    tbl.appendChild(body); box.appendChild(h('div', { class: 'dash-blotter-scroll' }, tbl));
   }
   function viewTrades(box) {
     if (!state.trades.length) {

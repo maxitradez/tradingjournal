@@ -34,27 +34,77 @@
     card.appendChild(el('h2', {}, 'Let’s set up your profile.'));
     card.appendChild(el('p', { class: 'profile-intro' }, 'A few details help us shape your journal around the way you trade. You can update these later.'));
     var form = el('form', { class: 'profile-form' });
-    var grid = el('div', { class: 'auth-fields' });
-    grid.appendChild(field('Name', 'display_name', 'text', profile.display_name || user.user_metadata && user.user_metadata.full_name || '', 'How should we address you?'));
-    grid.appendChild(field('Username', 'username', 'text', profile.username || '', 'Choose a unique username'));
-    grid.appendChild(field('Country', 'country', 'text', profile.country || '', 'e.g. Kenya'));
-    grid.appendChild(field('Experience level', 'experience_level', 'select', profile.experience_level || ''));
-    grid.appendChild(field('Trading style', 'trading_style', 'select', profile.trading_style || ''));
-    grid.appendChild(field('Preferred markets', 'preferred_markets', 'text', (profile.preferred_markets || []).join(', '), 'Forex, Gold, Indices, Crypto…'));
-    grid.appendChild(field('Timezone', 'timezone', 'text', profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', 'e.g. Africa/Nairobi'));
-    form.appendChild(grid);
+    var steps = [
+      { title: 'Your identity', intro: 'First, let’s make this workspace yours.', fields: [
+        field('Name', 'display_name', 'text', profile.display_name || user.user_metadata && user.user_metadata.full_name || '', 'How should we address you?'),
+        field('Username', 'username', 'text', profile.username || '', 'Choose a unique username'),
+        field('Country', 'country', 'text', profile.country || '', 'e.g. Kenya')
+      ]},
+      { title: 'How you trade', intro: 'We use this to make your journal feel relevant to your process.', fields: [
+        field('Experience level', 'experience_level', 'select', profile.experience_level || ''),
+        field('Trading style', 'trading_style', 'select', profile.trading_style || '')
+      ]},
+      { title: 'Your markets', intro: 'Choose the markets you want to track. You can change these any time.', fields: [
+        field('Preferred markets', 'preferred_markets', 'text', (profile.preferred_markets || []).join(', '), 'Forex, Gold, Indices, Crypto…'),
+        field('Timezone', 'timezone', 'text', profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', 'e.g. Africa/Nairobi')
+      ]}
+    ];
+    var stepper = el('div', { class: 'onboard-stepper', 'aria-label': 'Profile setup progress' });
+    var panels = [];
+    steps.forEach(function (step, index) {
+      var panel = el('section', { class: 'onboard-step' + (index ? '' : ' is-current'), 'data-step': String(index) });
+      panel.appendChild(el('h3', {}, step.title));
+      panel.appendChild(el('p', { class: 'profile-intro' }, step.intro));
+      var grid = el('div', { class: 'auth-fields' });
+      step.fields.forEach(function (control) { grid.appendChild(control); });
+      panel.appendChild(grid); panels.push(panel); form.appendChild(panel);
+      var dot = el('span', { class: 'onboard-step-dot' }, String(index + 1));
+      stepper.appendChild(dot);
+    });
+    form.insertBefore(stepper, form.firstChild);
     var note = el('p', { class: 'profile-message', role: 'status' });
-    var submit = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Save profile & open journal');
-    form.appendChild(note); form.appendChild(submit);
+    var actions = el('div', { class: 'onboard-actions' });
+    var back = el('button', { class: 'btn', type: 'button' }, 'Back');
+    var next = el('button', { class: 'btn btn-primary', type: 'button' }, 'Continue');
+    var submit = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Create my workspace');
+    back.hidden = true; submit.hidden = true;
+    actions.appendChild(back); actions.appendChild(next); actions.appendChild(submit);
+    form.appendChild(note); form.appendChild(actions);
+    var activeStep = 0;
+    function showStep(index) {
+      activeStep = Math.max(0, Math.min(steps.length - 1, index));
+      panels.forEach(function (panel, i) { panel.hidden = i !== activeStep; });
+      Array.prototype.forEach.call(stepper.children, function (dot, i) {
+        dot.classList.toggle('is-current', i === activeStep);
+        dot.classList.toggle('is-done', i < activeStep);
+        dot.setAttribute('aria-current', i === activeStep ? 'step' : 'false');
+      });
+      back.hidden = activeStep === 0;
+      next.hidden = activeStep === steps.length - 1;
+      submit.hidden = activeStep !== steps.length - 1;
+      note.textContent = '';
+    }
+    function validIdentity() {
+      var username = String(form.querySelector('[name="username"]').value || '').trim().toLowerCase();
+      var displayName = String(form.querySelector('[name="display_name"]').value || '').trim();
+      if (!displayName || !/^[a-z0-9_]{3,24}$/.test(username)) {
+        note.textContent = 'Add your name and a username (3–24 letters, numbers or underscores).';
+        return false;
+      }
+      return true;
+    }
+    next.addEventListener('click', function () {
+      if (activeStep === 0 && !validIdentity()) return;
+      showStep(activeStep + 1);
+    });
+    back.addEventListener('click', function () { showStep(activeStep - 1); });
+    showStep(0);
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
+      if (!validIdentity()) { showStep(0); return; }
       var data = new FormData(form);
       var username = String(data.get('username') || '').trim().toLowerCase();
       var displayName = String(data.get('display_name') || '').trim();
-      if (!displayName || !/^[a-z0-9_]{3,24}$/.test(username)) {
-        note.textContent = 'Add your name and a username (3–24 letters, numbers or underscores).';
-        return;
-      }
       submit.disabled = true; note.textContent = 'Saving your profile…';
       var payload = {
         display_name: displayName, username: username,

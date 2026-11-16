@@ -71,7 +71,7 @@
       wrap.appendChild(grid);
       return wrap;
     }
-    var marketChoices = ['Forex', 'XAUUSD', 'XAGUSD', 'Indices', 'US30', 'NAS100', 'Crypto', 'Stocks', 'Futures', 'Options'];
+    var marketChoices = ['XAUUSD', 'XAGUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'GBPJPY', 'AUDUSD', 'USDCAD', 'NAS100', 'US30', 'SPX500', 'GER40', 'BTCUSD', 'ETHUSD', 'Stocks', 'Futures', 'Options'];
     var sessionChoices = ['Asian', 'London', 'New York', 'Sydney', 'Other'];
     marketPanel.appendChild(choiceGroup('Markets and instruments · select all that apply', 'pip_markets', marketChoices, profile.preferred_markets || []));
     var custom = field('Other instruments (optional)', 'custom_markets', 'text', '', 'e.g. GBPJPY, DAX40, BTCUSD');

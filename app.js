@@ -651,7 +651,7 @@
   }
   function tradeCard(t) {
     var link = safeUrl(t.shot);
-    return h('div', { class: 'tcard' },
+    return h('div', { class: 'tcard', id: 'trade-card-' + t.id },
       h('div', { class: 'tcard-top' },
         h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.time ? h('span', { class: 'sub', text: t.time }) : null, t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
         h('div', { class: 'pn ' + cls(t.pnl), text: signed(t.pnl) + (t.r != null ? '  ' + fmtR(t.r) : '') })),
@@ -1037,7 +1037,7 @@
         h('button', { class: 'btn btn-primary', type: 'button', text: 'Record your first trade', onclick: function () { openTradeForm(null); } })));
       return;
     }
-    var f = state.filters, count = h('span', { class: 'sub' }), tbox = h('div'), viewMode = 'list';
+    var f = state.filters, count = h('span', { class: 'sub' }), tbox = h('div'), viewMode = state.focusTradeId ? 'cards' : 'list';
     function sel(key, opts) {
       var select = h('select', { 'aria-label': 'Filter by ' + key });
       opts.forEach(function (o) { select.appendChild(h('option', { value: o[0], text: o[1] })); });
@@ -1058,9 +1058,9 @@
     q.addEventListener('input', function () { f.q = q.value; refresh(); });
     var pbOpts = [['', 'All playbooks'], ['_none', 'No playbook']].concat(state.playbooks.map(function (p) { return [p.id, p.name]; }));
     var filters = h('div', { class: 'toolbar' }, q, sel('pb', pbOpts), sel('outcome', [['', 'All results'], ['Win', 'Wins'], ['Loss', 'Losses'], ['Break-even', 'Break-even']]), sel('plan', [['', 'All plans'], ['kept', 'Plan kept'], ['broken', 'Plan broken']]));
-    var listButton = h('button', { class: 'btn btn-sm is-selected', type: 'button', text: 'List', 'aria-pressed': 'true' });
-    var cardsButton = h('button', { class: 'btn btn-sm', type: 'button', text: 'Cards', 'aria-pressed': 'false' });
-    listButton.addEventListener('click', function () { viewMode = 'list'; listButton.classList.add('is-selected'); cardsButton.classList.remove('is-selected'); listButton.setAttribute('aria-pressed','true'); cardsButton.setAttribute('aria-pressed','false'); refresh(); });
+    var listButton = h('button', { class: 'btn btn-sm' + (viewMode === 'list' ? ' is-selected' : ''), type: 'button', text: 'List', 'aria-pressed': String(viewMode === 'list') });
+    var cardsButton = h('button', { class: 'btn btn-sm' + (viewMode === 'cards' ? ' is-selected' : ''), type: 'button', text: 'Cards', 'aria-pressed': String(viewMode === 'cards') });
+    listButton.addEventListener('click', function () { viewMode = 'list'; state.focusTradeId = null; listButton.classList.add('is-selected'); cardsButton.classList.remove('is-selected'); listButton.setAttribute('aria-pressed','true'); cardsButton.setAttribute('aria-pressed','false'); refresh(); });
     cardsButton.addEventListener('click', function () { viewMode = 'cards'; cardsButton.classList.add('is-selected'); listButton.classList.remove('is-selected'); cardsButton.setAttribute('aria-pressed','true'); listButton.setAttribute('aria-pressed','false'); refresh(); });
     var panel = h('section', { class: 'panel' },
       h('div', { class: 'panel-head' }, h('h2', { text: 'Trade history' }), count),
@@ -1411,6 +1411,15 @@
     showTradeStep(0);
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
   }
+  function showTradeSuccess(tradeId) {
+    state.lastSavedTradeId = tradeId;
+    var modal = $('trade-success');
+    if (modal) modal.hidden = false;
+  }
+  function closeTradeSuccess() {
+    var modal = $('trade-success');
+    if (modal) modal.hidden = true;
+  }
   function submitTrade(another) {
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     var msg = $('form-msg'); msg.textContent = '';
@@ -1440,7 +1449,7 @@
       toast(screenshotCleanupFailed
         ? (wasEdit ? 'Trade updated, but the old screenshot could not be removed from storage.' : 'Trade saved, but an old screenshot could not be removed from storage.')
         : (wasEdit ? 'Trade updated' : 'Trade saved'));
-      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); showTradeStep(0); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
+      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); showTradeStep(0); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); showTradeSuccess(t.id); }
     }).catch(function (err) {
       if (uploadedScreenshot && !tradeSaved) {
         dropAsset(uploadedScreenshot).catch(function () { screenshotCleanupFailed = true; }).then(function () {
@@ -1558,6 +1567,7 @@
     $('trade-step-count').textContent = 'Step ' + (tradeStep + 1) + ' of 4';
     $('trade-progress-fill').style.width = ((tradeStep + 1) * 25) + '%';
     $('trade-back').hidden = tradeStep === 0;
+    $('trade-quick-save').hidden = tradeStep !== 0 || !!state.editingTrade;
     $('trade-next').hidden = tradeStep === 3;
     $('btn-save').hidden = tradeStep !== 3;
     $('btn-another').hidden = tradeStep !== 3 || !!state.editingTrade;
@@ -1572,6 +1582,19 @@
     msg.textContent = '';
     return true;
   }
+  $('trade-quick-save').addEventListener('click', function () { submitTrade(false); });
+  $('trade-success-view').addEventListener('click', function () {
+    closeTradeSuccess();
+    state.focusTradeId = state.lastSavedTradeId;
+    if (location.hash !== '#trades') location.hash = '#trades';
+    else setView('trades');
+  });
+  $('trade-success-dashboard').addEventListener('click', function () {
+    closeTradeSuccess();
+    state.focusTradeId = null;
+    if (location.hash !== '#dashboard') location.hash = '#dashboard';
+    else setView('dashboard');
+  });
   $('trade-next').addEventListener('click', function () {
     if (tradeStep === 0 && !validateTradeBasics()) return;
     showTradeStep(tradeStep + 1);

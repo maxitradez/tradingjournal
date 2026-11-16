@@ -749,9 +749,27 @@
   /* ---------- view: dashboard ---------- */
   function viewDashboard(box) {
     var a = analyze(state.trades);
+    var today = todayStr();
+    var todaysTrades = state.trades.filter(function (t) { return t.date === today; });
+    var todaysNet = todaysTrades.reduce(function (sum, t) { return sum + t.pnl; }, 0);
+    var activity = h('section', { class: 'panel dashboard-today' },
+      h('div', { class: 'dashboard-today-head' },
+        h('div', null, h('p', { class: 'eyebrow', text: 'YOUR DAY, AT A GLANCE' }), h('h2', { text: 'Today’s activity' }), h('p', { class: 'sub', text: fmtDate(today) })),
+        h('button', { class: 'btn btn-primary', type: 'button', text: '+ Add trade', onclick: function () { openTradeForm(null); } })),
+      h('div', { class: 'dashboard-today-metrics' },
+        h('div', null, h('span', { class: 'stat-label', text: 'Today’s P&L' }), h('strong', { class: 'dashboard-today-value ' + (todaysTrades.length ? cls(todaysNet) : ''), text: todaysTrades.length ? signed(todaysNet) : '—' })),
+        h('div', null, h('span', { class: 'stat-label', text: 'Trades logged' }), h('strong', { class: 'dashboard-today-value', text: String(todaysTrades.length) })),
+        h('div', null, h('span', { class: 'stat-label', text: 'Daily status' }), h('strong', { class: 'dashboard-today-status', text: todaysTrades.length ? 'Activity recorded' : 'Not started yet' }))));
+    box.appendChild(activity);
+    if (!a.n) {
+      box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },
+        h('p', { class: 'eyebrow', text: 'A CLEAR START' }),
+        h('h2', { text: 'Your journal starts with one trade.' }),
+        h('p', { text: 'Record your first trade to begin building a personal history of your decisions, results and lessons. Your dashboard will grow as your journal does.' }),
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Record your first trade', onclick: function () { openTradeForm(null); } })));
+      return;
+    }
     box.appendChild(statTiles(a));
-    if (!a.n) { box.appendChild(emptyHero()); return; }
-    box.appendChild(todayPanel());
     var gp = goalsPanel(a); if (gp) box.appendChild(gp);
     var sc = computeScore(a), grid = h('div', { class: 'grid g-dash' });
     grid.appendChild(h('section', { class: 'panel a-eq' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Equity curve' }), h('span', { class: 'sub', text: 'Cumulative P&L by trade number' })), equityChart(a)));
@@ -1011,19 +1029,45 @@
     tbl.appendChild(body); box.appendChild(h('div', { class: 'tablewrap' }, tbl));
   }
   function viewTrades(box) {
-    if (!state.trades.length) { box.appendChild(emptyHero()); return; }
-    var f = state.filters, count = h('span', { class: 'sub' }), tbox = h('div');
+    if (!state.trades.length) {
+      box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },
+        h('p', { class: 'eyebrow', text: 'YOUR TRADE HISTORY' }),
+        h('h2', { text: 'Every trade has a lesson.' }),
+        h('p', { text: 'Your saved trades will appear here. Start with a quick entry, then add the details that help you learn from it.' }),
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Record your first trade', onclick: function () { openTradeForm(null); } })));
+      return;
+    }
+    var f = state.filters, count = h('span', { class: 'sub' }), tbox = h('div'), viewMode = 'list';
     function sel(key, opts) {
-      var s = h('select', { 'aria-label': 'Filter by ' + key });
-      opts.forEach(function (o) { s.appendChild(h('option', { value: o[0], text: o[1] })); });
-      s.value = f[key]; s.addEventListener('change', function () { f[key] = s.value; fillTradeTable(tbox, count); }); return s;
+      var select = h('select', { 'aria-label': 'Filter by ' + key });
+      opts.forEach(function (o) { select.appendChild(h('option', { value: o[0], text: o[1] })); });
+      select.value = f[key]; select.addEventListener('change', function () { f[key] = select.value; refresh(); }); return select;
+    }
+    function refresh() {
+      var filtered = filteredTrades();
+      count.textContent = filtered.length === state.trades.length ? filtered.length + (filtered.length === 1 ? ' trade' : ' trades') : filtered.length + ' of ' + state.trades.length;
+      tbox.textContent = '';
+      if (!filtered.length) { tbox.appendChild(h('p', { class: 'empty', text: 'No trades match these filters.' })); return; }
+      if (viewMode === 'cards') {
+        var cards = h('div', { class: 'trade-card-grid' });
+        filtered.forEach(function (trade) { cards.appendChild(tradeCard(trade)); });
+        tbox.appendChild(cards);
+      } else fillTradeTable(tbox, count);
     }
     var q = h('input', { class: 'q', type: 'search', placeholder: 'Search asset, lesson, emotion', 'aria-label': 'Search trades', value: f.q });
-    q.addEventListener('input', function () { f.q = q.value; fillTradeTable(tbox, count); });
+    q.addEventListener('input', function () { f.q = q.value; refresh(); });
     var pbOpts = [['', 'All playbooks'], ['_none', 'No playbook']].concat(state.playbooks.map(function (p) { return [p.id, p.name]; }));
-    var bar = h('div', { class: 'toolbar' }, q, sel('pb', pbOpts), sel('outcome', [['', 'All results'], ['Win', 'Wins'], ['Loss', 'Losses'], ['Break-even', 'Break-even']]), sel('plan', [['', 'All plans'], ['kept', 'Plan kept'], ['broken', 'Plan broken']]));
-    box.appendChild(h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Trade log' }), count), bar, tbox));
-    fillTradeTable(tbox, count);
+    var filters = h('div', { class: 'toolbar' }, q, sel('pb', pbOpts), sel('outcome', [['', 'All results'], ['Win', 'Wins'], ['Loss', 'Losses'], ['Break-even', 'Break-even']]), sel('plan', [['', 'All plans'], ['kept', 'Plan kept'], ['broken', 'Plan broken']]));
+    var listButton = h('button', { class: 'btn btn-sm is-selected', type: 'button', text: 'List', 'aria-pressed': 'true' });
+    var cardsButton = h('button', { class: 'btn btn-sm', type: 'button', text: 'Cards', 'aria-pressed': 'false' });
+    listButton.addEventListener('click', function () { viewMode = 'list'; listButton.classList.add('is-selected'); cardsButton.classList.remove('is-selected'); listButton.setAttribute('aria-pressed','true'); cardsButton.setAttribute('aria-pressed','false'); refresh(); });
+    cardsButton.addEventListener('click', function () { viewMode = 'cards'; cardsButton.classList.add('is-selected'); listButton.classList.remove('is-selected'); cardsButton.setAttribute('aria-pressed','true'); listButton.setAttribute('aria-pressed','false'); refresh(); });
+    var panel = h('section', { class: 'panel' },
+      h('div', { class: 'panel-head' }, h('h2', { text: 'Trade history' }), count),
+      h('div', { class: 'trade-view-tools' }, filters, h('div', { class: 'trade-view-switch', 'aria-label': 'Trade display mode' }, listButton, cardsButton)),
+      tbox);
+    box.appendChild(panel);
+    refresh();
   }
 
   /* ---------- view: playbooks ---------- */

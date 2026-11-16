@@ -613,7 +613,7 @@
     if (focusId) setTimeout(function () { var f = $(focusId); if (f) f.focus({ preventScroll: true }); }, 30);
   }
   function closeDrawers(silent) {
-    ['drawer-trade', 'drawer-pb'].forEach(function (id) { $(id).hidden = true; });
+    ['drawer-trade', 'drawer-pb', 'drawer-trade-detail'].forEach(function (id) { $(id).hidden = true; }); state.detailTradeId = null;
     $('scrim').hidden = true; document.documentElement.classList.remove('lock'); openDrawerEl = null;
     if (!silent && state.lastFocus && state.lastFocus.focus) { try { state.lastFocus.focus({ preventScroll: true }); } catch (e) {} }
   }
@@ -1437,7 +1437,9 @@
     if (t) {
       state.editingTrade = t.id;
       $('f-date').value = t.date; $('f-time').value = t.time; $('f-asset').value = t.asset; $(t.side === 'sell' ? 'side-sell' : 'side-buy').checked = true;
-      $('f-pnl').value = t.pnl; $('f-risk').value = t.risk == null ? '' : t.risk; $('f-entry').value = t.entry; $('f-sl').value = t.sl; $('f-tp').value = t.tp; $('f-exit').value = t.exit; $('f-r').value = t.r == null ? '' : t.r;
+      $('f-pnl').value = t.pnl; $('f-session').value = t.session || ''; $('f-pips').value = t.pips == null ? '' : t.pips; $('f-lotsize').value = t.lotSize == null ? '' : t.lotSize;
+      $('f-commission').value = t.commission == null ? '' : t.commission; $('f-hold').value = t.holdDuration == null ? '' : t.holdDuration; $('f-setuptags').value = (t.setupTags || []).join(', '); $('f-rating').value = t.executionRating == null ? '' : t.executionRating;
+      $('f-risk').value = t.risk == null ? '' : t.risk; $('f-entry').value = t.entry; $('f-sl').value = t.sl; $('f-tp').value = t.tp; $('f-exit').value = t.exit; $('f-r').value = t.r == null ? '' : t.r;
       $('f-pb').value = state.playbooks.some(function (p) { return p.id === t.playbook; }) ? t.playbook : '';
       $('f-emotion').value = t.emotion; setMistakes(t.mistakes); resetShot(t.shotId, t.shotUrl); $('f-lesson').value = t.lesson; $('f-shot').value = t.shot;
       renderChecks(t.misses.length ? $('f-pb').value && state.playbooks.find(function (p) { return p.id === $('f-pb').value; }).rules.filter(function (r) { return t.misses.indexOf(r) < 0; }) : null);
@@ -1474,7 +1476,7 @@
     var existing = state.editingTrade ? state.trades.find(function (x) { return x.id === state.editingTrade; }) : null;
     var misses = Array.prototype.filter.call($('checks').querySelectorAll('input[type=checkbox]'), function (c) { return !c.checked; }).map(function (c) { return c.getAttribute('data-rule'); });
     var t = normTrade({
-      id: existing ? existing.id : newId('t'), date: date, time: $('f-time').value, asset: asset, side: sd, entry: entry, sl: sl, tp: $('f-tp').value.trim(), exit: exit, pnl: pnl, r: r, risk: num($('f-risk').value), mistakes: pickedMistakes(),
+      id: existing ? existing.id : newId('t'), date: date, time: $('f-time').value, asset: asset, side: sd, entry: entry, sl: sl, tp: $('f-tp').value.trim(), exit: exit, pnl: pnl, r: r, risk: num($('f-risk').value), session: $('f-session').value, pips: num($('f-pips').value), lotSize: num($('f-lotsize').value), commission: num($('f-commission').value), holdDuration: num($('f-hold').value), setupTags: $('f-setuptags').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean), executionRating: num($('f-rating').value), mistakes: pickedMistakes(),
       playbook: $('f-pb').value, emotion: $('f-emotion').value, followed: $('plan-yes').checked, misses: misses, lesson: $('f-lesson').value.trim(), shot: $('f-shot').value.trim(), example: false, createdAt: existing ? existing.createdAt : Date.now()
     });
     var wasEdit = !!existing, b1 = $('btn-save'), b2 = $('btn-another'); b1.disabled = b2.disabled = true;
@@ -1594,6 +1596,9 @@
     box.appendChild(tradeReviewRow('Trade date', $('f-date').value));
     box.appendChild(tradeReviewRow('Entry / stop / exit', [$('f-entry').value, $('f-sl').value, $('f-exit').value].map(function (v) { return v || '—'; }).join(' / ')));
     box.appendChild(tradeReviewRow('Risk amount', $('f-risk').value ? CUR + $('f-risk').value : 'Not entered'));
+    box.appendChild(tradeReviewRow('Session / net pips', [$('f-session').value || 'No session', $('f-pips').value ? $('f-pips').value + ' pips' : 'Pips not entered'].join(' · ')));
+    box.appendChild(tradeReviewRow('Size / costs / hold', [$('f-lotsize').value || '—', $('f-commission').value || '—', $('f-hold').value ? $('f-hold').value + ' min' : '—'].join(' · ')));
+    box.appendChild(tradeReviewRow('Setup tags / rating', [$('f-setuptags').value || '—', $('f-rating').value ? $('f-rating').value + '/5' : 'Not rated'].join(' · ')));
     box.appendChild(tradeReviewRow('Playbook', $('f-pb').selectedOptions[0] ? $('f-pb').selectedOptions[0].textContent : 'None selected'));
     box.appendChild(tradeReviewRow('Emotion', $('f-emotion').value));
     box.appendChild(tradeReviewRow('Plan followed', $('plan-yes').checked ? 'Yes' : 'No'));

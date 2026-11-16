@@ -14,7 +14,7 @@
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, dashboardFilters: { range: '30', asset: '', session: 'all', chartMetric: 'usd', breakdown: 'asset' }, detailTradeId: null, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -93,6 +93,12 @@
       id: String(t.id), date: String(t.date || todayStr()), time: String(t.time || ''), asset: String(t.asset || ''), side: t.side === 'sell' ? 'sell' : 'buy',
       entry: t.entry == null ? '' : String(t.entry), sl: t.sl == null ? '' : String(t.sl), tp: t.tp == null ? '' : String(t.tp), exit: t.exit == null ? '' : String(t.exit),
       pnl: Number(t.pnl) || 0, r: t.r == null || t.r === '' ? null : Number(t.r), risk: t.risk == null || t.risk === '' || !isFinite(Number(t.risk)) ? null : Number(t.risk), playbook: String(t.playbook || ''), emotion: String(t.emotion || ''),
+      session: String(t.session || ''), pips: t.pips == null || t.pips === '' || !isFinite(Number(t.pips)) ? null : Number(t.pips),
+      lotSize: t.lotSize == null || t.lotSize === '' || !isFinite(Number(t.lotSize)) ? null : Number(t.lotSize),
+      commission: t.commission == null || t.commission === '' || !isFinite(Number(t.commission)) ? null : Number(t.commission),
+      holdDuration: t.holdDuration == null || t.holdDuration === '' || !isFinite(Number(t.holdDuration)) ? null : Number(t.holdDuration),
+      setupTags: Array.isArray(t.setupTags) ? t.setupTags.map(String) : [],
+      executionRating: t.executionRating == null || t.executionRating === '' ? null : Math.max(1, Math.min(5, Number(t.executionRating))),
       followed: t.followed !== false, misses: Array.isArray(t.misses) ? t.misses.map(String) : [], lesson: String(t.lesson || ''), shot: String(t.shot || ''), shotId: String(t.shotId || ''), shotUrl: String(t.shotUrl || ''), mistakes: Array.isArray(t.mistakes) ? t.mistakes.map(String) : [],
       example: !!t.example, createdAt: Number(t.createdAt) || 0
     };
@@ -137,8 +143,8 @@
       if (t.followed) a.followed++;
       var e = a.eq[a.eq.length - 1] + p; a.eq.push(e);
       peak = Math.max(peak, e); var dd = peak - e; a.dd.push(-dd); a.maxDD = Math.max(a.maxDD, dd);
-      var d = a.days[t.date] || (a.days[t.date] = { net: 0, n: 0, trades: [] });
-      d.net += p; d.n++; d.trades.push(t);
+      var d = a.days[t.date] || (a.days[t.date] = { net: 0, pips: 0, pipsN: 0, n: 0, trades: [] });
+      d.net += p; if (t.pips != null) { d.pips += t.pips; d.pipsN++; } d.n++; d.trades.push(t);
     });
     a.winRate = a.n ? a.wins / a.n : 0;
     a.pf = a.gl === 0 ? (a.gw > 0 ? Infinity : null) : a.gw / a.gl;

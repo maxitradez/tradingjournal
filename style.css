@@ -880,3 +880,106 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .trade-review-row { padding: 11px 12px; }
   .onboard-actions { position: sticky; bottom: 0; padding: 12px 0 max(8px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--bg) 25%); }
 }
+
+
+/* PIPBOOK product journey + top-first mobile navigation */
+.public-home { max-width:1440px; padding:clamp(20px,4vw,52px) clamp(18px,5vw,76px) 28px; }
+.public-top { padding-bottom:18px; border-bottom:1px solid var(--line); }
+.public-brand { font:800 22px/1 var(--font-display); letter-spacing:.1em; }
+.public-brand small { font:500 9px var(--font-mono); }
+.public-hero { min-height:620px; padding:clamp(54px,8vw,110px) 0; gap:clamp(30px,5vw,76px); }
+.public-copy h1 { max-width:720px; font-size:clamp(54px,7vw,100px); line-height:.96; letter-spacing:-.02em; }
+.public-copy h1 em,.feature-heading h2 em { font-style:normal; color:var(--accent); }
+.public-lede { max-width:520px; font-size:clamp(16px,1.5vw,19px); }
+.public-actions .btn { min-height:52px; padding-inline:22px; }
+.public-art { border-radius:14px; padding:18px; box-shadow:0 24px 70px rgba(0,0,0,.22); }
+.preview-window { margin:18px 0; padding:18px; border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,.12); }
+.preview-top { display:flex; align-items:center; gap:6px; color:var(--muted); font:500 9px var(--font-mono); letter-spacing:.12em; }
+.preview-top b { margin-left:12px; color:var(--fg); }
+.preview-top span:last-child { margin-left:auto; }
+.preview-dot { width:7px;height:7px;border-radius:50%;background:var(--line-strong); }
+.preview-metrics { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0 18px; }
+.preview-metrics>div { padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:8px; }
+.preview-metrics small,.preview-trades span,.preview-chart-label { display:block;color:var(--muted);font:500 9px var(--font-mono);letter-spacing:.1em; }
+.preview-metrics strong { display:block;margin:8px 0 3px;font:800 clamp(22px,3vw,32px)/1 var(--font-display); }
+.preview-metrics em { color:var(--win);font:10px var(--font-mono);font-style:normal; }
+.preview-chart { padding:14px 12px 4px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--accent); }
+.preview-chart-label { display:flex;justify-content:space-between; }
+.preview-chart svg { width:100%;display:block;margin-top:8px; }
+.preview-trades { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px; }
+.preview-trades>div { display:grid;gap:6px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px; }
+.preview-trades b { font:600 12px var(--font-mono); }
+.preview-trades strong { font:600 12px var(--font-mono);color:var(--win); }
+.public-features { padding:clamp(54px,8vw,96px) 0;border-top:1px solid var(--line); }
+.feature-heading { display:grid;grid-template-columns:1fr 1fr;gap:12px 40px;align-items:end;margin-bottom:30px; }
+.feature-heading .eyebrow { grid-column:1/-1;margin:0; }
+.feature-heading h2 { font:900 clamp(36px,5vw,64px)/.95 var(--font-display);margin:0; }
+.feature-heading>p:last-child { max-width:420px;color:var(--muted);margin:0;line-height:1.7; }
+.feature-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px; }
+.feature-card { min-height:210px;padding:20px;border:1px solid var(--line);border-radius:10px;background:var(--surface); }
+.feature-card>span { color:var(--accent);font:600 11px var(--font-mono); }
+.feature-card h3 { margin:28px 0 9px;font:800 22px/1.05 var(--font-display);text-transform:uppercase; }
+.feature-card p { color:var(--muted);font-size:13px;line-height:1.65;margin:0; }
+.public-cta { display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px;border:1px solid var(--line-strong);border-radius:12px;background:var(--surface);margin-bottom:28px; }
+.public-cta .eyebrow { margin:0 0 8px; }.public-cta h2 { font:800 clamp(26px,4vw,42px)/1 var(--font-display);max-width:620px; }
+.auth-screen { width:min(760px,100%);margin:0 auto;padding:28px 0 56px; }
+.auth-back { border:0;background:transparent;color:var(--muted);font:600 12px var(--font-mono);padding:10px 0;cursor:pointer; }
+.auth-screen-intro { text-align:center;max-width:520px;margin:34px auto 26px; }
+.auth-screen-intro .brand-mark { margin:0 auto 18px;border-radius:10px; }
+.auth-screen-intro h1 { font:900 clamp(38px,6vw,60px)/.95 var(--font-display);margin:14px 0; }
+.auth-screen-intro>p:last-child { color:var(--muted);line-height:1.7; }
+#public-auth .auth-panel { border-radius:12px;padding:clamp(20px,4vw,32px); }
+#public-auth .auth-form h2 { text-align:center;font:800 30px var(--font-display); }
+#public-auth .auth-fields { grid-template-columns:1fr; }
+#public-auth .auth-form-actions { display:grid;grid-template-columns:1fr; }
+#public-auth .auth-form-actions .btn { width:100%; }
+#public-auth .auth-toggle,#public-auth .auth-forgot { border-color:transparent; }
+.mobile-menu-toggle { display:none; }
+@media(max-width:979px) {
+  body { padding-top:12px;padding-bottom:40px; }
+  .masthead { position:sticky;top:0;z-index:31;padding:10px 0 14px;background:var(--bg);border-bottom:1px solid var(--line); }
+  .mobile-menu-toggle { display:flex;align-items:center;justify-content:center;gap:4px;flex-direction:column;width:48px;height:44px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface);color:var(--fg);cursor:pointer; }
+  .mobile-menu-toggle span { width:17px;height:2px;background:currentColor;border-radius:2px; }
+  .mobile-menu-toggle b { font:600 8px var(--font-mono);letter-spacing:.04em; }
+  .masthead .chip { display:none; }
+  .nav { display:none;position:fixed;top:76px;left:12px;right:12px;bottom:auto;z-index:40;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:10px;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);box-shadow:0 18px 44px rgba(0,0,0,.4); }
+  body.mobile-nav-open .nav { display:grid; }
+  .nav > a,.nav > a[data-v="playbooks"],.nav > a[data-v="reports"],.nav > a[data-v="insights"],.nav > a[data-v="settings"],.nav > a[data-v="profile"] { display:flex;min-height:48px;align-items:center;justify-content:flex-start;padding:0 14px;border:1px solid transparent;border-radius:9px;font:600 12px var(--font-body);letter-spacing:0;text-transform:none; }
+  .nav > a[aria-current="page"] { background:var(--surface-2);border-color:var(--line);color:var(--fg); }
+  .nav-more { display:none!important; }
+  .fab { right:16px;bottom:18px; }
+  .public-hero { min-height:0;padding:52px 0; }
+  .feature-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:560px) {
+  .public-home { padding:18px 16px 24px; }
+  .public-top { align-items:center; }
+  .public-free { font-size:8px;padding:7px 9px; }
+  .public-hero { padding:48px 0 42px;gap:30px; }
+  .public-copy h1 { font-size:clamp(48px,13vw,68px); }
+  .public-lede { font-size:15px; }
+  .public-actions { display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:24px; }
+  .public-actions .btn { min-width:0;padding:12px 8px;font-size:10px; }
+  .public-art { padding:12px;border-radius:10px; }
+  .preview-window { padding:10px;margin:12px 0; }
+  .preview-metrics { gap:7px;margin:15px 0 10px; }
+  .preview-metrics>div { padding:9px; }
+  .preview-metrics strong { font-size:22px; }
+  .preview-trades { gap:7px; }
+  .preview-trades>div { padding:9px; }
+  .preview-trades b,.preview-trades strong { font-size:10px; }
+  .feature-heading { display:block; }
+  .feature-heading h2 { margin:12px 0; }
+  .feature-grid { grid-template-columns:1fr 1fr;gap:8px; }
+  .feature-card { min-height:190px;padding:14px; }
+  .feature-card h3 { font-size:18px;margin-top:22px; }
+  .feature-card p { font-size:12px; }
+  .public-cta { display:grid;padding:20px; }
+  .public-cta .btn { width:100%; }
+  .public-bottom { font-size:8px; }
+  .auth-screen { padding-top:10px; }
+  .auth-screen-intro { margin:24px auto 18px; }
+  .mobile-menu-toggle { margin-left:auto; }
+  .masthead .brand h1 { font-size:1.9rem; }
+  .masthead .tagline { font-size:9px; }
+}

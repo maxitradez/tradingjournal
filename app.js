@@ -1540,7 +1540,7 @@
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
   }
   function renderAll() {
-    $('fab').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';
+    $('fab').hidden = state.view === 'dashboard' || !!state.readOnlyCloud || state.dataState === 'cloud-loading';
     $('btn-clear-ex').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';
     $('banner').hidden = !(state.trades.some(function (t) { return t.example; }) || state.playbooks.some(function (p) { return p.example; }) || state.days.some(function (d) { return d.example; }) || state.settings.example);
     renderView();
@@ -1551,6 +1551,7 @@
   function setView(name) {
     if (VIEWS.indexOf(name) < 0) name = 'dashboard';
     state.view = name;
+    $('fab').hidden = name === 'dashboard' || !!state.readOnlyCloud || state.dataState === 'cloud-loading';
     VIEWS.forEach(function (v) { var el = $('v-' + v); el.hidden = v !== name; if (v !== name) el.textContent = ''; });
     Array.prototype.forEach.call($('nav').querySelectorAll('a'), function (a) { if (a.getAttribute('data-v') === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var moreNav = $('nav').querySelector('.nav-more');

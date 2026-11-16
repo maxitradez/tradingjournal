@@ -1074,3 +1074,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
  .trade-success-card { padding:28px 20px; }
  .trade-success-card h2 { font-size:30px; }
 }
+
+
+/* PIPBOOK motivation check-in */
+.motivation-reminder { margin:0 0 16px;border-left:3px solid var(--accent);border-radius:10px; }
+.motivation-reminder .eyebrow { margin:0 0 9px; }
+.motivation-reminder h2 { font:800 clamp(23px,3vw,30px)/1 var(--font-display); }
+.motivation-reminder>p:not(.eyebrow) { color:var(--muted);max-width:760px;line-height:1.65; }
+.motivation-quote { margin:16px 0;padding:14px 18px;border-left:2px solid var(--accent);background:var(--surface-2);color:var(--fg);font-size:15px;line-height:1.65; }
+.motivation-reasons { color:var(--accent)!important;font:600 11px/1.7 var(--font-mono);letter-spacing:.06em;text-transform:uppercase; }
+.motivation-footer { margin-bottom:0;font-size:12px; }

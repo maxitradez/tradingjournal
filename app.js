@@ -8,7 +8,7 @@
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   var EMOTIONS = ['Calm', 'Confident', 'Focused', 'Patient', 'Hesitant', 'Fearful', 'Impatient', 'FOMO', 'Greedy', 'Revenge', 'Bored', 'Tired'];
-  var MISTAKES = ['Moved stop', 'Oversized', 'Early exit', 'Late entry', 'No setup', 'Chased price', 'Overtraded', 'Ignored news', 'Averaged down'];
+  var MISTAKES = ['FOMO', 'Moved SL', 'Overleveraged', 'Revenge trading', 'Early exit', 'Late entry', 'No setup', 'Chased price', 'Overtraded', 'Ignored news', 'Averaged down'];
   var VIEWS = ['dashboard', 'calendar', 'trades', 'playbooks', 'reports', 'insights', 'settings', 'profile'];
   var STARTERS = [
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
@@ -864,9 +864,9 @@
     var pairOptions = [['', 'All instruments']].concat(assets.map(function (x) { return [x, x]; }));
     return h('div', { class: 'dashboard-filterbar' },
       select('Date range', f.range, [['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['365','Last 12 months'],['all','All time']], 'range'),
-      select('Instrument', f.asset, pairOptions, 'asset'),
+      select('Pair / instrument', f.asset, pairOptions, 'asset'),
       select('Session', f.session, [['all','All sessions'],['Asian','Asian'],['London','London'],['New York','New York'],['Sydney','Sydney'],['Other','Other']], 'session'),
-      h('button', { class: 'btn btn-primary dashboard-add', type: 'button', text: '+ Log Trade', onclick: function () { openTradeForm(null); } }));
+      h('button', { class: 'btn btn-primary dashboard-add', type: 'button', onclick: function () { openTradeForm(null); } }, h('span', { text: '+ Log Trade' }), h('kbd', { class: 'shortcut-key', text: 'N' })));
   }
   function dashboardKpis(trades) {
     var a = analyze(trades), pips = trades.reduce(function (sum, t) { return sum + (t.pips == null ? 0 : t.pips); }, 0);
@@ -882,7 +882,7 @@
     cards.appendChild(h('article', { class: 'dash-kpi kpi-pnl' },
       h('span', { class: 'kpi-label', text: 'Net P&L' }),
       h('strong', { class: 'kpi-value ' + (a.n ? cls(a.total) : ''), text: a.n ? signed(a.total) : '—' }),
-      h('span', { class: 'kpi-sub', text: pipsCount ? fmtPips(pips) + ' · ' + pipsCount + ' trades with pip data' : 'Net result for selected period' })));
+      h('span', { class: 'kpi-sub', text: (state.settings.balance ? pcts(a.total / state.settings.balance * 100) + ' on starting balance · ' : '') + (pipsCount ? fmtPips(pips) : 'Pips not recorded') })));
     cards.appendChild(h('article', { class: 'dash-kpi' },
       h('span', { class: 'kpi-label', text: 'Profit factor' }),
       h('strong', { class: 'kpi-value', text: a.n ? pf : '—' }),

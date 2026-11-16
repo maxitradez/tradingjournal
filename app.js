@@ -1192,22 +1192,31 @@
     DOW.forEach(function (n) { cal.appendChild(h('div', { class: 'cal-h', text: n })); });
     cal.appendChild(h('div', { class: 'cal-h', text: 'Week' }));
     for (var w = 0; w < weeks; w++) {
-      var wn = 0, wc = 0;
+      var wn = 0, wc = 0, wp = 0, wpN = 0;
       for (var c = 0; c < 7; c++) {
         var dn = w * 7 + c - lead + 1;
         if (dn < 1 || dn > dim) { cal.appendChild(h('div', { class: 'day out' })); continue; }
         var k = ymd(new Date(m.y, m.m, dn)), info = a.days[k], cellCls = 'day' + (k === todayKey ? ' today' : '') + (state.selDay === k ? ' sel' : '');
         if (info) {
-          wn += info.net; wc += info.n;
+          wn += info.net; wc += info.n; if (info.pipsN) { wp += info.pips; wpN += info.pipsN; }
           var inten = Math.round(14 + 42 * Math.abs(info.net) / maxAbs), col = info.net > 0 ? 'var(--win)' : info.net < 0 ? 'var(--loss)' : 'var(--muted)';
           cal.appendChild(h('button', { class: cellCls, type: 'button', style: 'background:color-mix(in srgb, ' + col + ' ' + inten + '%, var(--surface-2))', 'aria-label': fmtDate(k) + ': ' + signed(info.net) + ' from ' + info.n + ' trades', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) },
-            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cp(info.net) }), h('span', { class: 'dc', text: info.n + (info.n === 1 ? ' trade' : ' trades') }), dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
+            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cp(info.net) }),
+            h('span', { class: 'dc', text: (info.pipsN ? (info.pips > 0 ? '+' : '') + fmt(info.pips,1) + 'p · ' : '') + info.n + (info.n === 1 ? ' trade' : ' trades') }),
+            dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
         } else cal.appendChild(h('button', { class: cellCls, type: 'button', 'aria-label': fmtDate(k) + ': no trades. Open notes', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) }, h('span', { class: 'dn', text: String(dn) }), dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
       }
-      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Wk ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cp(wn) : '' }), h('span', { class: 'dc', text: wc ? wc + (wc === 1 ? ' trade' : ' trades') : '' })));
+      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Week ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cp(wn) : '' }), h('span', { class: 'dc', text: (wpN ? (wp > 0 ? '+' : '') + fmt(wp,1) + 'p · ' : '') + (wc ? wc + (wc === 1 ? ' trade' : ' trades') : 'No trades') })));
     }
     panel.appendChild(cal);
     box.appendChild(panel);
+    var monthKey = m.y + '-' + String(m.m + 1).padStart(2, '0');
+    var monthTrades = state.trades.filter(function (t) { return t.date.slice(0,7) === monthKey; });
+    var sessionRows = groupBy(monthTrades, function (t) { return t.session; }).sort(function (x,y) { return y.pnl-x.pnl; });
+    var sessionPanel = h('section', { class: 'panel session-heatmap' },
+      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'INTRADAY PATTERNS' }), h('h2', { text: 'Session performance' }))));
+    sessionPanel.appendChild(sessionRows.length ? breakdown(sessionRows) : h('p', { class: 'empty', text: 'Add a session to your trades to see which market window performs best.' }));
+    box.appendChild(sessionPanel);
     if (!state.trades.length) box.appendChild(h('div', { style: 'margin-top:16px' }, emptyHero()));
     if (state.selDay) {
       var info2 = a.days[state.selDay], cards = h('div', { class: 'tcards' });

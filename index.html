@@ -128,6 +128,8 @@
           <input type="radio" name="side" id="side-sell" value="sell"><label for="side-sell">Sell</label>
         </div></div>
       <div class="field"><label for="f-date">Date</label><input id="f-date" type="date"></div>
+      <div class="field"><label for="f-entry">Entry price (optional)</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="Entry price"></div>
+      <div class="field"><label for="f-exit">Exit price (optional)</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="Exit price"></div>
       <div class="field"><label for="f-time">Time (optional)</label><input id="f-time" type="time"></div>
       <div class="field full"><label for="f-risk">Amount risked (optional)</label><input id="f-risk" type="number" step="any" min="0" inputmode="decimal" placeholder="What you stood to lose if stopped out"><p class="hint" id="risk-hint">Add it to track R-multiple and your risk limit.</p></div>
     </div>
@@ -138,10 +140,10 @@
       <details class="sec" id="sec-prices">
       <summary>Prices and R-multiple</summary>
       <div class="fields">
-        <div class="field"><label for="f-entry">Entry</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="1.0850"></div>
+        
         <div class="field"><label for="f-sl">Stop loss</label><input id="f-sl" type="number" step="any" inputmode="decimal" placeholder="1.0820"></div>
         <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
-        <div class="field"><label for="f-exit">Exit</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="1.0915"></div>
+        
         <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
         <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
         <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/jpeg,image/png,image/webp"><p class="hint">Private to your account. Images are compressed before upload; maximum stored size is 10 MB.</p><div id="shot-prev" class="shotprev"></div></div>

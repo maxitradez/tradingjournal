@@ -56,6 +56,10 @@
     var a = Math.abs(r), s = a >= 10000 ? Math.round(a / 1000) + 'k' : a >= 1000 ? (a / 1000).toFixed(1) + 'k' : String(a);
     return (r > 0 ? '+' : MINUS) + s;
   }
+  function cpCurrency(n) {
+    var a = Math.abs(Math.round(n)), compact = a >= 10000 ? Math.round(a / 1000) + 'k' : a >= 1000 ? (a / 1000).toFixed(1) + 'k' : String(a);
+    return (n > 0 ? '+' : n < 0 ? MINUS : '') + CUR + compact;
+  }
   function fmtR(r) {
     if (r == null) return '—';
     var a = Math.round(Math.abs(r) * 100) / 100;
@@ -1238,12 +1242,12 @@
           wn += info.net; wc += info.n; if (info.pipsN) { wp += info.pips; wpN += info.pipsN; }
           var inten = Math.round(14 + 42 * Math.abs(info.net) / maxAbs), col = info.net > 0 ? 'var(--win)' : info.net < 0 ? 'var(--loss)' : 'var(--muted)';
           cal.appendChild(h('button', { class: cellCls, type: 'button', style: 'background:color-mix(in srgb, ' + col + ' ' + inten + '%, var(--surface-2))', 'aria-label': fmtDate(k) + ': ' + signed(info.net) + ' from ' + info.n + ' trades', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) },
-            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cp(info.net) }),
+            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cpCurrency(info.net) }),
             h('span', { class: 'dc', text: (info.pipsN ? (info.pips > 0 ? '+' : '') + fmt(info.pips,1) + 'p · ' : '') + info.n + (info.n === 1 ? ' trade' : ' trades') }),
             dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
         } else cal.appendChild(h('button', { class: cellCls, type: 'button', 'aria-label': fmtDate(k) + ': no trades. Open notes', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) }, h('span', { class: 'dn', text: String(dn) }), dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
       }
-      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Week ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cp(wn) : '' }), h('span', { class: 'dc', text: (wpN ? (wp > 0 ? '+' : '') + fmt(wp,1) + 'p · ' : '') + (wc ? wc + (wc === 1 ? ' trade' : ' trades') : 'No trades') })));
+      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Week ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cpCurrency(wn) : '' }), h('span', { class: 'dc', text: (wpN ? (wp > 0 ? '+' : '') + fmt(wp,1) + 'p · ' : '') + (wc ? wc + (wc === 1 ? ' trade' : ' trades') : 'No trades') })));
     }
     panel.appendChild(cal);
     box.appendChild(panel);

@@ -699,6 +699,7 @@
     var specs = h('div', { class: 'detail-spec-grid' },
       detailSpec('Entry price', t.entry), detailSpec('Stop loss', t.sl), detailSpec('Take profit', t.tp), detailSpec('Exit price', t.exit),
       detailSpec('Lot / size', t.lotSize), detailSpec('Risk amount', t.risk == null ? '' : CUR + fmt(t.risk)),
+      detailSpec('Risk %', t.risk != null && state.settings.balance ? pcts(t.risk / state.settings.balance * 100) : ''),
       detailSpec('Spread / commission', t.commission == null ? '' : CUR + fmt(t.commission)),
       detailSpec('Hold duration', t.holdDuration == null ? '' : t.holdDuration + ' min'));
     execution.appendChild(specs); host.appendChild(execution);

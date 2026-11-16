@@ -91,15 +91,7 @@
           emotion: row.emotion, followed: row.followed_rules,
           misses: jsonArray(row.misses), mistakes: jsonArray(row.mistakes),
           lesson: row.lesson, shot: extra.legacy_shot || '',
-          shotId: extra.chart_screenshot_path || '', shotUrl: '',
-          session: extra.pipbook && extra.pipbook.session || '',
-          pips: extra.pipbook && extra.pipbook.pips,
-          lotSize: extra.pipbook && extra.pipbook.lotSize,
-          commission: extra.pipbook && extra.pipbook.commission,
-          holdDuration: extra.pipbook && extra.pipbook.holdDuration,
-          setupTags: extra.pipbook && extra.pipbook.setupTags || [],
-          executionRating: extra.pipbook && extra.pipbook.executionRating,
-          example: row.is_example,
+          shotId: extra.chart_screenshot_path || '', shotUrl: '', example: row.is_example,
           createdAt: row.created_at ? Date.parse(row.created_at) : 0
         });
       }
@@ -123,10 +115,7 @@
           misses: jsonArray(t.misses), mistakes: jsonArray(t.mistakes),
           lesson: t.lesson || null, is_example: !!t.example,
           notes: { legacy_shot: t.shot || '', legacy_shot_id: '',
-            chart_screenshot_path: t.shotId || null, playbook_legacy_id: t.playbook || '',
-            pipbook: { session: t.session || '', pips: t.pips, lotSize: t.lotSize,
-              commission: t.commission, holdDuration: t.holdDuration,
-              setupTags: jsonArray(t.setupTags), executionRating: t.executionRating } }
+            chart_screenshot_path: t.shotId || null, playbook_legacy_id: t.playbook || '' }
         };
       }
       async function saveLegacyRow(table, legacyId, payload) {

@@ -8,13 +8,13 @@
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   var EMOTIONS = ['Calm', 'Confident', 'Focused', 'Patient', 'Hesitant', 'Fearful', 'Impatient', 'FOMO', 'Greedy', 'Revenge', 'Bored', 'Tired'];
-  var MISTAKES = ['FOMO', 'Moved SL', 'Overleveraged', 'Revenge trading', 'Early exit', 'Late entry', 'No setup', 'Chased price', 'Overtraded', 'Ignored news', 'Averaged down'];
+  var MISTAKES = ['Moved stop', 'Oversized', 'Early exit', 'Late entry', 'No setup', 'Chased price', 'Overtraded', 'Ignored news', 'Averaged down'];
   var VIEWS = ['dashboard', 'calendar', 'trades', 'playbooks', 'reports', 'insights', 'settings', 'profile'];
   var STARTERS = [
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, dashboardFilters: { range: '30', asset: '', session: 'all', chartMetric: 'usd', breakdown: 'asset' }, detailTradeId: null, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -56,10 +56,6 @@
     var a = Math.abs(r), s = a >= 10000 ? Math.round(a / 1000) + 'k' : a >= 1000 ? (a / 1000).toFixed(1) + 'k' : String(a);
     return (r > 0 ? '+' : MINUS) + s;
   }
-  function cpCurrency(n) {
-    var a = Math.abs(Math.round(n)), compact = a >= 10000 ? Math.round(a / 1000) + 'k' : a >= 1000 ? (a / 1000).toFixed(1) + 'k' : String(a);
-    return (n > 0 ? '+' : n < 0 ? MINUS : '') + CUR + compact;
-  }
   function fmtR(r) {
     if (r == null) return '—';
     var a = Math.round(Math.abs(r) * 100) / 100;
@@ -97,12 +93,6 @@
       id: String(t.id), date: String(t.date || todayStr()), time: String(t.time || ''), asset: String(t.asset || ''), side: t.side === 'sell' ? 'sell' : 'buy',
       entry: t.entry == null ? '' : String(t.entry), sl: t.sl == null ? '' : String(t.sl), tp: t.tp == null ? '' : String(t.tp), exit: t.exit == null ? '' : String(t.exit),
       pnl: Number(t.pnl) || 0, r: t.r == null || t.r === '' ? null : Number(t.r), risk: t.risk == null || t.risk === '' || !isFinite(Number(t.risk)) ? null : Number(t.risk), playbook: String(t.playbook || ''), emotion: String(t.emotion || ''),
-      session: String(t.session || ''), pips: t.pips == null || t.pips === '' || !isFinite(Number(t.pips)) ? null : Number(t.pips),
-      lotSize: t.lotSize == null || t.lotSize === '' || !isFinite(Number(t.lotSize)) ? null : Number(t.lotSize),
-      commission: t.commission == null || t.commission === '' || !isFinite(Number(t.commission)) ? null : Number(t.commission),
-      holdDuration: t.holdDuration == null || t.holdDuration === '' || !isFinite(Number(t.holdDuration)) ? null : Number(t.holdDuration),
-      setupTags: Array.isArray(t.setupTags) ? t.setupTags.map(String) : [],
-      executionRating: t.executionRating == null || t.executionRating === '' ? null : Math.max(1, Math.min(5, Number(t.executionRating))),
       followed: t.followed !== false, misses: Array.isArray(t.misses) ? t.misses.map(String) : [], lesson: String(t.lesson || ''), shot: String(t.shot || ''), shotId: String(t.shotId || ''), shotUrl: String(t.shotUrl || ''), mistakes: Array.isArray(t.mistakes) ? t.mistakes.map(String) : [],
       example: !!t.example, createdAt: Number(t.createdAt) || 0
     };
@@ -147,8 +137,8 @@
       if (t.followed) a.followed++;
       var e = a.eq[a.eq.length - 1] + p; a.eq.push(e);
       peak = Math.max(peak, e); var dd = peak - e; a.dd.push(-dd); a.maxDD = Math.max(a.maxDD, dd);
-      var d = a.days[t.date] || (a.days[t.date] = { net: 0, pips: 0, pipsN: 0, n: 0, trades: [] });
-      d.net += p; if (t.pips != null) { d.pips += t.pips; d.pipsN++; } d.n++; d.trades.push(t);
+      var d = a.days[t.date] || (a.days[t.date] = { net: 0, n: 0, trades: [] });
+      d.net += p; d.n++; d.trades.push(t);
     });
     a.winRate = a.n ? a.wins / a.n : 0;
     a.pf = a.gl === 0 ? (a.gw > 0 ? Infinity : null) : a.gw / a.gl;
@@ -617,7 +607,7 @@
     if (focusId) setTimeout(function () { var f = $(focusId); if (f) f.focus({ preventScroll: true }); }, 30);
   }
   function closeDrawers(silent) {
-    ['drawer-trade', 'drawer-pb', 'drawer-trade-detail'].forEach(function (id) { $(id).hidden = true; }); state.detailTradeId = null;
+    ['drawer-trade', 'drawer-pb'].forEach(function (id) { $(id).hidden = true; });
     $('scrim').hidden = true; document.documentElement.classList.remove('lock'); openDrawerEl = null;
     if (!silent && state.lastFocus && state.lastFocus.focus) { try { state.lastFocus.focus({ preventScroll: true }); } catch (e) {} }
   }
@@ -672,51 +662,7 @@
       t.misses.length ? h('div', { class: 'cell-sub', text: 'Rules missed: ' + t.misses.join('; ') }) : null,
       h('div', { class: 'acts', style: 'justify-content:flex-start' },
         link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗', style: 'margin:0 8px 0 0;align-self:center' }) : null,
-        h('button', { class: 'btn btn-sm', type: 'button', text: 'Details', onclick: function () { openTradeDetail(t); } }), h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })));
-  }
-  function detailSpec(label, value) {
-    return h('div', { class: 'detail-spec' }, h('span', { text: label }), h('strong', { text: value == null || value === '' ? '—' : String(value) }));
-  }
-  function openTradeDetail(t) {
-    if (!t) return;
-    state.detailTradeId = t.id;
-    var host = $('trade-detail-content'), shot = screenshotSource(t), chartLink = safeUrl(t.shot);
-    host.textContent = '';
-    var header = h('div', { class: 'detail-drawer-head' },
-      h('div', null, h('p', { class: 'eyebrow', text: fmtDate(t.date) + (t.time ? ' · ' + t.time : '') }), h('h2', { id: 'trade-detail-title', text: t.asset }), h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })),
-      h('button', { class: 'xbtn', type: 'button', 'aria-label': 'Close trade details', text: '×', onclick: function () { closeDrawers(); } }));
-    host.appendChild(header);
-    host.appendChild(h('section', { class: 'detail-pnl-band' },
-      h('div', null, h('span', { class: 'kpi-label', text: 'NET P&L' }), h('strong', { class: 'detail-pnl ' + cls(t.pnl), text: signed(t.pnl) })),
-      h('div', null, h('span', { class: 'kpi-label', text: 'R MULTIPLE' }), h('strong', { class: 'detail-r', text: fmtR(t.r) })),
-      h('div', null, h('span', { class: 'kpi-label', text: 'NET PIPS' }), h('strong', { class: 'detail-r', text: t.pips == null ? '—' : fmtPips(t.pips) }))));
-    var chart = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Chart capture' }), h('span', { class: 'sub', text: shot ? 'Saved screenshot' : chartLink ? 'Chart link' : 'No chart added' })));
-    if (shot) chart.appendChild(h('a', { class: 'detail-chart-image', href: shot, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: shot, alt: 'Saved chart for ' + t.asset })));
-    else if (chartLink) chart.appendChild(h('a', { class: 'detail-chart-link', href: chartLink, target: '_blank', rel: 'noopener noreferrer' }, 'Open saved TradingView / chart link ↗'));
-    else chart.appendChild(h('div', { class: 'detail-chart-empty' }, h('span', { text: 'Chart not attached' }), h('p', { text: 'Add a chart link or upload a screenshot when editing this trade.' })));
-    host.appendChild(chart);
-    var execution = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Execution specs' }), h('span', { class: 'sub', text: t.session || 'Session not tagged' })));
-    var specs = h('div', { class: 'detail-spec-grid' },
-      detailSpec('Entry price', t.entry), detailSpec('Stop loss', t.sl), detailSpec('Take profit', t.tp), detailSpec('Exit price', t.exit),
-      detailSpec('Lot / size', t.lotSize), detailSpec('Risk amount', t.risk == null ? '' : CUR + fmt(t.risk)),
-      detailSpec('Risk %', t.risk != null && state.settings.balance ? pcts(t.risk / state.settings.balance * 100) : ''),
-      detailSpec('Spread / commission', t.commission == null ? '' : CUR + fmt(t.commission)),
-      detailSpec('Hold duration', t.holdDuration == null ? '' : t.holdDuration + ' min'));
-    execution.appendChild(specs); host.appendChild(execution);
-    var journal = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Trade review' })));
-    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Setup / confluence' }), h('div', { class: 'detail-tags' }, (t.setupTags.length ? t.setupTags : (t.playbook ? [pbName(t.playbook)] : ['No setup tags'])).map(function (tag) { return h('span', { class: 'detail-tag', text: tag }); }))));
-    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Execution rating' }), h('strong', { text: t.executionRating == null ? 'Not rated' : '★'.repeat(t.executionRating) + '☆'.repeat(5-t.executionRating) + ' · ' + t.executionRating + '/5' })));
-    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Followed plan' }), planPill(t)));
-    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Emotion' }), h('strong', { text: t.emotion || 'Not recorded' })));
-    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Mistakes' }), h('div', { class: 'detail-tags' }, (t.mistakes.length ? t.mistakes : ['None recorded']).map(function (tag) { return h('span', { class: 'detail-tag mistake', text: tag }); }))));
-    journal.appendChild(h('div', { class: 'detail-notes' }, h('span', { class: 'kpi-label', text: 'BRIEF NOTES' }), h('p', { text: t.lesson || 'No notes added yet.' })));
-    host.appendChild(journal);
-    var actions = h('div', { class: 'detail-actions' },
-      h('button', { class: 'btn btn-primary', type: 'button', text: 'Edit trade', onclick: function () { closeDrawers(); openTradeForm(t); } }),
-      h('button', { class: 'btn btn-quiet', type: 'button', text: 'Close', onclick: function () { closeDrawers(); } }),
-      deleteButton(function () { closeDrawers(); delTrade(t.id); }));
-    host.appendChild(actions);
-    openDrawer($('drawer-trade-detail'));
+        h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })));
   }
   function breakdown(rows, labelFn) {
     if (!rows.length) return h('p', { class: 'empty', text: 'Nothing to show yet.' });
@@ -754,7 +700,7 @@
     ticks.forEach(function (v) {
       var y = Y(v);
       sv('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: v === 0 ? 'zero' : 'gridl' }, svg);
-      sv('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', class: 'tick' }, svg).textContent = o.formatValue ? o.formatValue(v) : tickLabel(v);
+      sv('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', class: 'tick' }, svg).textContent = tickLabel(v);
     });
     var step = Math.max(1, Math.ceil(n / 6)), xt = [];
     for (var i = 0; i <= n; i += step) xt.push(i);
@@ -767,7 +713,7 @@
     if (o.pointClass && n <= 40) for (var k = 1; k <= n; k++) sv('circle', { cx: X(k), cy: Y(vals[k]), r: 3.5, class: o.pointClass(k) }, svg);
     sv('circle', { cx: X(n), cy: Y(vals[n]), r: 6, class: 'dot-end' }, svg);
     var ey = Y(vals[n]);
-    sv('text', { x: X(n) - 12, y: ey - 12 < m.t - 4 ? ey + 22 : ey - 12, 'text-anchor': 'end', class: 'end-label' }, svg).textContent = o.formatValue ? o.formatValue(vals[n]) : signed(vals[n]);
+    sv('text', { x: X(n) - 12, y: ey - 12 < m.t - 4 ? ey + 22 : ey - 12, 'text-anchor': 'end', class: 'end-label' }, svg).textContent = signed(vals[n]);
     var guide = sv('line', { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, class: 'guide', visibility: 'hidden' }, svg), hd = sv('circle', { cx: 0, cy: 0, r: 5, class: 'hover-dot', visibility: 'hidden' }, svg);
     var overlay = sv('rect', { x: m.l, y: m.t, width: pw, height: ph, fill: 'transparent' }, svg), tip = h('div', { class: 'tip', hidden: true });
     function show(e) {
@@ -832,189 +778,42 @@
       !why && reasons ? h('p', { class: 'motivation-reasons', text: reasons }) : null,
       h('p', { class: 'motivation-footer', text: 'One difficult stretch does not define you. You can pause, review and return with a clearer plan.' }));
   }
-  function dashboardFilteredTrades() {
-    var f = state.dashboardFilters, trades = state.trades.slice();
-    if (f.range !== 'all') {
-      var days = Number(f.range) || 30, cutoff = new Date();
-      cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate() - (days - 1));
-      var minDate = ymd(cutoff);
-      trades = trades.filter(function (t) { return t.date >= minDate && t.date <= todayStr(); });
-    }
-    if (f.asset) trades = trades.filter(function (t) { return t.asset === f.asset; });
-    if (f.session !== 'all') trades = trades.filter(function (t) { return t.session === f.session; });
-    return sortedAsc(trades);
-  }
-  function fmtPips(n, digits) {
-    if (n == null || !isFinite(n)) return '—';
-    var v = fmt(Math.abs(n), digits == null ? 1 : digits);
-    return (n > 0 ? '+' : n < 0 ? MINUS : '') + v + ' pips';
-  }
-  function metricValue(v, metric) {
-    if (metric === 'pips') return fmtPips(v);
-    if (metric === 'r') return fmtR(v);
-    return signed(v);
-  }
-  function dashboardFilterBar() {
-    var f = state.dashboardFilters;
-    function select(label, value, opts, key) {
-      var field = h('label', { class: 'dash-filter' });
-      field.appendChild(h('span', { text: label }));
-      var input = h('select', { 'aria-label': label });
-      opts.forEach(function (o) { input.appendChild(h('option', { value: o[0], text: o[1] })); });
-      input.value = value;
-      input.addEventListener('change', function () { state.dashboardFilters[key] = input.value; renderView(); });
-      field.appendChild(input); return field;
-    }
-    var preferred = [{ value: 'EURUSD', label: 'EUR/USD' },{ value: 'GBPJPY', label: 'GBP/JPY' },{ value: 'XAUUSD', label: 'XAU/USD' }];
-    var assets = Array.from(new Set(preferred.map(function (x) { return x.value; }).concat(state.trades.map(function (t) { return t.asset; }).filter(Boolean)))).sort();
-    var pairOptions = [['', 'All pairs / instruments']].concat(assets.map(function (x) {
-      var known = preferred.find(function (item) { return item.value === x; });
-      return [x, known ? known.label : x];
-    }));
-    return h('div', { class: 'dashboard-filterbar' },
-      select('Date range', f.range, [['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['365','Last 12 months'],['all','All time']], 'range'),
-      select('Pair / instrument', f.asset, pairOptions, 'asset'),
-      select('Session', f.session, [['all','All sessions'],['Asian','Asian'],['London','London'],['New York','New York'],['Sydney','Sydney'],['Other','Other']], 'session'),
-      h('button', { class: 'btn btn-primary dashboard-add', type: 'button', onclick: function () { openTradeForm(null); } }, h('span', { text: '+ Log Trade' }), h('kbd', { class: 'shortcut-key', text: 'N' })));
-  }
-  function dashboardKpis(trades) {
-    var a = analyze(trades), pips = trades.reduce(function (sum, t) { return sum + (t.pips == null ? 0 : t.pips); }, 0);
-    var pipsCount = trades.filter(function (t) { return t.pips != null; }).length;
-    var winRs = trades.filter(function (t) { return t.pnl > 0 && t.r != null && t.r > 0; }).map(function (t) { return t.r; });
-    var averageWinR = winRs.length ? winRs.reduce(function (x,y) { return x+y; },0) / winRs.length : null;
-    var todayTrades = state.trades.filter(function (t) { return t.date === todayStr(); });
-    var todayNet = todayTrades.reduce(function (sum,t) { return sum + t.pnl; },0);
-    var dailyLimit = state.settings.dailyLoss || 0, used = dailyLimit ? Math.max(0,-todayNet) : 0;
-    var usedPct = dailyLimit ? Math.min(100, used / dailyLimit * 100) : 0;
-    var pf = a.pf == null ? '—' : a.pf === Infinity ? '∞' : a.pf.toFixed(2);
-    var cards = h('section', { class: 'dash-kpis', 'aria-label': 'Trading performance key metrics' });
-    cards.appendChild(h('article', { class: 'dash-kpi kpi-pnl' },
-      h('span', { class: 'kpi-label', text: 'Net P&L' }),
-      h('strong', { class: 'kpi-value ' + (a.n ? cls(a.total) : ''), text: a.n ? signed(a.total) : '—' }),
-      h('span', { class: 'kpi-sub', text: (state.settings.balance ? pcts(a.total / state.settings.balance * 100) + ' on starting balance · ' : '') + (pipsCount ? fmtPips(pips) : 'Pips not recorded') })));
-    cards.appendChild(h('article', { class: 'dash-kpi' },
-      h('span', { class: 'kpi-label', text: 'Profit factor' }),
-      h('strong', { class: 'kpi-value', text: a.n ? pf : '—' }),
-      h('span', { class: 'kpi-sub', text: 'Gross profit ÷ gross loss' })));
-    cards.appendChild(h('article', { class: 'dash-kpi' },
-      h('span', { class: 'kpi-label', text: 'Win rate & average R:R' }),
-      h('div', { class: 'kpi-duo' },
-        h('div', null, h('strong', { class: 'kpi-value', text: a.n ? pct(a.winRate) : '—' }), h('span', { class: 'kpi-sub', text: 'Win rate' })),
-        h('div', null, h('strong', { class: 'kpi-value', text: averageWinR == null ? '—' : '1:' + averageWinR.toFixed(1) }), h('span', { class: 'kpi-sub', text: 'Avg winner R:R' })))));
-    var meter = h('article', { class: 'dash-kpi kpi-risk' },
-      h('div', { class: 'kpi-risk-head' }, h('span', { class: 'kpi-label', text: 'Daily drawdown / risk' }), h('span', { class: 'risk-percent', text: dailyLimit ? Math.round(usedPct) + '%' : '—' })),
-      h('strong', { class: 'kpi-value ' + (used ? 'neg' : ''), text: dailyLimit ? CUR + fmt(used) + ' / ' + CUR + fmt(dailyLimit) : 'Set daily limit' }),
-      h('div', { class: 'risk-meter' }, h('span', { style: 'width:' + usedPct + '%' })),
-      h('span', { class: 'kpi-sub', text: dailyLimit ? (usedPct >= 100 ? 'Daily loss limit reached' : 'Based on today’s realised P&L') : 'Configure a max daily loss in Settings' }));
-    meter.setAttribute('data-risk', usedPct >= 80 ? 'high' : usedPct >= 50 ? 'medium' : 'low');
-    cards.appendChild(meter);
-    return cards;
-  }
-  function dashboardEquityChart(trades, metric) {
-    var box = h('div', { class: 'chart dash-equity-chart' });
-    var selected = trades.filter(function (t) {
-      return metric === 'pips' ? t.pips != null : metric === 'r' ? t.r != null : true;
-    });
-    if (!selected.length) {
-      box.appendChild(h('p', { class: 'empty', text: metric === 'pips' ? 'No net-pip data in this selection yet. Add pips when logging a trade to unlock this view.' : metric === 'r' ? 'Add R-multiple values to see this curve.' : 'Your equity curve starts with your first trade.' }));
-      return box;
-    }
-    var vals = [0], running = 0;
-    selected.forEach(function (t) {
-      running += metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl;
-      vals.push(running);
-    });
-    setTimeout(function () {
-      lineChart(box, {
-        vals: vals, gid: 'pipbook-equity-' + metric, formatValue: function (v) { return metricValue(v, metric); },
-        empty: 'No records for this selection.', aria: 'Cumulative ' + metric + ' across ' + selected.length + ' trades.',
-        pointClass: function (k) { var t = selected[k - 1], value = metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl; return value > 0 ? 'pt-pos' : value < 0 ? 'pt-neg' : 'pt-flat'; },
-        tip: function (i) {
-          if (i === 0) return [{ text: 'Start' }, { text: metricValue(0, metric) }];
-          var t = selected[i - 1], value = metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl;
-          return [{ text: fmtDate(t.date) + (t.time ? ' · ' + t.time : '') }, { text: t.asset + ' ' + (t.side === 'sell' ? 'SHORT' : 'LONG') }, { text: 'Trade ' + metricValue(value, metric) }, { text: 'Cumulative ' + metricValue(vals[i], metric) }];
-        }
-      });
-    }, 0);
-    return box;
-  }
-  function dashboardBlotter(trades) {
-    var recent = trades.slice().sort(function (a,b) {
-      var x=a.date+(a.time||'00:00'), y=b.date+(b.time||'00:00'); return x<y?1:x>y?-1:b.createdAt-a.createdAt;
-    }).slice(0,8);
-    if (!recent.length) return h('p', { class: 'empty', text: 'Your latest executions will appear here.' });
-    var table = h('table', { class: 'dash-blotter-table' });
-    table.appendChild(h('thead', null, h('tr', null,
-      h('th', { text: 'Date / time' }), h('th', { text: 'Session' }), h('th', { text: 'Pair' }),
-      h('th', { text: 'Direction' }), h('th', { text: 'Setup tag' }), h('th', { text: 'R:R' }),
-      h('th', { class: 'num', text: 'Pips' }), h('th', { class: 'num', text: 'Net P&L' }), h('th', { text: 'Chart' }))));
-    var body = h('tbody');
-    recent.forEach(function (t) {
-      var row = h('tr', { tabindex: '0', role: 'button', 'aria-label': 'Open trade details for ' + t.asset + ' ' + t.date });
-      row.appendChild(h('td', null, h('strong', { text: fmtDate(t.date) }), h('span', { class: 'blotter-sub', text: t.time || 'Time not set' })));
-      row.appendChild(h('td', { text: t.session || '—' }));
-      row.appendChild(h('td', null, h('strong', { text: t.asset })));
-      row.appendChild(h('td', null, h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })));
-      row.appendChild(h('td', { text: t.setupTags.length ? t.setupTags.slice(0,2).join(', ') : t.playbook ? pbName(t.playbook) : '—' }));
-      row.appendChild(h('td', { text: t.r == null ? '—' : (t.r > 0 ? '1:' + fmt(t.r,1) : fmtR(t.r)) }));
-      row.appendChild(h('td', { class: 'num ' + (t.pips == null ? '' : cls(t.pips)), text: t.pips == null ? '—' : fmtPips(t.pips) }));
-      row.appendChild(h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }));
-      row.appendChild(h('td', { class: 'chart-indicator', text: screenshotSource(t) || safeUrl(t.shot) ? '▧' : '—', title: screenshotSource(t) || safeUrl(t.shot) ? 'Chart available' : 'No chart added' }));
-      row.addEventListener('click', function () { openTradeDetail(t); });
-      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTradeDetail(t); } });
-      body.appendChild(row);
-    });
-    table.appendChild(body);
-    return h('div', { class: 'dash-blotter-scroll' }, table);
-  }
-  function dashboardBreakdown(trades) {
-    var type = state.dashboardFilters.breakdown, sessionMode = type === 'session';
-    var rows = groupBy(trades, function (t) { return sessionMode ? t.session : t.asset; }).sort(function (a,b) { return b.pnl-a.pnl; });
-    var panel = h('section', { class: 'panel dash-breakdown' });
-    var choose = h('select', { 'aria-label': 'Breakdown by', class: 'compact-select' },
-      h('option', { value: 'asset', text: 'By instrument' }), h('option', { value: 'session', text: 'By session' }));
-    choose.value = type;
-    choose.addEventListener('change', function () { state.dashboardFilters.breakdown = choose.value; renderView(); });
-    panel.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'WHERE YOU PERFORM' }), h('h2', { text: 'Profit breakdown' })), choose));
-    if (!rows.length) panel.appendChild(h('p', { class: 'empty', text: sessionMode ? 'Tag a trading session on your trades to compare sessions.' : 'Record trades to compare instruments.' }));
-    else panel.appendChild(breakdown(rows));
-    return panel;
-  }
   function viewDashboard(box) {
-    var trades = dashboardFilteredTrades(), a = analyze(trades), f = state.dashboardFilters;
-    box.appendChild(dashboardFilterBar());
-    box.appendChild(h('div', { class: 'dash-page-heading' },
-      h('div', null, h('p', { class: 'eyebrow', text: 'PERFORMANCE WORKSPACE' }), h('h2', { text: 'Dashboard' }), h('p', { class: 'sub', text: trades.length + (trades.length === 1 ? ' trade in this view' : ' trades in this view') })),
-      h('span', { class: 'dash-period-pill', text: f.range === 'all' ? 'All-time overview' : 'Last ' + f.range + ' days' })));
-    box.appendChild(dashboardKpis(trades));
+    var a = analyze(state.trades);
+    var today = todayStr();
+    var todaysTrades = state.trades.filter(function (t) { return t.date === today; });
+    var todaysNet = todaysTrades.reduce(function (sum, t) { return sum + t.pnl; }, 0);
+    var activity = h('section', { class: 'panel dashboard-today' },
+      h('div', { class: 'dashboard-today-head' },
+        h('div', null, h('p', { class: 'eyebrow', text: 'YOUR DAY, AT A GLANCE' }), h('h2', { text: 'Today’s activity' }), h('p', { class: 'sub', text: fmtDate(today) })),
+        h('button', { class: 'btn btn-primary', type: 'button', text: '+ Add trade', onclick: function () { openTradeForm(null); } })),
+      h('div', { class: 'dashboard-today-metrics' },
+        h('div', null, h('span', { class: 'stat-label', text: 'Today’s P&L' }), h('strong', { class: 'dashboard-today-value ' + (todaysTrades.length ? cls(todaysNet) : ''), text: todaysTrades.length ? signed(todaysNet) : '—' })),
+        h('div', null, h('span', { class: 'stat-label', text: 'Trades logged' }), h('strong', { class: 'dashboard-today-value', text: String(todaysTrades.length) })),
+        h('div', null, h('span', { class: 'stat-label', text: 'Daily status' }), h('strong', { class: 'dashboard-today-status', text: todaysTrades.length ? 'Activity recorded' : 'Not started yet' }))));
+    box.appendChild(activity);
     var reminder = motivationReminderPanel(); if (reminder) box.appendChild(reminder);
-    var layout = h('div', { class: 'dashboard-layout' });
-    var chartMetric = f.chartMetric;
-    var equity = h('section', { class: 'panel dash-equity' });
-    var metricButtons = h('div', { class: 'chart-toggles' });
-    [['usd','Net $'],['pips','Net pips'],['r','R multiple']].forEach(function (item) {
-      var btn = h('button', { class: 'chart-toggle' + (chartMetric === item[0] ? ' active' : ''), type: 'button', text: item[1], 'aria-pressed': String(chartMetric === item[0]) });
-      btn.addEventListener('click', function () { state.dashboardFilters.chartMetric = item[0]; renderView(); });
-      metricButtons.appendChild(btn);
-    });
-    equity.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'CAPITAL CURVE' }), h('h2', { text: 'Cumulative performance' })), metricButtons));
-    equity.appendChild(dashboardEquityChart(trades, chartMetric));
-    layout.appendChild(equity);
-    layout.appendChild(dashboardBreakdown(trades));
-    var blotter = h('section', { class: 'panel dash-blotter' });
-    blotter.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'LATEST EXECUTIONS' }), h('h2', { text: 'Trade blotter' })), h('a', { class: 'btn btn-sm', href: '#trades', text: 'Full trade log' })));
-    blotter.appendChild(dashboardBlotter(trades));
-    layout.appendChild(blotter);
-    box.appendChild(layout);
-    if (!state.trades.length) {
+    if (!a.n) {
       box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },
         h('p', { class: 'eyebrow', text: 'A CLEAR START' }),
-        h('h2', { text: 'Build your edge, one execution at a time.' }),
-        h('p', { text: 'Log your first trade to unlock the equity curve, instrument breakdown and execution blotter.' }),
-        h('button', { class: 'btn btn-primary', type: 'button', text: '+ Log your first trade', onclick: function () { openTradeForm(null); } })));
-    } else if (!trades.length) {
-      box.appendChild(h('p', { class: 'empty dash-no-results', text: 'No trades match these filters. Try a wider date range or clear the instrument/session filters.' }));
+        h('h2', { text: 'Your journal starts with one trade.' }),
+        h('p', { text: 'Record your first trade to begin building a personal history of your decisions, results and lessons. Your dashboard will grow as your journal does.' }),
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Record your first trade', onclick: function () { openTradeForm(null); } })));
+      return;
     }
+    box.appendChild(statTiles(a));
+    var gp = goalsPanel(a); if (gp) box.appendChild(gp);
+    var sc = computeScore(a), grid = h('div', { class: 'grid g-dash' });
+    grid.appendChild(h('section', { class: 'panel a-eq' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Equity curve' }), h('span', { class: 'sub', text: 'Cumulative P&L by trade number' })), equityChart(a)));
+    grid.appendChild(scorePanel(a, sc));
+    var recent = h('ul', { class: 'recent' });
+    a.sorted.slice(-6).reverse().forEach(function (t) {
+      recent.appendChild(h('li', null,
+        h('div', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), planPill(t)), h('div', { class: 'm', text: fmtDate(t.date) + (t.playbook ? ' · ' + pbName(t.playbook) : '') })),
+        h('div', { class: 'p ' + cls(t.pnl), text: signed(t.pnl) + (t.r != null ? ' · ' + fmtR(t.r) : '') })));
+    });
+    grid.appendChild(h('section', { class: 'panel a-recent' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Recent trades' }), h('a', { class: 'sub', href: '#trades', text: 'View all' })), recent));
+    box.appendChild(grid);
   }
   function scorePanel(a, sc) {
     var p = h('section', { class: 'panel a-score' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Journal score' }), h('span', { class: 'sub', text: 'Open formula, no black box' })));
@@ -1182,88 +981,41 @@
   }
 
   /* ---------- view: calendar ---------- */
-  function calendarSessionHeatmap(trades) {
-    var sessions = ['Asian','London','New York','Sydney','Other'], max = 1, matrix = {};
-    sessions.forEach(function (session) {
-      matrix[session] = {};
-      DOW.forEach(function (_,day) { matrix[session][day] = { pnl:0,pips:0,pipsN:0,n:0 }; });
-    });
-    trades.forEach(function (t) {
-      if (!t.session || !matrix[t.session]) return;
-      var cell = matrix[t.session][weekdayIdx(t.date)];
-      cell.pnl += t.pnl; cell.n++;
-      if (t.pips != null) { cell.pips += t.pips; cell.pipsN++; }
-      max = Math.max(max,Math.abs(cell.pnl));
-    });
-    var tagged = trades.filter(function (t) { return !!t.session; }).length;
-    var panel = h('section', { class: 'panel session-heatmap' },
-      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'INTRADAY PATTERNS' }), h('h2', { text: 'Session × weekday heatmap' })), h('span', { class: 'sub', text: tagged + ' tagged trades' })));
-    if (!tagged) { panel.appendChild(h('p', { class: 'empty', text: 'Tag a session when logging trades to see where your strongest and weakest trading windows occur.' })); return panel; }
-    var table = h('table', { class: 'session-heatmap-table' }), thead = h('thead'), header = h('tr', null, h('th', { text: 'Session' }));
-    DOW.forEach(function (day) { header.appendChild(h('th', { text: day })); });
-    thead.appendChild(header); table.appendChild(thead);
-    var body = h('tbody');
-    sessions.forEach(function (session) {
-      var row = h('tr'); row.appendChild(h('th', { text: session }));
-      DOW.forEach(function (_,day) {
-        var cell = matrix[session][day], pct = cell.n ? Math.max(12,Math.round(Math.abs(cell.pnl)/max*64)) : 0;
-        var tint = cell.pnl > 0 ? 'var(--win)' : cell.pnl < 0 ? 'var(--loss)' : 'var(--surface-2)';
-        var content = cell.n
-          ? h('div', { class: 'heat-cell-content' }, h('strong', { text: signed(cell.pnl) }), h('span', { text: cell.pipsN ? fmtPips(cell.pips) : cell.n + (cell.n === 1 ? ' trade' : ' trades') }), cell.pipsN ? h('small', { text: cell.n + (cell.n === 1 ? ' trade' : ' trades') }) : null)
-          : h('span', { class: 'heat-empty', text: '—' });
-        row.appendChild(h('td', null, h('div', { class: 'heat-cell' + (cell.n ? ' has-data' : ''), style: 'background:' + (cell.n ? 'color-mix(in srgb,' + tint + ' ' + pct + '%,var(--surface-2))' : 'var(--surface-2)') }, content)));
-      });
-      body.appendChild(row);
-    });
-    table.appendChild(body); panel.appendChild(h('div', { class: 'session-heatmap-scroll' },table));
-    panel.appendChild(h('p', { class: 'heatmap-legend', text: 'Green indicates positive net P&L · Red indicates negative net P&L · Cells without data are neutral' }));
-    return panel;
-  }
   function viewCalendar(box) {
     var now = new Date(), m = state.month || (state.month = { y: now.getFullYear(), m: now.getMonth() });
     var a = analyze(state.trades), first = new Date(m.y, m.m, 1), dim = new Date(m.y, m.m + 1, 0).getDate(), lead = (first.getDay() + 6) % 7, weeks = Math.ceil((lead + dim) / 7);
     var days = [];
     for (var d = 1; d <= dim; d++) { var key = ymd(new Date(m.y, m.m, d)); if (a.days[key]) days.push({ key: key, v: a.days[key] }); }
-    var net = 0, nt = 0, g = 0, r = 0, pipsNet = 0, pipsCount = 0, best = null, maxAbs = 1;
-    days.forEach(function (x) { net += x.v.net; nt += x.v.n; pipsNet += x.v.pips; pipsCount += x.v.pipsN; if (x.v.net > 0) g++; else if (x.v.net < 0) r++; if (!best || x.v.net > best.v.net) best = x; maxAbs = Math.max(maxAbs, Math.abs(x.v.net)); });
+    var net = 0, nt = 0, g = 0, r = 0, best = null, maxAbs = 1;
+    days.forEach(function (x) { net += x.v.net; nt += x.v.n; if (x.v.net > 0) g++; else if (x.v.net < 0) r++; if (!best || x.v.net > best.v.net) best = x; maxAbs = Math.max(maxAbs, Math.abs(x.v.net)); });
     function shift(dm) { var nd = new Date(m.y, m.m + dm, 1); state.month = { y: nd.getFullYear(), m: nd.getMonth() }; state.selDay = null; renderView(); }
     box.appendChild(h('div', { class: 'cal-head' },
       h('div', { class: 'nv' }, h('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Previous month', text: '‹', onclick: function () { shift(-1); } }), h('div', { class: 'cal-title', text: MONTHS[m.m] + ' ' + m.y }), h('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Next month', text: '›', onclick: function () { shift(1); } })),
       h('button', { class: 'btn btn-sm', type: 'button', text: 'Today', onclick: function () { state.month = null; state.selDay = null; renderView(); } })));
     var tiles = h('div', { class: 'cal-tiles' });
-    [['Month P&L', nt ? signed(net) : '—', nt ? cls(net) : ''], ['Net pips', pipsCount ? fmtPips(pipsNet) : '—', pipsCount ? cls(pipsNet) : ''], ['Trades', String(nt), ''], ['Green / red days', g + ' / ' + r, ''], ['Best day', best ? signed(best.v.net) : '—', best ? cls(best.v.net) : '']].forEach(function (t) {
+    [['Month P&L', nt ? signed(net) : '—', nt ? cls(net) : ''], ['Trades', String(nt), ''], ['Green / red days', g + ' / ' + r, ''], ['Best day', best ? signed(best.v.net) : '—', best ? cls(best.v.net) : '']].forEach(function (t) {
       tiles.appendChild(h('div', { class: 'mini' }, h('div', { class: 'stat-label', text: t[0] }), h('div', { class: 'stat-value ' + t[2], text: t[1] })));
     });
     var panel = h('section', { class: 'panel' }, tiles), cal = h('div', { class: 'cal' }), todayKey = todayStr();
     DOW.forEach(function (n) { cal.appendChild(h('div', { class: 'cal-h', text: n })); });
     cal.appendChild(h('div', { class: 'cal-h', text: 'Week' }));
     for (var w = 0; w < weeks; w++) {
-      var wn = 0, wc = 0, wp = 0, wpN = 0;
+      var wn = 0, wc = 0;
       for (var c = 0; c < 7; c++) {
         var dn = w * 7 + c - lead + 1;
         if (dn < 1 || dn > dim) { cal.appendChild(h('div', { class: 'day out' })); continue; }
         var k = ymd(new Date(m.y, m.m, dn)), info = a.days[k], cellCls = 'day' + (k === todayKey ? ' today' : '') + (state.selDay === k ? ' sel' : '');
         if (info) {
-          wn += info.net; wc += info.n; if (info.pipsN) { wp += info.pips; wpN += info.pipsN; }
+          wn += info.net; wc += info.n;
           var inten = Math.round(14 + 42 * Math.abs(info.net) / maxAbs), col = info.net > 0 ? 'var(--win)' : info.net < 0 ? 'var(--loss)' : 'var(--muted)';
           cal.appendChild(h('button', { class: cellCls, type: 'button', style: 'background:color-mix(in srgb, ' + col + ' ' + inten + '%, var(--surface-2))', 'aria-label': fmtDate(k) + ': ' + signed(info.net) + ' from ' + info.n + ' trades', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) },
-            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cpCurrency(info.net) }),
-            h('span', { class: 'dc', text: (info.pipsN ? (info.pips > 0 ? '+' : '') + fmt(info.pips,1) + 'p · ' : '') + info.n + (info.n === 1 ? ' trade' : ' trades') }),
-            dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
+            h('span', { class: 'dn', text: String(dn) }), h('span', { class: 'dp', text: cp(info.net) }), h('span', { class: 'dc', text: info.n + (info.n === 1 ? ' trade' : ' trades') }), dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
         } else cal.appendChild(h('button', { class: cellCls, type: 'button', 'aria-label': fmtDate(k) + ': no trades. Open notes', onclick: (function (kk) { return function () { state.selDay = state.selDay === kk ? null : kk; renderView(); }; })(k) }, h('span', { class: 'dn', text: String(dn) }), dayHasNote(dayOf(k)) ? h('span', { class: 'nd', title: 'Has notes' }) : null));
       }
-      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Week ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cpCurrency(wn) : '' }), h('span', { class: 'dc', text: (wpN ? (wp > 0 ? '+' : '') + fmt(wp,1) + 'p · ' : '') + (wc ? wc + (wc === 1 ? ' trade' : ' trades') : 'No trades') })));
+      cal.appendChild(h('div', { class: 'day wk' }, h('span', { class: 'dn', text: 'Wk ' + (w + 1) }), h('span', { class: 'dp ' + (wc ? cls(wn) : ''), text: wc ? cp(wn) : '' }), h('span', { class: 'dc', text: wc ? wc + (wc === 1 ? ' trade' : ' trades') : '' })));
     }
     panel.appendChild(cal);
     box.appendChild(panel);
-    var monthKey = m.y + '-' + String(m.m + 1).padStart(2, '0');
-    var monthTrades = state.trades.filter(function (t) { return t.date.slice(0,7) === monthKey; });
-    var sessionRows = groupBy(monthTrades, function (t) { return t.session; }).sort(function (x,y) { return y.pnl-x.pnl; });
-    box.appendChild(calendarSessionHeatmap(monthTrades));
-    var sessionPanel = h('section', { class: 'panel session-bars' },
-      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'SESSION RANKING' }), h('h2', { text: 'Net performance by session' }))));
-    sessionPanel.appendChild(sessionRows.length ? breakdown(sessionRows) : h('p', { class: 'empty', text: 'Add a session to your trades to compare trading windows.' }));
-    box.appendChild(sessionPanel);
     if (!state.trades.length) box.appendChild(h('div', { style: 'margin-top:16px' }, emptyHero()));
     if (state.selDay) {
       var info2 = a.days[state.selDay], cards = h('div', { class: 'tcards' });
@@ -1291,27 +1043,22 @@
     var ts = filteredTrades(); box.textContent = '';
     count.textContent = ts.length === state.trades.length ? ts.length + (ts.length === 1 ? ' trade' : ' trades') : ts.length + ' of ' + state.trades.length;
     if (!ts.length) { box.appendChild(h('p', { class: 'empty', text: 'No trades match these filters.' })); return; }
-    var tbl = h('table', { class: 'dash-blotter-table full-blotter-table' }, h('thead', null, h('tr', null,
-      h('th', { text: 'Date / time' }), h('th', { text: 'Session' }), h('th', { text: 'Pair' }),
-      h('th', { text: 'Direction' }), h('th', { text: 'Setup tag' }), h('th', { text: 'R:R' }),
-      h('th', { class: 'num', text: 'Pips' }), h('th', { class: 'num', text: 'Net P&L' }), h('th', { text: 'Chart' }))));
+    var tbl = h('table', { class: 'tbl-log' }, h('thead', null, h('tr', null, h('th', { text: 'Date' }), h('th', { text: 'Asset' }), h('th', { text: 'Playbook' }), h('th', { text: 'Emotion' }), h('th', { text: 'Plan' }), h('th', { class: 'num', text: 'P&L' }), h('th', { class: 'num', text: 'R' }), h('th', { text: '' }))));
     var body = h('tbody');
     ts.forEach(function (t) {
-      var row = h('tr', { tabindex: '0', role: 'button', 'aria-label': 'Open trade details for ' + t.asset + ' on ' + t.date });
-      row.appendChild(h('td', null, h('strong', { text: fmtDate(t.date) }), h('span', { class: 'blotter-sub', text: t.time || 'Time not set' })));
-      row.appendChild(h('td', { text: t.session || '—' }));
-      row.appendChild(h('td', null, h('strong', { text: t.asset })));
-      row.appendChild(h('td', null, h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })));
-      row.appendChild(h('td', { text: t.setupTags.length ? t.setupTags.slice(0,2).join(', ') : t.playbook ? pbName(t.playbook) : '—' }));
-      row.appendChild(h('td', { text: t.r == null ? '—' : (t.r > 0 ? '1:' + fmt(t.r,1) : fmtR(t.r)) }));
-      row.appendChild(h('td', { class: 'num ' + (t.pips == null ? '' : cls(t.pips)), text: t.pips == null ? '—' : fmtPips(t.pips) }));
-      row.appendChild(h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }));
-      row.appendChild(h('td', { class: 'chart-indicator', text: screenshotSource(t) || safeUrl(t.shot) ? '▧' : '—' }));
-      row.addEventListener('click', function () { openTradeDetail(t); });
-      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTradeDetail(t); } });
-      body.appendChild(row);
+      var link = safeUrl(t.shot), prices = (t.entry || t.exit) ? (t.entry || '—') + ' → ' + (t.exit || '—') : '';
+      body.appendChild(h('tr', null,
+        h('td', { class: 'mono nowrap' }, fmtDate(t.date), t.time ? h('div', { class: 'cell-sub', text: t.time }) : null),
+        h('td', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
+          prices ? h('div', { class: 'cell-sub', text: prices }) : null, screenshotSource(t) ? h('a', { class: 'chartlink', style: 'margin-right:10px', href: screenshotSource(t), target: '_blank', rel: 'noopener noreferrer', text: 'Screenshot' }) : null, link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗' }) : null),
+        h('td', { text: t.playbook ? pbName(t.playbook) : '—' }),
+        h('td', { text: t.emotion || '—' }),
+        h('td', null, planPill(t), isOver(t) ? h('span', { class: 'pill loss', text: 'Over risk', style: 'margin-left:6px' }) : null, t.misses.length ? h('div', { class: 'cell-sub', text: t.misses.join('; ') }) : null, t.mistakes.length ? h('div', { class: 'cell-sub', text: t.mistakes.join(', ') }) : null),
+        h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }),
+        h('td', { class: 'num ' + (t.r != null ? cls(t.r) : ''), text: fmtR(t.r) }),
+        h('td', null, h('div', { class: 'acts' }, h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })))));
     });
-    tbl.appendChild(body); box.appendChild(h('div', { class: 'dash-blotter-scroll' }, tbl));
+    tbl.appendChild(body); box.appendChild(h('div', { class: 'tablewrap' }, tbl));
   }
   function viewTrades(box) {
     if (!state.trades.length) {
@@ -1684,9 +1431,7 @@
     if (t) {
       state.editingTrade = t.id;
       $('f-date').value = t.date; $('f-time').value = t.time; $('f-asset').value = t.asset; $(t.side === 'sell' ? 'side-sell' : 'side-buy').checked = true;
-      $('f-pnl').value = t.pnl; $('f-session').value = t.session || ''; $('f-pips').value = t.pips == null ? '' : t.pips; $('f-lotsize').value = t.lotSize == null ? '' : t.lotSize;
-      $('f-commission').value = t.commission == null ? '' : t.commission; $('f-hold').value = t.holdDuration == null ? '' : t.holdDuration; $('f-setuptags').value = (t.setupTags || []).join(', '); $('f-rating').value = t.executionRating == null ? '' : t.executionRating;
-      $('f-risk').value = t.risk == null ? '' : t.risk; $('f-entry').value = t.entry; $('f-sl').value = t.sl; $('f-tp').value = t.tp; $('f-exit').value = t.exit; $('f-r').value = t.r == null ? '' : t.r;
+      $('f-pnl').value = t.pnl; $('f-risk').value = t.risk == null ? '' : t.risk; $('f-entry').value = t.entry; $('f-sl').value = t.sl; $('f-tp').value = t.tp; $('f-exit').value = t.exit; $('f-r').value = t.r == null ? '' : t.r;
       $('f-pb').value = state.playbooks.some(function (p) { return p.id === t.playbook; }) ? t.playbook : '';
       $('f-emotion').value = t.emotion; setMistakes(t.mistakes); resetShot(t.shotId, t.shotUrl); $('f-lesson').value = t.lesson; $('f-shot').value = t.shot;
       renderChecks(t.misses.length ? $('f-pb').value && state.playbooks.find(function (p) { return p.id === $('f-pb').value; }).rules.filter(function (r) { return t.misses.indexOf(r) < 0; }) : null);
@@ -1723,7 +1468,7 @@
     var existing = state.editingTrade ? state.trades.find(function (x) { return x.id === state.editingTrade; }) : null;
     var misses = Array.prototype.filter.call($('checks').querySelectorAll('input[type=checkbox]'), function (c) { return !c.checked; }).map(function (c) { return c.getAttribute('data-rule'); });
     var t = normTrade({
-      id: existing ? existing.id : newId('t'), date: date, time: $('f-time').value, asset: asset, side: sd, entry: entry, sl: sl, tp: $('f-tp').value.trim(), exit: exit, pnl: pnl, r: r, risk: num($('f-risk').value), session: $('f-session').value, pips: num($('f-pips').value), lotSize: num($('f-lotsize').value), commission: num($('f-commission').value), holdDuration: num($('f-hold').value), setupTags: $('f-setuptags').value.split(',').map(function (x) { return x.trim(); }).filter(Boolean), executionRating: num($('f-rating').value), mistakes: pickedMistakes(),
+      id: existing ? existing.id : newId('t'), date: date, time: $('f-time').value, asset: asset, side: sd, entry: entry, sl: sl, tp: $('f-tp').value.trim(), exit: exit, pnl: pnl, r: r, risk: num($('f-risk').value), mistakes: pickedMistakes(),
       playbook: $('f-pb').value, emotion: $('f-emotion').value, followed: $('plan-yes').checked, misses: misses, lesson: $('f-lesson').value.trim(), shot: $('f-shot').value.trim(), example: false, createdAt: existing ? existing.createdAt : Date.now()
     });
     var wasEdit = !!existing, b1 = $('btn-save'), b2 = $('btn-another'); b1.disabled = b2.disabled = true;
@@ -1816,9 +1561,8 @@
       moreNav.querySelector('summary').classList.toggle('is-active', moreActive);
     }
     document.body.classList.remove('mobile-nav-open');
-    var menuButton = $('mobile-menu-toggle'), menuScrim = $('nav-scrim');
+    var menuButton = $('mobile-menu-toggle');
     if (menuButton) menuButton.setAttribute('aria-expanded', 'false');
-    if (menuScrim) menuScrim.hidden = true;
     renderView();
   }
 
@@ -1844,9 +1588,6 @@
     box.appendChild(tradeReviewRow('Trade date', $('f-date').value));
     box.appendChild(tradeReviewRow('Entry / stop / exit', [$('f-entry').value, $('f-sl').value, $('f-exit').value].map(function (v) { return v || '—'; }).join(' / ')));
     box.appendChild(tradeReviewRow('Risk amount', $('f-risk').value ? CUR + $('f-risk').value : 'Not entered'));
-    box.appendChild(tradeReviewRow('Session / net pips', [$('f-session').value || 'No session', $('f-pips').value ? $('f-pips').value + ' pips' : 'Pips not entered'].join(' · ')));
-    box.appendChild(tradeReviewRow('Size / costs / hold', [$('f-lotsize').value || '—', $('f-commission').value || '—', $('f-hold').value ? $('f-hold').value + ' min' : '—'].join(' · ')));
-    box.appendChild(tradeReviewRow('Setup tags / rating', [$('f-setuptags').value || '—', $('f-rating').value ? $('f-rating').value + '/5' : 'Not rated'].join(' · ')));
     box.appendChild(tradeReviewRow('Playbook', $('f-pb').selectedOptions[0] ? $('f-pb').selectedOptions[0].textContent : 'None selected'));
     box.appendChild(tradeReviewRow('Emotion', $('f-emotion').value));
     box.appendChild(tradeReviewRow('Plan followed', $('plan-yes').checked ? 'Yes' : 'No'));
@@ -1939,48 +1680,17 @@
     else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
-  var mobileMenuButton = $('mobile-menu-toggle'), navScrim = $('nav-scrim');
-  function toggleMobileNav(open) {
-    document.body.classList.toggle('mobile-nav-open', !!open);
-    if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', String(!!open));
-    if (navScrim) navScrim.hidden = !open;
-  }
+  var mobileMenuButton = $('mobile-menu-toggle');
   if (mobileMenuButton) mobileMenuButton.addEventListener('click', function () {
-    toggleMobileNav(!document.body.classList.contains('mobile-nav-open'));
+    var open = !document.body.classList.contains('mobile-nav-open');
+    document.body.classList.toggle('mobile-nav-open', open);
+    mobileMenuButton.setAttribute('aria-expanded', String(open));
   });
-  if (navScrim) navScrim.addEventListener('click', function () { toggleMobileNav(false); });
   $('nav').addEventListener('click', function (event) {
     if (event.target.closest('a[data-v]')) {
-      toggleMobileNav(false);
+      document.body.classList.remove('mobile-nav-open');
+      if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', 'false');
     }
-  });
-  var sidebarCollapse = $('sidebar-collapse');
-  if (sidebarCollapse) sidebarCollapse.addEventListener('click', function () {
-    var collapsed = document.body.classList.toggle('sidebar-collapsed');
-    sidebarCollapse.textContent = collapsed ? '›' : '‹';
-    sidebarCollapse.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-    sidebarCollapse.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) { toggleMobileNav(false); return; }
-    var target = e.target, tag = target && target.tagName ? target.tagName.toLowerCase() : '';
-    var typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable);
-    if (e.key && e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !typing && !openDrawerEl && !e.repeat) {
-      e.preventDefault();
-      openTradeForm(null);
-    }
-  });
-  document.addEventListener('paste', function (e) {
-    if (!$('drawer-trade') || $('drawer-trade').hidden || !e.clipboardData) return;
-    var text = (e.clipboardData.getData('text/plain') || '').trim();
-    if (!text || !/^(https?:\/\/)?(www\.)?tradingview\.com\//i.test(text)) return;
-    var link = safeUrl(text);
-    if (!link) return;
-    e.preventDefault();
-    showTradeStep(1);
-    $('f-shot').value = link;
-    $('sec-prices').open = true;
-    toast('TradingView chart link added');
   });
   window.addEventListener('hashchange', function () { setView(location.hash.replace('#', '')); });
   var lastW = 0, raf = 0;

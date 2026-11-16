@@ -1441,6 +1441,12 @@
     state.view = name;
     VIEWS.forEach(function (v) { var el = $('v-' + v); el.hidden = v !== name; if (v !== name) el.textContent = ''; });
     Array.prototype.forEach.call($('nav').querySelectorAll('a'), function (a) { if (a.getAttribute('data-v') === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    var moreNav = $('nav').querySelector('.nav-more');
+    if (moreNav) {
+      var moreActive = ['playbooks', 'reports', 'insights', 'settings', 'profile'].indexOf(name) >= 0;
+      moreNav.open = false;
+      moreNav.querySelector('summary').classList.toggle('is-active', moreActive);
+    }
     renderView();
   }
 

@@ -1966,6 +1966,7 @@
     var link = safeUrl(text);
     if (!link) return;
     e.preventDefault();
+    showTradeStep(1);
     $('f-shot').value = link;
     $('sec-prices').open = true;
     toast('TradingView chart link added');

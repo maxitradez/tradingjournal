@@ -1084,3 +1084,64 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .motivation-quote { margin:16px 0;padding:14px 18px;border-left:2px solid var(--accent);background:var(--surface-2);color:var(--fg);font-size:15px;line-height:1.65; }
 .motivation-reasons { color:var(--accent)!important;font:600 11px/1.7 var(--font-mono);letter-spacing:.06em;text-transform:uppercase; }
 .motivation-footer { margin-bottom:0;font-size:12px; }
+
+
+/* PIPBOOK mobile layout refinement — typography, hierarchy and spacing */
+@media (max-width: 979px) {
+  body { padding-top: 10px; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); font-size: 16px; }
+  .wrap { width: 100%; max-width: 760px; }
+  .masthead { min-height: 82px; align-items: center; gap: 12px; padding: 8px 0 16px; }
+  .masthead .brand h1 { font-size: clamp(2.15rem, 8vw, 2.8rem); letter-spacing: -.045em; }
+  .masthead .brand::before { width: 42px; height: 4px; margin-bottom: 8px; }
+  .masthead .tagline { margin-top: 8px; font-size: 11px; line-height: 1.5; letter-spacing: .025em; }
+  .mobile-menu-toggle { width: 58px; height: 54px; gap: 5px; border-radius: 12px; }
+  .mobile-menu-toggle span { width: 21px; height: 2px; }
+  .mobile-menu-toggle b { font-size: 10px; letter-spacing: .04em; }
+  .nav { top: 92px; left: 14px; right: 14px; gap: 8px; padding: 12px; }
+  .nav > a,.nav > a[data-v="playbooks"],.nav > a[data-v="reports"],.nav > a[data-v="insights"],.nav > a[data-v="settings"],.nav > a[data-v="profile"] {
+    min-height: 52px; padding: 0 15px; font-size: 14px; border-radius: 10px;
+  }
+  main { display: block; }
+  main > section { min-width: 0; }
+  .dashboard-today { padding: 20px; margin-bottom: 14px; border-radius: 16px; }
+  .dashboard-today-head { align-items: center; gap: 14px; margin-bottom: 18px; }
+  .dashboard-today-head h2 { font-size: clamp(26px, 6vw, 34px); line-height: 1.08; letter-spacing: -.04em; }
+  .dashboard-today-head .eyebrow { font-size: 11px; letter-spacing: .08em; }
+  .dashboard-today-head .sub { font-size: 14px; }
+  .dashboard-today-head .btn { min-height: 50px; padding: 13px 16px; font-size: 12px; white-space: nowrap; }
+  .dashboard-today-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+  .dashboard-today-metrics>div { min-height: 92px; align-content: space-between; gap: 10px; padding: 13px 12px; border-radius: 11px; }
+  .dashboard-today-metrics .stat-label { font-size: 11px; line-height: 1.25; letter-spacing: .015em; text-transform: none; }
+  .dashboard-today-value { font-size: clamp(24px, 5vw, 32px); }
+  .dashboard-today-status { font-size: 12px; line-height: 1.35; }
+  .pipbook-empty { min-height: 0; padding: 26px 24px; border-radius: 16px; }
+  .pipbook-empty .eyebrow { margin-bottom: 14px; font-size: 12px; letter-spacing: .09em; }
+  .pipbook-empty h2 { max-width: 15ch; margin-bottom: 14px; font-size: clamp(30px, 7vw, 42px); line-height: 1.04; letter-spacing: -.045em; }
+  .pipbook-empty p:not(.eyebrow) { max-width: 48ch; margin-bottom: 18px; color: #514b42; font-size: 16px; line-height: 1.65; }
+  .pipbook-empty .btn { min-height: 52px; padding: 15px 18px; font-size: 13px; }
+  .panel { border-radius: 14px; }
+  .btn { min-height: 48px; font-size: 13px; letter-spacing: .045em; }
+  .sub,.empty { font-size: 14px; }
+  label,.lbl { font-size: 12px; letter-spacing: .07em; }
+  .foot { margin-top: 24px; font-size: 12px; line-height: 1.6; }
+  /* The dashboard already has its primary Add trade action in the header card. */
+  body:has(#v-dashboard:not([hidden])) .fab { display: none; }
+}
+@media (max-width: 560px) {
+  .masthead { padding-bottom: 14px; }
+  .masthead .brand h1 { font-size: 2.35rem; }
+  .masthead .tagline { max-width: 260px; font-size: 10px; }
+  .dashboard-today { padding: 16px; }
+  .dashboard-today-head { align-items: flex-start; }
+  .dashboard-today-head h2 { font-size: 27px; }
+  .dashboard-today-head .btn { min-height: 46px; padding: 11px 12px; font-size: 10px; }
+  .dashboard-today-metrics { grid-template-columns: 1fr; gap: 8px; }
+  .dashboard-today-metrics>div { min-height: 70px; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 12px 14px; }
+  .dashboard-today-metrics .stat-label { font-size: 12px; }
+  .dashboard-today-value { font-size: 26px; }
+  .dashboard-today-status { font-size: 12px; text-align: right; }
+  .pipbook-empty { padding: 24px 20px; }
+  .pipbook-empty h2 { max-width: 13ch; font-size: 34px; }
+  .pipbook-empty p:not(.eyebrow) { font-size: 15px; line-height: 1.65; }
+  .pipbook-empty .btn { width: 100%; }
+}

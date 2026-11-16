@@ -828,3 +828,55 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 @media (max-width: 979px) { .nav-more > summary.is-active { color: var(--accent-hot); background: var(--surface-2); } }
+
+
+/* Guided onboarding and trade-entry flows */
+:root { --sand: #d8cdb8; --sand-ink: #292824; --sand-muted: #625d53; }
+.trade-progress { position: sticky; top: 0; z-index: 2; padding: 4px 0 14px; background: var(--surface); }
+.trade-progress-track { height: 4px; overflow: hidden; border-radius: 99px; background: var(--line); }
+.trade-progress-track span { display: block; width: 25%; height: 100%; border-radius: inherit; background: var(--action); transition: width .22s ease; }
+.trade-progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 9px; color: var(--muted); font: 600 10px/1.3 var(--font-mono); letter-spacing: .08em; }
+.trade-step { min-width: 0; animation: trade-step-in .18s ease both; }
+.trade-step[hidden] { display: none !important; }
+.trade-step h3, .onboard-step h3 { margin: 0 0 5px; color: var(--fg); font-size: 20px; letter-spacing: -.025em; }
+.trade-step-intro { margin: 0 0 17px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.trade-wizard-actions { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 9px; padding: 14px 0 max(8px, env(safe-area-inset-bottom)); margin-top: 18px; background: linear-gradient(180deg, transparent, var(--surface) 20%); }
+.trade-wizard-actions .btn { flex: 1; min-height: 48px; }
+.trade-wizard-actions #trade-back { flex: 0 0 92px; }
+.trade-review-summary { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.trade-review-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.trade-review-row:last-child { border-bottom: 0; }
+.trade-review-label { color: var(--muted); font-size: 12px; }
+.trade-review-row strong { max-width: 62%; color: var(--fg); text-align: right; font-size: 13px; overflow-wrap: anywhere; }
+.onboard-stepper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 22px 0; }
+.onboard-step-dot { display: flex; align-items: center; justify-content: center; height: 5px; overflow: hidden; border-radius: 99px; background: var(--line); color: transparent; font-size: 0; transition: background .2s ease; }
+.onboard-step-dot.is-current, .onboard-step-dot.is-done { background: var(--action); }
+.onboard-step[hidden] { display: none !important; }
+.onboard-step { animation: trade-step-in .18s ease both; }
+.onboard-step .profile-intro { margin: 0 0 18px; }
+.onboard-actions { display: flex; gap: 10px; margin-top: 14px; }
+.onboard-actions .btn { flex: 1; min-height: 48px; }
+@keyframes trade-step-in { from { opacity: .55; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Sand surfaces create the 70 / 20 / 10 balance; blue remains action-only. */
+.stat, .hero-empty, .profile-card {
+  background: var(--sand);
+  border-color: var(--sand);
+  color: var(--sand-ink);
+}
+.stat .stat-label, .stat .stat-title, .stat h3, .hero-empty h2, .profile-card h2, .onboard-step h3 { color: var(--sand-ink); }
+.stat .stat-value { color: var(--sand-ink); }
+.stat .stat-sub, .hero-empty p, .profile-card .profile-intro, .profile-card .eyebrow { color: var(--sand-muted); }
+.hero-empty .btn:not(.btn-primary), .profile-card .btn:not(.btn-primary) { color: var(--sand-ink); border-color: #a79c89; }
+.hero-empty .btn-primary, .profile-card .btn-primary { color: #fff; }
+.profile-card { padding: clamp(22px, 5vw, 34px); border-radius: 18px; }
+.profile-card .field label { color: var(--sand-ink); }
+.profile-card input, .profile-card select { background: #eee7da; color: #292824; border-color: #b6aa96; }
+.profile-card input::placeholder { color: #81796d; }
+.profile-card .profile-message { color: var(--sand-ink); }
+.trade-review-summary { border-color: #575044; }
+@media (max-width: 640px) {
+  .trade-wizard-actions { margin-left: -2px; margin-right: -2px; }
+  .trade-review-row { padding: 11px 12px; }
+  .onboard-actions { position: sticky; bottom: 0; padding: 12px 0 max(8px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--bg) 25%); }
+}

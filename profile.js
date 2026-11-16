@@ -7,6 +7,7 @@
   var currentUser = null;
   var cachedProfile = null;
   var savingOnboarding = false;
+  var showingWelcome = false;
   function el(tag, attrs, text) {
     var n = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) { if (k === 'class') n.className = attrs[k]; else n.setAttribute(k, attrs[k]); });
@@ -171,6 +172,7 @@
     card.appendChild(form); onboarding.appendChild(card);
   }
   function buildWelcomeScreen(user, reasons, personalReason) {
+    showingWelcome = true;
     onboarding.textContent = '';
     var card = el('div', { class: 'profile-card pipbook-welcome-card' });
     card.appendChild(el('span', { class: 'brand-mark' }, 'P'));
@@ -182,6 +184,7 @@
     else card.appendChild(el('blockquote', { class: 'welcome-quote' }, 'Your trading journey, documented. Your progress, understood.'));
     var enter = el('button', { class: 'btn btn-primary welcome-enter', type: 'button' }, 'Enter My Dashboard');
     enter.addEventListener('click', function () {
+      showingWelcome = false;
       onboarding.hidden = true;
       home.hidden = true;
       document.body.classList.remove('profile-required');
@@ -195,7 +198,7 @@
   }
   async function handleSession(session) {
     var nextUser = session && session.user ? session.user : null;
-    if (savingOnboarding && currentUser && nextUser && currentUser.id === nextUser.id) { currentUser = nextUser; return; }
+    if ((savingOnboarding || showingWelcome) && currentUser && nextUser && currentUser.id === nextUser.id) { currentUser = nextUser; return; }
     currentUser = nextUser;
     if (!currentUser) {
       cachedProfile = null;

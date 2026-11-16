@@ -396,7 +396,9 @@
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
       state.mode = 'signed-out'; state.readOnlyCloud = false;
       state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings();
-      setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll(); return;
+      setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll();
+      if (window.PipbookAuthPage) window.PipbookAuthPage.close();
+      return;
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
@@ -489,10 +491,31 @@
     var publicAuth = document.getElementById('public-auth');
     if (publicAuth) publicAuth.appendChild(authPanel);
     else document.querySelector('.masthead').insertAdjacentElement('afterend', authPanel);
+    function openAuthPage(mode) {
+      var marketing = document.getElementById('public-marketing');
+      var screen = document.getElementById('auth-screen');
+      if (marketing) marketing.hidden = true;
+      if (screen) screen.hidden = false;
+      showAuthForm(mode);
+      window.scrollTo(0, 0);
+    }
+    function closeAuthPage() {
+      var marketing = document.getElementById('public-marketing');
+      var screen = document.getElementById('auth-screen');
+      if (marketing) marketing.hidden = false;
+      if (screen) screen.hidden = true;
+      if (authPanel) authPanel.querySelector('.auth-form').hidden = true;
+      window.scrollTo(0, 0);
+    }
+    window.PipbookAuthPage = { open: openAuthPage, close: closeAuthPage };
     var createButton = document.getElementById('public-create');
+    var createBottom = document.getElementById('public-create-bottom');
     var loginButton = document.getElementById('public-login');
-    if (createButton) createButton.addEventListener('click', function () { showAuthForm('signup'); });
-    if (loginButton) loginButton.addEventListener('click', function () { showAuthForm('signin'); });
+    var backButton = document.getElementById('auth-back');
+    if (createButton) createButton.addEventListener('click', function () { openAuthPage('signup'); });
+    if (createBottom) createBottom.addEventListener('click', function () { openAuthPage('signup'); });
+    if (loginButton) loginButton.addEventListener('click', function () { openAuthPage('signin'); });
+    if (backButton) backButton.addEventListener('click', closeAuthPage);
     refreshAuthPanel();
   }
   async function init() {
@@ -1448,6 +1471,9 @@
       moreNav.open = false;
       moreNav.querySelector('summary').classList.toggle('is-active', moreActive);
     }
+    document.body.classList.remove('mobile-nav-open');
+    var menuButton = $('mobile-menu-toggle');
+    if (menuButton) menuButton.setAttribute('aria-expanded', 'false');
     renderView();
   }
 
@@ -1550,6 +1576,18 @@
     if (!openDrawerEl.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
     else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  var mobileMenuButton = $('mobile-menu-toggle');
+  if (mobileMenuButton) mobileMenuButton.addEventListener('click', function () {
+    var open = !document.body.classList.contains('mobile-nav-open');
+    document.body.classList.toggle('mobile-nav-open', open);
+    mobileMenuButton.setAttribute('aria-expanded', String(open));
+  });
+  $('nav').addEventListener('click', function (event) {
+    if (event.target.closest('a[data-v]')) {
+      document.body.classList.remove('mobile-nav-open');
+      if (mobileMenuButton) mobileMenuButton.setAttribute('aria-expanded', 'false');
+    }
   });
   window.addEventListener('hashchange', function () { setView(location.hash.replace('#', '')); });
   var lastW = 0, raf = 0;

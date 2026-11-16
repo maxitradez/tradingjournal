@@ -1145,3 +1145,33 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .pipbook-empty p:not(.eyebrow) { font-size: 15px; line-height: 1.65; }
   .pipbook-empty .btn { width: 100%; }
 }
+
+
+/* Hybrid dashboard: clear at a glance, detailed when you want it */
+@media (max-width: 979px) {
+  .dashboard-today { padding: 22px; border-radius: 16px; }
+  .dashboard-today-head { margin-bottom: 20px; }
+  .dashboard-today-head h2 { font-size: clamp(28px, 5vw, 36px); letter-spacing: -.045em; text-transform: none; }
+  .dashboard-today-head .eyebrow { font-size: 11px; }
+  .dashboard-today-head .sub { font-size: 14px; }
+  .dashboard-today-metrics>div { min-height: 90px; padding: 14px; }
+  .dashboard-today-metrics .stat-label { font-size: 12px; line-height: 1.35; letter-spacing: 0; text-transform: none; }
+  .dashboard-today-value { font-size: clamp(25px, 4vw, 34px); }
+  .dashboard-today-status { font-size: 12px; }
+  .pipbook-empty { padding: clamp(24px, 4vw, 34px); border-radius: 16px; }
+  .pipbook-empty h2 { max-width: 16ch; font-size: clamp(32px, 5.5vw, 42px); line-height: 1.04; letter-spacing: -.045em; text-transform: none; }
+  .pipbook-empty p:not(.eyebrow) { color: #37332d; font-size: 16px; line-height: 1.65; }
+  .pipbook-empty .btn { min-height: 52px; font-size: 14px; }
+  .g-dash { grid-template-areas: "recent" "eq" "score"; }
+}
+@media (max-width: 560px) {
+  .dashboard-today { padding: 18px; }
+  .dashboard-today-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .dashboard-today-metrics>div { min-height: 84px; padding: 13px; }
+  .dashboard-today-metrics>div:last-child { grid-column: 1 / -1; min-height: 64px; grid-template-columns: 1fr auto; align-items: center; }
+  .dashboard-today-metrics .stat-label { font-size: 12px; }
+  .dashboard-today-status { text-align: right; }
+  .pipbook-empty { padding: 24px 20px; }
+  .pipbook-empty h2 { max-width: 14ch; font-size: 34px; }
+  .pipbook-empty p:not(.eyebrow) { font-size: 15px; }
+}

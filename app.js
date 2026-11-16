@@ -865,8 +865,12 @@
       input.addEventListener('change', function () { state.dashboardFilters[key] = input.value; renderView(); });
       field.appendChild(input); return field;
     }
-    var assets = Array.from(new Set(state.trades.map(function (t) { return t.asset; }).filter(Boolean))).sort();
-    var pairOptions = [['', 'All instruments']].concat(assets.map(function (x) { return [x, x]; }));
+    var preferred = [{ value: 'EURUSD', label: 'EUR/USD' },{ value: 'GBPJPY', label: 'GBP/JPY' },{ value: 'XAUUSD', label: 'XAU/USD' }];
+    var assets = Array.from(new Set(preferred.map(function (x) { return x.value; }).concat(state.trades.map(function (t) { return t.asset; }).filter(Boolean)))).sort();
+    var pairOptions = [['', 'All pairs / instruments']].concat(assets.map(function (x) {
+      var known = preferred.find(function (item) { return item.value === x; });
+      return [x, known ? known.label : x];
+    }));
     return h('div', { class: 'dashboard-filterbar' },
       select('Date range', f.range, [['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['365','Last 12 months'],['all','All time']], 'range'),
       select('Pair / instrument', f.asset, pairOptions, 'asset'),

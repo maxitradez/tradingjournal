@@ -668,7 +668,50 @@
       t.misses.length ? h('div', { class: 'cell-sub', text: 'Rules missed: ' + t.misses.join('; ') }) : null,
       h('div', { class: 'acts', style: 'justify-content:flex-start' },
         link ? h('a', { class: 'chartlink', href: link, target: '_blank', rel: 'noopener noreferrer', text: 'Chart ↗', style: 'margin:0 8px 0 0;align-self:center' }) : null,
-        h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })));
+        h('button', { class: 'btn btn-sm', type: 'button', text: 'Details', onclick: function () { openTradeDetail(t); } }), h('button', { class: 'btn btn-sm', type: 'button', text: 'Edit', onclick: function () { openTradeForm(t); } }), deleteButton(function () { delTrade(t.id); })));
+  }
+  function detailSpec(label, value) {
+    return h('div', { class: 'detail-spec' }, h('span', { text: label }), h('strong', { text: value == null || value === '' ? '—' : String(value) }));
+  }
+  function openTradeDetail(t) {
+    if (!t) return;
+    state.detailTradeId = t.id;
+    var host = $('trade-detail-content'), shot = screenshotSource(t), chartLink = safeUrl(t.shot);
+    host.textContent = '';
+    var header = h('div', { class: 'detail-drawer-head' },
+      h('div', null, h('p', { class: 'eyebrow', text: fmtDate(t.date) + (t.time ? ' · ' + t.time : '') }), h('h2', { id: 'trade-detail-title', text: t.asset }), h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })),
+      h('button', { class: 'xbtn', type: 'button', 'aria-label': 'Close trade details', text: '×', onclick: function () { closeDrawers(); } }));
+    host.appendChild(header);
+    host.appendChild(h('section', { class: 'detail-pnl-band' },
+      h('div', null, h('span', { class: 'kpi-label', text: 'NET P&L' }), h('strong', { class: 'detail-pnl ' + cls(t.pnl), text: signed(t.pnl) })),
+      h('div', null, h('span', { class: 'kpi-label', text: 'R MULTIPLE' }), h('strong', { class: 'detail-r', text: fmtR(t.r) })),
+      h('div', null, h('span', { class: 'kpi-label', text: 'NET PIPS' }), h('strong', { class: 'detail-r', text: t.pips == null ? '—' : fmtPips(t.pips) }))));
+    var chart = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Chart capture' }), h('span', { class: 'sub', text: shot ? 'Saved screenshot' : chartLink ? 'Chart link' : 'No chart added' })));
+    if (shot) chart.appendChild(h('a', { class: 'detail-chart-image', href: shot, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: shot, alt: 'Saved chart for ' + t.asset })));
+    else if (chartLink) chart.appendChild(h('a', { class: 'detail-chart-link', href: chartLink, target: '_blank', rel: 'noopener noreferrer' }, 'Open saved TradingView / chart link ↗'));
+    else chart.appendChild(h('div', { class: 'detail-chart-empty' }, h('span', { text: 'Chart not attached' }), h('p', { text: 'Add a chart link or upload a screenshot when editing this trade.' })));
+    host.appendChild(chart);
+    var execution = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Execution specs' }), h('span', { class: 'sub', text: t.session || 'Session not tagged' })));
+    var specs = h('div', { class: 'detail-spec-grid' },
+      detailSpec('Entry price', t.entry), detailSpec('Stop loss', t.sl), detailSpec('Take profit', t.tp), detailSpec('Exit price', t.exit),
+      detailSpec('Lot / size', t.lotSize), detailSpec('Risk amount', t.risk == null ? '' : CUR + fmt(t.risk)),
+      detailSpec('Spread / commission', t.commission == null ? '' : CUR + fmt(t.commission)),
+      detailSpec('Hold duration', t.holdDuration == null ? '' : t.holdDuration + ' min'));
+    execution.appendChild(specs); host.appendChild(execution);
+    var journal = h('section', { class: 'detail-section' }, h('div', { class: 'detail-section-heading' }, h('h3', { text: 'Trade review' })));
+    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Setup / confluence' }), h('div', { class: 'detail-tags' }, (t.setupTags.length ? t.setupTags : (t.playbook ? [pbName(t.playbook)] : ['No setup tags'])).map(function (tag) { return h('span', { class: 'detail-tag', text: tag }); }))));
+    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Execution rating' }), h('strong', { text: t.executionRating == null ? 'Not rated' : '★'.repeat(t.executionRating) + '☆'.repeat(5-t.executionRating) + ' · ' + t.executionRating + '/5' })));
+    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Followed plan' }), planPill(t)));
+    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Emotion' }), h('strong', { text: t.emotion || 'Not recorded' })));
+    journal.appendChild(h('div', { class: 'detail-review-row' }, h('span', { text: 'Mistakes' }), h('div', { class: 'detail-tags' }, (t.mistakes.length ? t.mistakes : ['None recorded']).map(function (tag) { return h('span', { class: 'detail-tag mistake', text: tag }); }))));
+    journal.appendChild(h('div', { class: 'detail-notes' }, h('span', { class: 'kpi-label', text: 'BRIEF NOTES' }), h('p', { text: t.lesson || 'No notes added yet.' })));
+    host.appendChild(journal);
+    var actions = h('div', { class: 'detail-actions' },
+      h('button', { class: 'btn btn-primary', type: 'button', text: 'Edit trade', onclick: function () { closeDrawers(); openTradeForm(t); } }),
+      h('button', { class: 'btn btn-quiet', type: 'button', text: 'Close', onclick: function () { closeDrawers(); } }),
+      deleteButton(function () { closeDrawers(); delTrade(t.id); }));
+    host.appendChild(actions);
+    openDrawer($('drawer-trade-detail'));
   }
   function breakdown(rows, labelFn) {
     if (!rows.length) return h('p', { class: 'empty', text: 'Nothing to show yet.' });

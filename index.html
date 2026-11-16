@@ -69,27 +69,20 @@
     <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span><b>Menu</b></button>
     <span class="chip" id="sync" data-state="loading" role="status"><i></i><span id="sync-text">Connecting</span></span>
   </header>
-  <nav class="nav" id="nav" aria-label="Sections">
-    <a href="#dashboard" data-v="dashboard">Dashboard</a>
-    <a href="#calendar" data-v="calendar">Calendar</a>
-    <a href="#trades" data-v="trades">Trades</a>
-    <a href="#playbooks" data-v="playbooks">Playbooks</a>
-    <a href="#reports" data-v="reports">Reports</a>
-    <a href="#insights" data-v="insights">Analytics</a>
-    <a href="#settings" data-v="settings">Settings</a>
-    <a href="#profile" data-v="profile">Profile</a>
-    <details class="nav-more">
-      <summary aria-label="More sections">More <span aria-hidden="true">⌄</span></summary>
-      <div class="nav-more-menu" aria-label="More sections">
-        <a href="#playbooks" data-v="playbooks">Playbooks</a>
-        <a href="#reports" data-v="reports">Reports</a>
-        <a href="#insights" data-v="insights">Analytics</a>
-        <a href="#settings" data-v="settings">Settings</a>
-        <a href="#profile" data-v="profile">Profile</a>
-      </div>
-    </details>
+  <nav class="nav" id="nav" aria-label="Primary navigation">
+    <div class="nav-topbar"><strong>WORKSPACE</strong><button class="sidebar-collapse" id="sidebar-collapse" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button></div>
+    <div class="nav-section-label">WORKSPACE</div>
+    <a href="#dashboard" data-v="dashboard" class="nav-primary" title="Dashboard"><span class="nav-icon" aria-hidden="true">◫</span><span class="nav-label">Dashboard</span></a>
+    <a href="#trades" data-v="trades" class="nav-primary" title="Trade Log"><span class="nav-icon" aria-hidden="true">≡</span><span class="nav-label">Trade Log</span></a>
+    <a href="#calendar" data-v="calendar" class="nav-primary" title="Calendar"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Calendar</span></a>
+    <a href="#playbooks" data-v="playbooks" class="nav-primary" title="Playbook / Analytics"><span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">Playbook / Analytics</span></a>
+    <div class="nav-section-label nav-secondary-label">MORE</div>
+    <a href="#insights" data-v="insights" title="Insights"><span class="nav-icon" aria-hidden="true">⌁</span><span class="nav-label">Insights</span></a>
+    <a href="#reports" data-v="reports" title="Reports"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">Reports</span></a>
+    <a href="#settings" data-v="settings" title="Settings"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-label">Settings</span></a>
+    <a href="#profile" data-v="profile" title="Profile"><span class="nav-icon" aria-hidden="true">◎</span><span class="nav-label">Profile</span></a>
   </nav>
-  <div class="banner" id="banner" hidden>
+  <div class="nav-scrim" id="nav-scrim" hidden></div>  <div class="banner" id="banner" hidden>
     <p>You are looking at example data so you can see how every page works. Clear it before you log your own trades.</p>
     <button class="btn btn-sm" id="btn-clear-ex" type="button">Clear examples</button>
   </div>
@@ -122,6 +115,9 @@
           <div class="fields">
       <div class="field"><label for="f-asset">Pair / asset</label><input id="f-asset" list="dl-assets" placeholder="EURUSD, BTC, AAPL"></div>
       <div class="field"><label for="f-pnl">P&amp;L amount</label><input id="f-pnl" type="number" step="any" inputmode="decimal" placeholder="65 or -40"></div>
+      <div class="field"><label for="f-session">Trading session</label><select id="f-session"><option value="">Select session</option><option>Asian</option><option>London</option><option>New York</option><option>Sydney</option><option>Other</option></select></div>
+      <div class="field"><label for="f-pips">Net pips (optional)</label><input id="f-pips" type="number" step="any" inputmode="decimal" placeholder="e.g. 18.5"></div>
+      <div class="field"><label for="f-lotsize">Lot / position size</label><input id="f-lotsize" type="number" step="any" min="0" inputmode="decimal" placeholder="e.g. 0.10"></div>
       <div class="field full" id="asset-chips-wrap" hidden><span class="lbl">Recent</span><div class="chips" id="asset-chips" style="margin-top:0"></div></div>
       <div class="field full"><span class="lbl" id="side-lbl">Direction</span>
         <div class="seg" role="radiogroup" aria-labelledby="side-lbl">
@@ -146,7 +142,9 @@
         <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
         
         <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
-        <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
+        <div class="field"><label for="f-commission">Spread / commission</label><input id="f-commission" type="number" step="any" inputmode="decimal" placeholder="Cost in account currency"></div>
+        <div class="field"><label for="f-hold">Hold duration (minutes)</label><input id="f-hold" type="number" step="1" min="0" inputmode="numeric" placeholder="e.g. 42"></div>
+        <div class="field"><label for="f-shot">TradingView / chart link</label><input id="f-shot" type="url" inputmode="url" placeholder="Paste a TradingView chart URL"><p class="hint">Open trade entry and press Ctrl+V to attach a copied TradingView link.</p></div>
         <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/jpeg,image/png,image/webp"><p class="hint">Private to your account. Images are compressed before upload; maximum stored size is 10 MB.</p><div id="shot-prev" class="shotprev"></div></div>
         <div class="field full"><p class="hint" id="r-hint" style="margin:0">R is worked out from entry, stop loss and exit. Type a value to override it.</p></div>
       </div>
@@ -166,8 +164,10 @@
             <input type="radio" name="plan" id="plan-no" value="no"><label for="plan-no">No</label>
           </div></div>
         <div class="field full"><label for="f-emotion">Emotion going in</label><select id="f-emotion"></select></div>
+        <div class="field full"><label for="f-setuptags">Setup / confluence tags</label><input id="f-setuptags" type="text" placeholder="London Breakout, Liquidity Sweep, FVG"></div>
+        <div class="field"><label for="f-rating">Execution rating</label><select id="f-rating"><option value="">Not rated</option><option value="1">1 · Poor</option><option value="2">2 · Below standard</option><option value="3">3 · Acceptable</option><option value="4">4 · Good</option><option value="5">5 · Excellent</option></select></div>
         <div class="field full"><span class="lbl" id="mist-lbl">Mistakes (tick any)</span><div class="mchips" id="mchips" role="group" aria-labelledby="mist-lbl"></div></div>
-        <div class="field full"><label for="f-lesson">Lesson learned</label><textarea id="f-lesson" placeholder="What did this trade teach you?"></textarea></div>
+        <div class="field full"><label for="f-lesson">Brief notes · market context &amp; mindset</label><textarea id="f-lesson" placeholder="In 2–3 sentences: what was happening in the market, how were you feeling, and what did you learn?"></textarea></div>
       </div>
     </details>
     </section>
@@ -186,6 +186,10 @@
     </div>
     <datalist id="dl-assets"></datalist>
   </form>
+</aside>
+
+<aside class="drawer trade-detail-drawer" id="drawer-trade-detail" role="dialog" aria-modal="true" aria-labelledby="trade-detail-title" hidden>
+  <div id="trade-detail-content"></div>
 </aside>
 
 <aside class="drawer" id="drawer-pb" role="dialog" aria-modal="true" aria-labelledby="dp-title" hidden>

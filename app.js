@@ -706,7 +706,7 @@
     ticks.forEach(function (v) {
       var y = Y(v);
       sv('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: v === 0 ? 'zero' : 'gridl' }, svg);
-      sv('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', class: 'tick' }, svg).textContent = tickLabel(v);
+      sv('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', class: 'tick' }, svg).textContent = o.formatValue ? o.formatValue(v) : tickLabel(v);
     });
     var step = Math.max(1, Math.ceil(n / 6)), xt = [];
     for (var i = 0; i <= n; i += step) xt.push(i);
@@ -719,7 +719,7 @@
     if (o.pointClass && n <= 40) for (var k = 1; k <= n; k++) sv('circle', { cx: X(k), cy: Y(vals[k]), r: 3.5, class: o.pointClass(k) }, svg);
     sv('circle', { cx: X(n), cy: Y(vals[n]), r: 6, class: 'dot-end' }, svg);
     var ey = Y(vals[n]);
-    sv('text', { x: X(n) - 12, y: ey - 12 < m.t - 4 ? ey + 22 : ey - 12, 'text-anchor': 'end', class: 'end-label' }, svg).textContent = signed(vals[n]);
+    sv('text', { x: X(n) - 12, y: ey - 12 < m.t - 4 ? ey + 22 : ey - 12, 'text-anchor': 'end', class: 'end-label' }, svg).textContent = o.formatValue ? o.formatValue(vals[n]) : signed(vals[n]);
     var guide = sv('line', { x1: 0, x2: 0, y1: m.t, y2: m.t + ph, class: 'guide', visibility: 'hidden' }, svg), hd = sv('circle', { cx: 0, cy: 0, r: 5, class: 'hover-dot', visibility: 'hidden' }, svg);
     var overlay = sv('rect', { x: m.l, y: m.t, width: pw, height: ph, fill: 'transparent' }, svg), tip = h('div', { class: 'tip', hidden: true });
     function show(e) {
@@ -784,42 +784,185 @@
       !why && reasons ? h('p', { class: 'motivation-reasons', text: reasons }) : null,
       h('p', { class: 'motivation-footer', text: 'One difficult stretch does not define you. You can pause, review and return with a clearer plan.' }));
   }
+  function dashboardFilteredTrades() {
+    var f = state.dashboardFilters, trades = state.trades.slice();
+    if (f.range !== 'all') {
+      var days = Number(f.range) || 30, cutoff = new Date();
+      cutoff.setHours(0,0,0,0); cutoff.setDate(cutoff.getDate() - (days - 1));
+      var minDate = ymd(cutoff);
+      trades = trades.filter(function (t) { return t.date >= minDate && t.date <= todayStr(); });
+    }
+    if (f.asset) trades = trades.filter(function (t) { return t.asset === f.asset; });
+    if (f.session !== 'all') trades = trades.filter(function (t) { return t.session === f.session; });
+    return sortedAsc(trades);
+  }
+  function fmtPips(n, digits) {
+    if (n == null || !isFinite(n)) return '—';
+    var v = fmt(Math.abs(n), digits == null ? 1 : digits);
+    return (n > 0 ? '+' : n < 0 ? MINUS : '') + v + ' pips';
+  }
+  function metricValue(v, metric) {
+    if (metric === 'pips') return fmtPips(v);
+    if (metric === 'r') return fmtR(v);
+    return signed(v);
+  }
+  function dashboardFilterBar() {
+    var f = state.dashboardFilters;
+    function select(label, value, opts, key) {
+      var field = h('label', { class: 'dash-filter' });
+      field.appendChild(h('span', { text: label }));
+      var input = h('select', { 'aria-label': label });
+      opts.forEach(function (o) { input.appendChild(h('option', { value: o[0], text: o[1] })); });
+      input.value = value;
+      input.addEventListener('change', function () { state.dashboardFilters[key] = input.value; renderView(); });
+      field.appendChild(input); return field;
+    }
+    var assets = Array.from(new Set(state.trades.map(function (t) { return t.asset; }).filter(Boolean))).sort();
+    var pairOptions = [['', 'All instruments']].concat(assets.map(function (x) { return [x, x]; }));
+    return h('div', { class: 'dashboard-filterbar' },
+      select('Date range', f.range, [['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['365','Last 12 months'],['all','All time']], 'range'),
+      select('Instrument', f.asset, pairOptions, 'asset'),
+      select('Session', f.session, [['all','All sessions'],['Asian','Asian'],['London','London'],['New York','New York'],['Sydney','Sydney'],['Other','Other']], 'session'),
+      h('button', { class: 'btn btn-primary dashboard-add', type: 'button', text: '+ Log Trade', onclick: function () { openTradeForm(null); } }));
+  }
+  function dashboardKpis(trades) {
+    var a = analyze(trades), pips = trades.reduce(function (sum, t) { return sum + (t.pips == null ? 0 : t.pips); }, 0);
+    var pipsCount = trades.filter(function (t) { return t.pips != null; }).length;
+    var winRs = trades.filter(function (t) { return t.pnl > 0 && t.r != null && t.r > 0; }).map(function (t) { return t.r; });
+    var averageWinR = winRs.length ? winRs.reduce(function (x,y) { return x+y; },0) / winRs.length : null;
+    var todayTrades = state.trades.filter(function (t) { return t.date === todayStr(); });
+    var todayNet = todayTrades.reduce(function (sum,t) { return sum + t.pnl; },0);
+    var dailyLimit = state.settings.dailyLoss || 0, used = dailyLimit ? Math.max(0,-todayNet) : 0;
+    var usedPct = dailyLimit ? Math.min(100, used / dailyLimit * 100) : 0;
+    var pf = a.pf == null ? '—' : a.pf === Infinity ? '∞' : a.pf.toFixed(2);
+    var cards = h('section', { class: 'dash-kpis', 'aria-label': 'Trading performance key metrics' });
+    cards.appendChild(h('article', { class: 'dash-kpi kpi-pnl' },
+      h('span', { class: 'kpi-label', text: 'Net P&L' }),
+      h('strong', { class: 'kpi-value ' + (a.n ? cls(a.total) : ''), text: a.n ? signed(a.total) : '—' }),
+      h('span', { class: 'kpi-sub', text: pipsCount ? fmtPips(pips) + ' · ' + pipsCount + ' trades with pip data' : 'Net result for selected period' })));
+    cards.appendChild(h('article', { class: 'dash-kpi' },
+      h('span', { class: 'kpi-label', text: 'Profit factor' }),
+      h('strong', { class: 'kpi-value', text: a.n ? pf : '—' }),
+      h('span', { class: 'kpi-sub', text: 'Gross profit ÷ gross loss' })));
+    cards.appendChild(h('article', { class: 'dash-kpi' },
+      h('span', { class: 'kpi-label', text: 'Win rate & average R:R' }),
+      h('div', { class: 'kpi-duo' },
+        h('div', null, h('strong', { class: 'kpi-value', text: a.n ? pct(a.winRate) : '—' }), h('span', { class: 'kpi-sub', text: 'Win rate' })),
+        h('div', null, h('strong', { class: 'kpi-value', text: averageWinR == null ? '—' : '1:' + averageWinR.toFixed(1) }), h('span', { class: 'kpi-sub', text: 'Avg winner R:R' })))));
+    var meter = h('article', { class: 'dash-kpi kpi-risk' },
+      h('div', { class: 'kpi-risk-head' }, h('span', { class: 'kpi-label', text: 'Daily drawdown / risk' }), h('span', { class: 'risk-percent', text: dailyLimit ? Math.round(usedPct) + '%' : '—' })),
+      h('strong', { class: 'kpi-value ' + (used ? 'neg' : ''), text: dailyLimit ? CUR + fmt(used) + ' / ' + CUR + fmt(dailyLimit) : 'Set daily limit' }),
+      h('div', { class: 'risk-meter' }, h('span', { style: 'width:' + usedPct + '%' })),
+      h('span', { class: 'kpi-sub', text: dailyLimit ? (usedPct >= 100 ? 'Daily loss limit reached' : 'Based on today’s realised P&L') : 'Configure a max daily loss in Settings' }));
+    meter.setAttribute('data-risk', usedPct >= 80 ? 'high' : usedPct >= 50 ? 'medium' : 'low');
+    cards.appendChild(meter);
+    return cards;
+  }
+  function dashboardEquityChart(trades, metric) {
+    var box = h('div', { class: 'chart dash-equity-chart' });
+    var selected = trades.filter(function (t) {
+      return metric === 'pips' ? t.pips != null : metric === 'r' ? t.r != null : true;
+    });
+    if (!selected.length) {
+      box.appendChild(h('p', { class: 'empty', text: metric === 'pips' ? 'No net-pip data in this selection yet. Add pips when logging a trade to unlock this view.' : metric === 'r' ? 'Add R-multiple values to see this curve.' : 'Your equity curve starts with your first trade.' }));
+      return box;
+    }
+    var vals = [0], running = 0;
+    selected.forEach(function (t) {
+      running += metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl;
+      vals.push(running);
+    });
+    setTimeout(function () {
+      lineChart(box, {
+        vals: vals, gid: 'pipbook-equity-' + metric, formatValue: function (v) { return metricValue(v, metric); },
+        empty: 'No records for this selection.', aria: 'Cumulative ' + metric + ' across ' + selected.length + ' trades.',
+        pointClass: function (k) { var t = selected[k - 1], value = metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl; return value > 0 ? 'pt-pos' : value < 0 ? 'pt-neg' : 'pt-flat'; },
+        tip: function (i) {
+          if (i === 0) return [{ text: 'Start' }, { text: metricValue(0, metric) }];
+          var t = selected[i - 1], value = metric === 'pips' ? t.pips : metric === 'r' ? t.r : t.pnl;
+          return [{ text: fmtDate(t.date) + (t.time ? ' · ' + t.time : '') }, { text: t.asset + ' ' + (t.side === 'sell' ? 'SHORT' : 'LONG') }, { text: 'Trade ' + metricValue(value, metric) }, { text: 'Cumulative ' + metricValue(vals[i], metric) }];
+        }
+      });
+    }, 0);
+    return box;
+  }
+  function dashboardBlotter(trades) {
+    var recent = trades.slice().sort(function (a,b) {
+      var x=a.date+(a.time||'00:00'), y=b.date+(b.time||'00:00'); return x<y?1:x>y?-1:b.createdAt-a.createdAt;
+    }).slice(0,8);
+    if (!recent.length) return h('p', { class: 'empty', text: 'Your latest executions will appear here.' });
+    var table = h('table', { class: 'dash-blotter-table' });
+    table.appendChild(h('thead', null, h('tr', null,
+      h('th', { text: 'Date / time' }), h('th', { text: 'Session' }), h('th', { text: 'Pair' }),
+      h('th', { text: 'Direction' }), h('th', { text: 'Setup tag' }), h('th', { text: 'R:R' }),
+      h('th', { class: 'num', text: 'Pips' }), h('th', { class: 'num', text: 'Net P&L' }), h('th', { text: 'Chart' }))));
+    var body = h('tbody');
+    recent.forEach(function (t) {
+      var row = h('tr', { tabindex: '0', role: 'button', 'aria-label': 'Open trade details for ' + t.asset + ' ' + t.date });
+      row.appendChild(h('td', null, h('strong', { text: fmtDate(t.date) }), h('span', { class: 'blotter-sub', text: t.time || 'Time not set' })));
+      row.appendChild(h('td', { text: t.session || '—' }));
+      row.appendChild(h('td', null, h('strong', { text: t.asset })));
+      row.appendChild(h('td', null, h('span', { class: 'direction-pill ' + (t.side === 'sell' ? 'short' : 'long'), text: t.side === 'sell' ? 'Short' : 'Long' })));
+      row.appendChild(h('td', { text: t.setupTags.length ? t.setupTags.slice(0,2).join(', ') : t.playbook ? pbName(t.playbook) : '—' }));
+      row.appendChild(h('td', { text: t.r == null ? '—' : (t.r > 0 ? '1:' + fmt(t.r,1) : fmtR(t.r)) }));
+      row.appendChild(h('td', { class: 'num ' + (t.pips == null ? '' : cls(t.pips)), text: t.pips == null ? '—' : fmtPips(t.pips) }));
+      row.appendChild(h('td', { class: 'num ' + cls(t.pnl), text: signed(t.pnl) }));
+      row.appendChild(h('td', { class: 'chart-indicator', text: screenshotSource(t) || safeUrl(t.shot) ? '▧' : '—', title: screenshotSource(t) || safeUrl(t.shot) ? 'Chart available' : 'No chart added' }));
+      row.addEventListener('click', function () { openTradeDetail(t); });
+      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTradeDetail(t); } });
+      body.appendChild(row);
+    });
+    table.appendChild(body);
+    return h('div', { class: 'dash-blotter-scroll' }, table);
+  }
+  function dashboardBreakdown(trades) {
+    var type = state.dashboardFilters.breakdown, sessionMode = type === 'session';
+    var rows = groupBy(trades, function (t) { return sessionMode ? t.session : t.asset; }).sort(function (a,b) { return b.pnl-a.pnl; });
+    var panel = h('section', { class: 'panel dash-breakdown' });
+    var choose = h('select', { 'aria-label': 'Breakdown by', class: 'compact-select' },
+      h('option', { value: 'asset', text: 'By instrument' }), h('option', { value: 'session', text: 'By session' }));
+    choose.value = type;
+    choose.addEventListener('change', function () { state.dashboardFilters.breakdown = choose.value; renderView(); });
+    panel.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'WHERE YOU PERFORM' }), h('h2', { text: 'Profit breakdown' })), choose));
+    if (!rows.length) panel.appendChild(h('p', { class: 'empty', text: sessionMode ? 'Tag a trading session on your trades to compare sessions.' : 'Record trades to compare instruments.' }));
+    else panel.appendChild(breakdown(rows));
+    return panel;
+  }
   function viewDashboard(box) {
-    var a = analyze(state.trades);
-    var today = todayStr();
-    var todaysTrades = state.trades.filter(function (t) { return t.date === today; });
-    var todaysNet = todaysTrades.reduce(function (sum, t) { return sum + t.pnl; }, 0);
-    var activity = h('section', { class: 'panel dashboard-today' },
-      h('div', { class: 'dashboard-today-head' },
-        h('div', null, h('p', { class: 'eyebrow', text: 'YOUR DAY, AT A GLANCE' }), h('h2', { text: 'Today’s activity' }), h('p', { class: 'sub', text: fmtDate(today) })),
-        h('button', { class: 'btn btn-primary', type: 'button', text: '+ Add trade', onclick: function () { openTradeForm(null); } })),
-      h('div', { class: 'dashboard-today-metrics' },
-        h('div', null, h('span', { class: 'stat-label', text: 'Today’s P&L' }), h('strong', { class: 'dashboard-today-value ' + (todaysTrades.length ? cls(todaysNet) : ''), text: todaysTrades.length ? signed(todaysNet) : '—' })),
-        h('div', null, h('span', { class: 'stat-label', text: 'Trades logged' }), h('strong', { class: 'dashboard-today-value', text: String(todaysTrades.length) })),
-        h('div', null, h('span', { class: 'stat-label', text: 'Daily status' }), h('strong', { class: 'dashboard-today-status', text: todaysTrades.length ? 'Activity recorded' : 'Not started yet' }))));
-    box.appendChild(activity);
+    var trades = dashboardFilteredTrades(), a = analyze(trades), f = state.dashboardFilters;
+    box.appendChild(dashboardFilterBar());
+    box.appendChild(h('div', { class: 'dash-page-heading' },
+      h('div', null, h('p', { class: 'eyebrow', text: 'PERFORMANCE WORKSPACE' }), h('h2', { text: 'Dashboard' }), h('p', { class: 'sub', text: trades.length + (trades.length === 1 ? ' trade in this view' : ' trades in this view') })),
+      h('span', { class: 'dash-period-pill', text: f.range === 'all' ? 'All-time overview' : 'Last ' + f.range + ' days' })));
+    box.appendChild(dashboardKpis(trades));
     var reminder = motivationReminderPanel(); if (reminder) box.appendChild(reminder);
-    if (!a.n) {
+    var layout = h('div', { class: 'dashboard-layout' });
+    var chartMetric = f.chartMetric;
+    var equity = h('section', { class: 'panel dash-equity' });
+    var metricButtons = h('div', { class: 'chart-toggles' });
+    [['usd','Net $'],['pips','Net pips'],['r','R multiple']].forEach(function (item) {
+      var btn = h('button', { class: 'chart-toggle' + (chartMetric === item[0] ? ' active' : ''), type: 'button', text: item[1], 'aria-pressed': String(chartMetric === item[0]) });
+      btn.addEventListener('click', function () { state.dashboardFilters.chartMetric = item[0]; renderView(); });
+      metricButtons.appendChild(btn);
+    });
+    equity.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'CAPITAL CURVE' }), h('h2', { text: 'Cumulative performance' })), metricButtons));
+    equity.appendChild(dashboardEquityChart(trades, chartMetric));
+    layout.appendChild(equity);
+    layout.appendChild(dashboardBreakdown(trades));
+    var blotter = h('section', { class: 'panel dash-blotter' });
+    blotter.appendChild(h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'LATEST EXECUTIONS' }), h('h2', { text: 'Trade blotter' })), h('a', { class: 'btn btn-sm', href: '#trades', text: 'Full trade log' })));
+    blotter.appendChild(dashboardBlotter(trades));
+    layout.appendChild(blotter);
+    box.appendChild(layout);
+    if (!state.trades.length) {
       box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },
         h('p', { class: 'eyebrow', text: 'A CLEAR START' }),
-        h('h2', { text: 'Your journal starts with one trade.' }),
-        h('p', { text: 'Record your first trade to begin building a personal history of your decisions, results and lessons. Your dashboard will grow as your journal does.' }),
-        h('button', { class: 'btn btn-primary', type: 'button', text: 'Record your first trade', onclick: function () { openTradeForm(null); } })));
-      return;
+        h('h2', { text: 'Build your edge, one execution at a time.' }),
+        h('p', { text: 'Log your first trade to unlock the equity curve, instrument breakdown and execution blotter.' }),
+        h('button', { class: 'btn btn-primary', type: 'button', text: '+ Log your first trade', onclick: function () { openTradeForm(null); } })));
+    } else if (!trades.length) {
+      box.appendChild(h('p', { class: 'empty dash-no-results', text: 'No trades match these filters. Try a wider date range or clear the instrument/session filters.' }));
     }
-    box.appendChild(statTiles(a));
-    var gp = goalsPanel(a); if (gp) box.appendChild(gp);
-    var sc = computeScore(a), grid = h('div', { class: 'grid g-dash' });
-    grid.appendChild(h('section', { class: 'panel a-eq' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Equity curve' }), h('span', { class: 'sub', text: 'Cumulative P&L by trade number' })), equityChart(a)));
-    grid.appendChild(scorePanel(a, sc));
-    var recent = h('ul', { class: 'recent' });
-    a.sorted.slice(-6).reverse().forEach(function (t) {
-      recent.appendChild(h('li', null,
-        h('div', null, h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), planPill(t)), h('div', { class: 'm', text: fmtDate(t.date) + (t.playbook ? ' · ' + pbName(t.playbook) : '') })),
-        h('div', { class: 'p ' + cls(t.pnl), text: signed(t.pnl) + (t.r != null ? ' · ' + fmtR(t.r) : '') })));
-    });
-    grid.appendChild(h('section', { class: 'panel a-recent' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Recent trades' }), h('a', { class: 'sub', href: '#trades', text: 'View all' })), recent));
-    box.appendChild(grid);
   }
   function scorePanel(a, sc) {
     var p = h('section', { class: 'panel a-score' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Journal score' }), h('span', { class: 'sub', text: 'Open formula, no black box' })));

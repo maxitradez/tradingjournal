@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Maxi Trades Journal</title>
-<meta name="description" content="Trading Journal. Every trade, every lesson, every step forward.">
+<title>PIPBOOK — Trading Journal</title>
+<meta name="description" content="PIPBOOK. Your trading journey, documented. Your progress, understood.">
 <meta name="theme-color" content="#202123">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1530'/%3E%3Crect x='6' y='6' width='14' height='4' fill='%23d9c29a'/%3E%3Cpath d='M6 26 L13 18 L18 22 L27 11' stroke='%23ecd9b3' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1530'/%3E%3Cpath d='M9 25V7h9a7 7 0 0 1 0 14h-4' fill='none' stroke='%23d9c29a' stroke-width='4' stroke-linecap='square'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -14,22 +14,59 @@
 </head>
 <body class="account-required">
 <section class="public-home" id="public-home">
-  <div class="public-top"><a class="public-brand" href="#" aria-label="Maxi Trades Journal home"><span class="brand-mark">M</span><span>MAXI <b>TRADES</b><small>JOURNAL</small></span></a><span class="public-free">100% FREE · BUILT FOR TRADERS</span></div>
-  <div class="public-hero">
-    <div class="public-copy"><p class="eyebrow">TRADE WITH INTENTION. REVIEW WITH CLARITY.</p><h1>Your edge deserves<br><em>a record.</em></h1><p class="public-lede">A focused trading journal to track every decision, understand your performance, and build consistency—one trade at a time.</p><div class="public-points"><span>01 / Log every trade</span><span>02 / Measure what matters</span><span>03 / Learn your patterns</span></div><div class="public-actions"><button class="btn btn-primary" id="public-create" type="button">Create your free account</button><button class="btn" id="public-login" type="button">Log in</button></div><p class="public-note">Your journal is private. Your progress is yours.</p></div>
-    <div class="public-art" aria-hidden="true"><div class="art-label">THE TRADER'S LEDGER <span>MTJ / 001</span></div><div class="art-chart"><div class="chart-grid"></div><svg viewBox="0 0 520 310" role="img"><polyline points="12,248 70,218 110,235 155,162 198,188 245,110 285,142 335,72 380,103 435,35 505,55" fill="none" stroke="#e6d2aa" stroke-width="3"/><g stroke="#e6d2aa" stroke-width="2"><path d="M70 205v45m-7 -33h14M155 142v48m-7 -37h14M245 92v45m-7 -34h14M335 54v54m-7 -42h14M435 18v45m-7 -34h14"/></g></svg><div class="art-axis"><span>PROCESS</span><span>PRECISION</span><span>PROGRESS</span></div></div><div class="art-footer"><span>DISCIPLINE OVER IMPULSE</span><span>EST. 2026</span></div></div>
+  <div id="public-marketing">
+    <div class="public-top">
+      <a class="public-brand" href="#" aria-label="PIPBOOK home"><span class="brand-mark">P</span><span>PIPBOOK<small>TRADING JOURNAL</small></span></a>
+      <span class="public-free">FREE · BUILT FOR TRADERS</span>
+    </div>
+    <div class="public-hero">
+      <div class="public-copy">
+        <p class="eyebrow">A JOURNAL THAT GROWS WITH YOUR PROCESS</p>
+        <h1>Your trading journey,<br><em>documented.</em></h1>
+        <p class="public-lede">Your progress, understood. Record every trade, recognise your patterns, and build a clearer picture of the trader you're becoming.</p>
+        <div class="public-actions">
+          <button class="btn btn-primary" id="public-create" type="button">Get Started Free</button>
+          <button class="btn" id="public-login" type="button">Log In</button>
+        </div>
+        <p class="public-note">One place for your trades, your thinking, and your progress.</p>
+      </div>
+      <div class="public-art" aria-label="Preview of a trading journal dashboard">
+        <div class="art-label"><span>PIPBOOK / YOUR JOURNAL</span><span>LIVE PREVIEW</span></div>
+        <div class="preview-window">
+          <div class="preview-top"><span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span><b>OVERVIEW</b><span>THIS WEEK</span></div>
+          <div class="preview-metrics"><div><small>NET P&amp;L</small><strong>+$1,284.50</strong><em>+8.4% this week</em></div><div><small>WIN RATE</small><strong>68.2%</strong><em>34 trades logged</em></div></div>
+          <div class="preview-chart"><div class="preview-chart-label"><span>PERFORMANCE</span><span>MON — FRI</span></div><svg viewBox="0 0 520 190" role="img" aria-label="Illustrative performance line chart"><path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12 L520 190 L0 190Z" fill="currentColor" opacity=".08"/></svg></div>
+          <div class="preview-trades"><div><span>RECENT TRADE</span><b>XAUUSD · BUY</b><strong>+$186.00</strong></div><div><span>RECENT TRADE</span><b>EURUSD · SELL</b><strong>+$92.50</strong></div></div>
+        </div>
+        <div class="art-footer"><span>RECORD THE PROCESS</span><span>UNDERSTAND THE PROGRESS</span></div>
+      </div>
+    </div>
+    <section class="public-features">
+      <div class="feature-heading"><p class="eyebrow">BUILT AROUND THE TRADER</p><h2>Make every trade<br><em>mean something.</em></h2><p>More than a trade log. A clear view of your decisions, habits and development.</p></div>
+      <div class="feature-grid">
+        <article class="feature-card"><span>01</span><h3>Journal every trade</h3><p>Capture the setup, execution, result and lesson behind every position.</p></article>
+        <article class="feature-card"><span>02</span><h3>Understand your numbers</h3><p>Explore performance by instrument, session, strategy and time period.</p></article>
+        <article class="feature-card"><span>03</span><h3>Know your patterns</h3><p>Connect your trading decisions with discipline, emotions and consistency.</p></article>
+        <article class="feature-card"><span>04</span><h3>Keep your why close</h3><p>Reconnect with the reason you started when the process gets difficult.</p></article>
+      </div>
+    </section>
+    <div class="public-cta"><div><p class="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p><h2>Your trading journey deserves a record.</h2></div><button class="btn btn-primary" type="button" id="public-create-bottom">Get Started Free</button></div>
+    <div class="public-bottom"><span>YOUR TRADING JOURNEY, DOCUMENTED.</span><span>PIPBOOK © 2026 · FREE TO USE</span></div>
   </div>
-  <div class="public-bottom"><span>ONE PLACE FOR YOUR TRADING JOURNEY</span><span>MAXI TRADES JOURNAL © 2026</span></div>
-  <div id="public-auth"></div>
+  <section class="auth-screen" id="auth-screen" hidden>
+    <button class="auth-back" id="auth-back" type="button">← Back to PIPBOOK</button>
+    <div class="auth-screen-intro"><span class="brand-mark">P</span><p class="eyebrow">WELCOME TO PIPBOOK</p><h1>Your process starts here.</h1><p>Sign in to continue, or create your free account to start documenting your trading journey.</p></div>
+    <div id="public-auth"></div>
+  </section>
 </section>
 <div id="profile-onboarding" class="profile-onboarding" hidden></div>
 <div class="wrap">
   <header class="masthead">
     <div class="brand">
-      <h1>Maxi Trades Journal</h1>
+      <h1>PIPBOOK</h1>
       <p class="tagline"><span>Every trade</span><span>Every lesson</span><span>Every step forward</span></p>
     </div>
-    <span class="chip" id="sync" data-state="loading" role="status"><i></i><span id="sync-text">Connecting</span></span>
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span><b>Menu</b></button>\n    <span class="chip" id="sync" data-state="loading" role="status"><i></i><span id="sync-text">Connecting</span></span>
   </header>
   <nav class="nav" id="nav" aria-label="Sections">
     <a href="#dashboard" data-v="dashboard">Dashboard</a>
@@ -37,7 +74,7 @@
     <a href="#trades" data-v="trades">Trades</a>
     <a href="#playbooks" data-v="playbooks">Playbooks</a>
     <a href="#reports" data-v="reports">Reports</a>
-    <a href="#insights" data-v="insights">Insights</a>
+    <a href="#insights" data-v="insights">Analytics</a>
     <a href="#settings" data-v="settings">Settings</a>
     <a href="#profile" data-v="profile">Profile</a>
     <details class="nav-more">
@@ -45,7 +82,7 @@
       <div class="nav-more-menu" aria-label="More sections">
         <a href="#playbooks" data-v="playbooks">Playbooks</a>
         <a href="#reports" data-v="reports">Reports</a>
-        <a href="#insights" data-v="insights">Insights</a>
+        <a href="#insights" data-v="insights">Analytics</a>
         <a href="#settings" data-v="settings">Settings</a>
         <a href="#profile" data-v="profile">Profile</a>
       </div>
@@ -91,6 +128,8 @@
           <input type="radio" name="side" id="side-sell" value="sell"><label for="side-sell">Sell</label>
         </div></div>
       <div class="field"><label for="f-date">Date</label><input id="f-date" type="date"></div>
+      <div class="field"><label for="f-entry">Entry price (optional)</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="Entry price"></div>
+      <div class="field"><label for="f-exit">Exit price (optional)</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="Exit price"></div>
       <div class="field"><label for="f-time">Time (optional)</label><input id="f-time" type="time"></div>
       <div class="field full"><label for="f-risk">Amount risked (optional)</label><input id="f-risk" type="number" step="any" min="0" inputmode="decimal" placeholder="What you stood to lose if stopped out"><p class="hint" id="risk-hint">Add it to track R-multiple and your risk limit.</p></div>
     </div>
@@ -101,10 +140,10 @@
       <details class="sec" id="sec-prices">
       <summary>Prices and R-multiple</summary>
       <div class="fields">
-        <div class="field"><label for="f-entry">Entry</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="1.0850"></div>
+        
         <div class="field"><label for="f-sl">Stop loss</label><input id="f-sl" type="number" step="any" inputmode="decimal" placeholder="1.0820"></div>
         <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
-        <div class="field"><label for="f-exit">Exit</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="1.0915"></div>
+        
         <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
         <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
         <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/jpeg,image/png,image/webp"><p class="hint">Private to your account. Images are compressed before upload; maximum stored size is 10 MB.</p><div id="shot-prev" class="shotprev"></div></div>
@@ -139,7 +178,8 @@
     <p class="form-msg" id="form-msg" role="alert"></p>
     <div class="trade-wizard-actions">
       <button class="btn" id="trade-back" type="button" hidden>Back</button>
-      <button class="btn btn-primary" id="trade-next" type="button">Continue</button>
+      <button class="btn btn-primary" id="trade-quick-save" type="button">Save quick entry</button>
+      <button class="btn btn-primary" id="trade-next" type="button">Add trade details</button>
       <button class="btn btn-primary" id="btn-save" type="submit" hidden>Save trade</button>
       <button class="btn" id="btn-another" type="button" hidden>Save &amp; add another</button>
     </div>
@@ -162,6 +202,18 @@
 </aside>
 
 <div class="toasts" aria-live="polite"><div class="toast" id="toast" hidden></div></div>
+<aside class="trade-success" id="trade-success" role="dialog" aria-modal="true" aria-labelledby="trade-success-title" hidden>
+  <div class="trade-success-card">
+    <span class="success-mark" aria-hidden="true">✓</span>
+    <p class="eyebrow">JOURNAL UPDATED</p>
+    <h2 id="trade-success-title">Trade saved successfully.</h2>
+    <p>Your trade is now part of your PIPBOOK history. Add the detail later if you want to reflect on the setup and decision.</p>
+    <div class="trade-success-actions">
+      <button class="btn btn-primary" id="trade-success-view" type="button">View Trade</button>
+      <button class="btn" id="trade-success-dashboard" type="button">Return to Dashboard</button>
+    </div>
+  </div>
+</aside>
 
 <!-- Supabase client and public configuration; keep these before app.js. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

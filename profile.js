@@ -6,6 +6,8 @@
   var onboarding = document.getElementById('profile-onboarding');
   var currentUser = null;
   var cachedProfile = null;
+  var savingOnboarding = false;
+  var showingWelcome = false;
   function el(tag, attrs, text) {
     var n = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) { if (k === 'class') n.className = attrs[k]; else n.setAttribute(k, attrs[k]); });
@@ -29,75 +31,105 @@
   }
   function buildOnboarding(user, profile) {
     onboarding.textContent = '';
-    var card = el('div', { class: 'profile-card' });
-    card.appendChild(el('p', { class: 'eyebrow' }, 'YOUR WORKSPACE STARTS HERE'));
-    card.appendChild(el('h2', {}, 'Let’s set up your profile.'));
-    card.appendChild(el('p', { class: 'profile-intro' }, 'A few details help us shape your journal around the way you trade. You can update these later.'));
-    var form = el('form', { class: 'profile-form' });
+    var meta = user.user_metadata || {};
+    var card = el('div', { class: 'profile-card pipbook-onboard-card' });
+    card.appendChild(el('p', { class: 'eyebrow' }, 'WELCOME TO PIPBOOK'));
+    card.appendChild(el('h2', {}, 'Let’s make this journal yours.'));
+    card.appendChild(el('p', { class: 'profile-intro' }, 'A few thoughtful details help PIPBOOK understand the markets you follow and the reason you started.'));
+    var form = el('form', { class: 'profile-form', autocomplete: 'off' });
     var steps = [
-      { title: 'Your identity', intro: 'First, let’s make this workspace yours.', fields: [
-        field('Name', 'display_name', 'text', profile.display_name || user.user_metadata && user.user_metadata.full_name || '', 'How should we address you?'),
+      { title: 'First, the basics', intro: 'Tell us a little about yourself.', fields: [
+        field('Your name', 'display_name', 'text', profile.display_name || meta.full_name || '', 'How should we address you?'),
         field('Username', 'username', 'text', profile.username || '', 'Choose a unique username'),
-        field('Country', 'country', 'text', profile.country || '', 'e.g. Kenya')
+        field('Country', 'country', 'text', profile.country || '', 'Your country')
       ]},
-      { title: 'How you trade', intro: 'We use this to make your journal feel relevant to your process.', fields: [
-        field('Experience level', 'experience_level', 'select', profile.experience_level || ''),
-        field('Trading style', 'trading_style', 'select', profile.trading_style || '')
-      ]},
-      { title: 'Your markets', intro: 'Choose the markets you want to track. You can change these any time.', fields: [
-        field('Preferred markets', 'preferred_markets', 'text', (profile.preferred_markets || []).join(', '), 'Forex, Gold, Indices, Crypto…'),
-        field('Timezone', 'timezone', 'text', profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', 'e.g. Africa/Nairobi')
-      ]}
+      { title: 'Your trading world', intro: 'Choose the markets and sessions that are part of your routine.', fields: [] }
     ];
-    var stepper = el('div', { class: 'onboard-stepper', 'aria-label': 'Profile setup progress' });
-    var panels = [];
-    steps.forEach(function (step, index) {
-      var panel = el('section', { class: 'onboard-step' + (index ? '' : ' is-current'), 'data-step': String(index) });
-      panel.appendChild(el('h3', {}, step.title));
-      panel.appendChild(el('p', { class: 'profile-intro' }, step.intro));
-      var grid = el('div', { class: 'auth-fields' });
-      step.fields.forEach(function (control) { grid.appendChild(control); });
-      panel.appendChild(grid); panels.push(panel); form.appendChild(panel);
-      var dot = el('span', { class: 'onboard-step-dot' }, String(index + 1));
-      stepper.appendChild(dot);
-    });
+    steps[0].fields.forEach(function (control) { form.appendChild(control); });
+    var panels = [el('section', { class: 'onboard-step is-current', 'data-step': '0' })];
+    panels[0].appendChild(el('h3', {}, steps[0].title));
+    panels[0].appendChild(el('p', { class: 'profile-intro' }, steps[0].intro));
+    var identityGrid = el('div', { class: 'auth-fields' });
+    steps[0].fields.forEach(function (control) { identityGrid.appendChild(control); });
+    panels[0].appendChild(identityGrid);
+
+    var marketPanel = el('section', { class: 'onboard-step', 'data-step': '1' });
+    marketPanel.appendChild(el('h3', {}, steps[1].title));
+    marketPanel.appendChild(el('p', { class: 'profile-intro' }, steps[1].intro));
+    function choiceGroup(title, name, choices, selected) {
+      var wrap = el('div', { class: 'onboard-choice-group' });
+      wrap.appendChild(el('span', { class: 'lbl' }, title));
+      var grid = el('div', { class: 'onboard-choice-grid' });
+      choices.forEach(function (choice) {
+        var label = el('label', { class: 'onboard-choice' });
+        var input = el('input', { type: 'checkbox', name: name, value: choice });
+        input.checked = (selected || []).indexOf(choice) >= 0;
+        label.appendChild(input);
+        label.appendChild(el('span', {}, choice));
+        grid.appendChild(label);
+      });
+      wrap.appendChild(grid);
+      return wrap;
+    }
+    var marketChoices = ['XAUUSD', 'XAGUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'GBPJPY', 'AUDUSD', 'USDCAD', 'NAS100', 'US30', 'SPX500', 'GER40', 'BTCUSD', 'ETHUSD', 'Stocks', 'Futures', 'Options'];
+    var sessionChoices = ['Asian', 'London', 'New York', 'Sydney', 'Other'];
+    marketPanel.appendChild(choiceGroup('Markets and instruments · select all that apply', 'pip_markets', marketChoices, profile.preferred_markets || []));
+    var custom = field('Other instruments (optional)', 'custom_markets', 'text', '', 'e.g. GBPJPY, DAX40, BTCUSD');
+    marketPanel.appendChild(custom);
+    marketPanel.appendChild(choiceGroup('Trading sessions · select all that apply', 'pip_sessions', sessionChoices, meta.preferred_sessions || []));
+    marketPanel.appendChild(choiceGroup('Why did you start trading? · select all that apply', 'pip_reasons', [
+      'Financial freedom', 'Supporting my family', 'Building a trading career',
+      'Personal growth and discipline', 'Building long-term wealth', 'Creating more opportunities', 'Other'
+    ], meta.motivation_reasons || []));
+    var personal = el('div', { class: 'field full onboard-motivation-note' });
+    personal.appendChild(el('label', { for: 'pip-motivation-note' }, 'Your personal reason (optional)'));
+    var noteInput = el('textarea', { id: 'pip-motivation-note', name: 'motivation_note', placeholder: 'In your own words, what made you start this journey?' });
+    noteInput.value = meta.motivation_note || '';
+    personal.appendChild(noteInput);
+    marketPanel.appendChild(personal);
+    panels.push(marketPanel);
+    panels.forEach(function (panel) { form.appendChild(panel); });
+
+    var stepper = el('div', { class: 'onboard-stepper', 'aria-label': 'Onboarding progress' });
+    ['01', '02'].forEach(function (n, i) { stepper.appendChild(el('span', { class: 'onboard-step-dot' + (i ? '' : ' is-current') }, n)); });
     form.insertBefore(stepper, form.firstChild);
-    var note = el('p', { class: 'profile-message', role: 'status' });
+    var note = el('p', { class: 'profile-message', role: 'status', 'aria-live': 'polite' });
     var actions = el('div', { class: 'onboard-actions' });
     var back = el('button', { class: 'btn', type: 'button' }, 'Back');
     var next = el('button', { class: 'btn btn-primary', type: 'button' }, 'Continue');
-    var submit = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Create my workspace');
+    var submit = el('button', { class: 'btn btn-primary', type: 'submit' }, 'Finish setup');
     back.hidden = true; submit.hidden = true;
     actions.appendChild(back); actions.appendChild(next); actions.appendChild(submit);
     form.appendChild(note); form.appendChild(actions);
     var activeStep = 0;
     function showStep(index) {
-      activeStep = Math.max(0, Math.min(steps.length - 1, index));
+      activeStep = Math.max(0, Math.min(1, index));
       panels.forEach(function (panel, i) { panel.hidden = i !== activeStep; });
       Array.prototype.forEach.call(stepper.children, function (dot, i) {
         dot.classList.toggle('is-current', i === activeStep);
         dot.classList.toggle('is-done', i < activeStep);
-        dot.setAttribute('aria-current', i === activeStep ? 'step' : 'false');
       });
       back.hidden = activeStep === 0;
-      next.hidden = activeStep === steps.length - 1;
-      submit.hidden = activeStep !== steps.length - 1;
+      next.hidden = activeStep === 1;
+      submit.hidden = activeStep !== 1;
       note.textContent = '';
+      onboarding.scrollTop = 0;
     }
     function validIdentity() {
       var username = String(form.querySelector('[name="username"]').value || '').trim().toLowerCase();
       var displayName = String(form.querySelector('[name="display_name"]').value || '').trim();
-      if (!displayName || !/^[a-z0-9_]{3,24}$/.test(username)) {
-        note.textContent = 'Add your name and a username (3–24 letters, numbers or underscores).';
+      var country = String(form.querySelector('[name="country"]').value || '').trim();
+      if (!displayName || !country || !/^[a-z0-9_]{3,24}$/.test(username)) {
+        note.textContent = 'Enter your name and country, and choose a username (3–24 letters, numbers or underscores).';
         return false;
       }
       return true;
     }
     next.addEventListener('click', function () {
-      if (activeStep === 0 && !validIdentity()) return;
-      showStep(activeStep + 1);
+      if (!validIdentity()) return;
+      showStep(1);
     });
-    back.addEventListener('click', function () { showStep(activeStep - 1); });
+    back.addEventListener('click', function () { showStep(0); });
     showStep(0);
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
@@ -105,35 +137,69 @@
       var data = new FormData(form);
       var username = String(data.get('username') || '').trim().toLowerCase();
       var displayName = String(data.get('display_name') || '').trim();
-      submit.disabled = true; note.textContent = 'Saving your profile…';
-      var payload = {
-        display_name: displayName, username: username,
-        country: String(data.get('country') || '').trim(),
-        experience_level: String(data.get('experience_level') || ''),
-        trading_style: String(data.get('trading_style') || ''),
-        preferred_markets: String(data.get('preferred_markets') || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 12),
-        timezone: String(data.get('timezone') || 'UTC').trim(),
-        onboarding_completed: true, updated_at: new Date().toISOString()
-      };
+      var markets = data.getAll('pip_markets');
+      String(data.get('custom_markets') || '').split(',').map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean).forEach(function (x) { if (markets.indexOf(x) < 0) markets.push(x); });
+      var sessions = data.getAll('pip_sessions');
+      var reasons = data.getAll('pip_reasons');
+      var personalReason = String(data.get('motivation_note') || '').trim();
+      submit.disabled = true; savingOnboarding = true; note.textContent = 'Saving your PIPBOOK profile…';
       try {
+        var metaUpdate = await api.auth.updateUser({ data: {
+          preferred_sessions: sessions,
+          motivation_reasons: reasons,
+          motivation_note: personalReason
+        }});
+        if (metaUpdate.error) throw metaUpdate.error;
+        var payload = {
+          display_name: displayName, username: username,
+          country: String(data.get('country') || '').trim(),
+          preferred_markets: markets.slice(0, 24),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          onboarding_completed: true, updated_at: new Date().toISOString()
+        };
         var saved = await api.from('profiles').update(payload).eq('id', user.id).select('*').single();
         if (saved.error) throw saved.error;
         cachedProfile = saved.data;
-        document.body.classList.remove('profile-required');
-        onboarding.hidden = true; home.hidden = true;
-        document.querySelector('.wrap').hidden = false;
-        document.getElementById('fab').hidden = false;
-        if (location.hash === '#profile') window.MaxiProfileUI.render(document.getElementById('v-profile'));
-        note.textContent = 'Profile saved.';
+        savingOnboarding = false;
+        var updatedUser = metaUpdate.data && metaUpdate.data.user ? metaUpdate.data.user : user;
+        buildWelcomeScreen(updatedUser, reasons, personalReason);
       } catch (error) {
-        note.textContent = error && error.code === '23505' ? 'That username is already taken. Try another.' : (error.message || 'Could not save your profile. Check the profile database migration.');
+        savingOnboarding = false;
+        note.textContent = error && error.code === '23505' ? 'That username is already taken. Try another.' : (error.message || 'Could not save your profile. Please try again.');
         submit.disabled = false;
       }
     });
     card.appendChild(form); onboarding.appendChild(card);
   }
+  function buildWelcomeScreen(user, reasons, personalReason) {
+    showingWelcome = true;
+    onboarding.textContent = '';
+    var card = el('div', { class: 'profile-card pipbook-welcome-card' });
+    card.appendChild(el('span', { class: 'brand-mark' }, 'P'));
+    card.appendChild(el('p', { class: 'eyebrow' }, 'YOUR JOURNEY STARTS HERE'));
+    card.appendChild(el('h2', {}, 'Welcome to PIPBOOK, ' + ((cachedProfile && cachedProfile.display_name) || 'trader') + '.'));
+    card.appendChild(el('p', { class: 'profile-intro' }, 'You started this journey for a reason. Keep it close, especially on the days that test your patience.'));
+    if (reasons && reasons.length) card.appendChild(el('div', { class: 'welcome-reasons' }, reasons.join(' · ')));
+    if (personalReason) card.appendChild(el('blockquote', { class: 'welcome-quote' }, '“' + personalReason + '”'));
+    else card.appendChild(el('blockquote', { class: 'welcome-quote' }, 'Your trading journey, documented. Your progress, understood.'));
+    var enter = el('button', { class: 'btn btn-primary welcome-enter', type: 'button' }, 'Enter My Dashboard');
+    enter.addEventListener('click', function () {
+      showingWelcome = false;
+      onboarding.hidden = true;
+      home.hidden = true;
+      document.body.classList.remove('profile-required');
+      document.querySelector('.wrap').hidden = false;
+      document.getElementById('fab').hidden = false;
+      if (location.hash !== '#dashboard') location.hash = '#dashboard';
+      else window.dispatchEvent(new Event('hashchange'));
+    });
+    card.appendChild(enter);
+    onboarding.appendChild(card);
+  }
   async function handleSession(session) {
-    currentUser = session && session.user ? session.user : null;
+    var nextUser = session && session.user ? session.user : null;
+    if ((savingOnboarding || showingWelcome) && currentUser && nextUser && currentUser.id === nextUser.id) { currentUser = nextUser; return; }
+    currentUser = nextUser;
     if (!currentUser) {
       cachedProfile = null;
       document.body.classList.add('account-required');

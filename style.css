@@ -1712,3 +1712,12 @@ label,.lbl {
   .cal .day .dn { font-size:9px; }
   .session-heatmap .brk { grid-template-columns:minmax(75px,1fr) minmax(50px,.9fr) auto;gap:7px; }
 }
+
+
+/* Small keyboard hint inside the primary dashboard action */
+.shortcut-key { display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:8px;padding:0 5px;border:1px solid rgba(255,255,255,.35);border-radius:5px;background:rgba(13,25,54,.18);color:#fff;font:700 10px var(--font-body); }
+.dashboard-add { display:flex;align-items:center;justify-content:center;gap:4px; }
+@media(max-width:979px) {
+  #v-calendar .panel { overflow-x:auto; }
+  .cal { width:100%; }
+}

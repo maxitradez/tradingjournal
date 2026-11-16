@@ -1178,14 +1178,14 @@
     var a = analyze(state.trades), first = new Date(m.y, m.m, 1), dim = new Date(m.y, m.m + 1, 0).getDate(), lead = (first.getDay() + 6) % 7, weeks = Math.ceil((lead + dim) / 7);
     var days = [];
     for (var d = 1; d <= dim; d++) { var key = ymd(new Date(m.y, m.m, d)); if (a.days[key]) days.push({ key: key, v: a.days[key] }); }
-    var net = 0, nt = 0, g = 0, r = 0, best = null, maxAbs = 1;
-    days.forEach(function (x) { net += x.v.net; nt += x.v.n; if (x.v.net > 0) g++; else if (x.v.net < 0) r++; if (!best || x.v.net > best.v.net) best = x; maxAbs = Math.max(maxAbs, Math.abs(x.v.net)); });
+    var net = 0, nt = 0, g = 0, r = 0, pipsNet = 0, pipsCount = 0, best = null, maxAbs = 1;
+    days.forEach(function (x) { net += x.v.net; nt += x.v.n; pipsNet += x.v.pips; pipsCount += x.v.pipsN; if (x.v.net > 0) g++; else if (x.v.net < 0) r++; if (!best || x.v.net > best.v.net) best = x; maxAbs = Math.max(maxAbs, Math.abs(x.v.net)); });
     function shift(dm) { var nd = new Date(m.y, m.m + dm, 1); state.month = { y: nd.getFullYear(), m: nd.getMonth() }; state.selDay = null; renderView(); }
     box.appendChild(h('div', { class: 'cal-head' },
       h('div', { class: 'nv' }, h('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Previous month', text: '‹', onclick: function () { shift(-1); } }), h('div', { class: 'cal-title', text: MONTHS[m.m] + ' ' + m.y }), h('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Next month', text: '›', onclick: function () { shift(1); } })),
       h('button', { class: 'btn btn-sm', type: 'button', text: 'Today', onclick: function () { state.month = null; state.selDay = null; renderView(); } })));
     var tiles = h('div', { class: 'cal-tiles' });
-    [['Month P&L', nt ? signed(net) : '—', nt ? cls(net) : ''], ['Trades', String(nt), ''], ['Green / red days', g + ' / ' + r, ''], ['Best day', best ? signed(best.v.net) : '—', best ? cls(best.v.net) : '']].forEach(function (t) {
+    [['Month P&L', nt ? signed(net) : '—', nt ? cls(net) : ''], ['Net pips', pipsCount ? fmtPips(pipsNet) : '—', pipsCount ? cls(pipsNet) : ''], ['Trades', String(nt), ''], ['Green / red days', g + ' / ' + r, ''], ['Best day', best ? signed(best.v.net) : '—', best ? cls(best.v.net) : '']].forEach(function (t) {
       tiles.appendChild(h('div', { class: 'mini' }, h('div', { class: 'stat-label', text: t[0] }), h('div', { class: 'stat-value ' + t[2], text: t[1] })));
     });
     var panel = h('section', { class: 'panel' }, tiles), cal = h('div', { class: 'cal' }), todayKey = todayStr();

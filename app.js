@@ -1324,7 +1324,6 @@
     $('checks').textContent = ''; $('checks').hidden = true; $('sec-prices').open = false; resetShot(''); updateRHint();
   }
   function openTradeForm(t) {
-    showTradeStep(0);
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') { toast(state.readOnlyCloud ? 'Cloud journal is read-only in this stage' : 'Please wait for the account journal to finish loading'); return; }
     fillSelects(); resetTradeForm(false);
     if (t) {
@@ -1342,6 +1341,7 @@
     $('f-shotfile').disabled = state.mode === 'cloud' ? !activeCloudAdapter : !state.assets;
     if (t && t.shotId) $('sec-prices').open = true;
     updateLimitWarn();
+    showTradeStep(0);
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
   }
   function submitTrade(another) {
@@ -1373,7 +1373,7 @@
       toast(screenshotCleanupFailed
         ? (wasEdit ? 'Trade updated, but the old screenshot could not be removed from storage.' : 'Trade saved, but an old screenshot could not be removed from storage.')
         : (wasEdit ? 'Trade updated' : 'Trade saved'));
-      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
+      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); showTradeStep(0); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
     }).catch(function (err) {
       if (uploadedScreenshot && !tradeSaved) {
         dropAsset(uploadedScreenshot).catch(function () { screenshotCleanupFailed = true; }).then(function () {

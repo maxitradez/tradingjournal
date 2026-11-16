@@ -1721,3 +1721,17 @@ label,.lbl {
   #v-calendar .panel { overflow-x:auto; }
   .cal { width:100%; }
 }
+
+
+@media (min-width:700px) {
+  #v-calendar .cal-tiles { grid-template-columns:repeat(5,minmax(0,1fr)); }
+}
+@media (max-width:979px) {
+  .dashboard-filterbar { top:84px; }
+}
+@media (max-width:560px) {
+  .dashboard-filterbar { top:78px; }
+  #v-calendar .cal-tiles { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+.cal .day.wk,.cal .cal-h:last-child { position:sticky;right:0;z-index:2;background:var(--surface); }
+.cal .day.wk { border-color:var(--line-strong);box-shadow:-7px 0 12px rgba(0,0,0,.12); }

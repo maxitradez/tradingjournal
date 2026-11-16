@@ -107,7 +107,7 @@
   function posNum(v) { var n = Number(v); return v != null && v !== '' && isFinite(n) && n > 0 ? n : null; }
   function normSettings(o) {
     o = o || {}; var b = Number(o.balance), r = Number(o.riskPct);
-    return { balance: o.balance != null && o.balance !== '' && isFinite(b) && b > 0 ? b : null, riskPct: o.riskPct != null && o.riskPct !== '' && isFinite(r) && r > 0 ? r : null, currency: String(o.currency || '').trim().slice(0, 4), monthlyTarget: posNum(o.monthlyTarget), maxTradesDay: posNum(o.maxTradesDay) ? Math.round(posNum(o.maxTradesDay)) : null, dailyLoss: posNum(o.dailyLoss), example: !!o.example };
+    return { balance: o.balance != null && o.balance !== '' && isFinite(b) && b > 0 ? b : null, riskPct: o.riskPct != null && o.riskPct !== '' && isFinite(r) && r > 0 ? r : null, currency: String(o.currency || '').trim().slice(0, 4), monthlyTarget: posNum(o.monthlyTarget), maxTradesDay: posNum(o.maxTradesDay) ? Math.round(posNum(o.maxTradesDay)) : null, dailyLoss: posNum(o.dailyLoss), lossStreakThreshold: Math.min(10, Math.max(2, Math.round(Number(o.lossStreakThreshold) || 3))), example: !!o.example };
   }
   function applySettings() { CUR = state.settings.currency || ''; }
   function riskLimit() { var s = state.settings; return s.balance && s.riskPct ? s.balance * s.riskPct / 100 : null; }
@@ -747,6 +747,37 @@
   }
 
   /* ---------- view: dashboard ---------- */
+  function motivationReminderPanel() {
+    var userMeta = authUser && authUser.user_metadata ? authUser.user_metadata : {};
+    var ordered = sortedAsc(state.trades), threshold = state.settings.lossStreakThreshold || 3, streak = 0;
+    for (var i = ordered.length - 1; i >= 0; i--) {
+      if (ordered[i].pnl < 0) streak++;
+      else break;
+    }
+    var dates = [];
+    ordered.slice().reverse().forEach(function (trade) { if (dates.indexOf(trade.date) < 0) dates.push(trade.date); });
+    var declining = false;
+    if (dates.length >= 14) {
+      var recentDates = dates.slice(0, 7), previousDates = dates.slice(7, 14);
+      var recent = lite(ordered.filter(function (t) { return recentDates.indexOf(t.date) >= 0; }));
+      var previous = lite(ordered.filter(function (t) { return previousDates.indexOf(t.date) >= 0; }));
+      declining = recent.total < previous.total && (recent.winRate <= previous.winRate - 0.10 || (recent.total < 0 && previous.total >= 0));
+    }
+    if (streak < threshold && !declining) return null;
+    var why = String(userMeta.motivation_note || '').trim();
+    var reasons = Array.isArray(userMeta.motivation_reasons) ? userMeta.motivation_reasons.join(' · ') : '';
+    var heading = streak >= threshold ? 'Take a moment before the next trade.' : 'Your recent performance has shifted.';
+    var detail = streak >= threshold
+      ? 'You have recorded ' + streak + ' consecutive losing trades. Consider stepping back, protecting your capital and reviewing your process.'
+      : 'Your most recent 7 trading days are weaker than the 7 before them. Pause to review your decisions before increasing activity.';
+    return h('section', { class: 'panel motivation-reminder' },
+      h('p', { class: 'eyebrow', text: 'A REMINDER FROM YOUR WHY' }),
+      h('h2', { text: heading }),
+      h('p', { text: detail }),
+      why ? h('blockquote', { class: 'motivation-quote', text: '“' + why + '”' }) : null,
+      !why && reasons ? h('p', { class: 'motivation-reasons', text: reasons }) : null,
+      h('p', { class: 'motivation-footer', text: 'One difficult stretch does not define you. You can pause, review and return with a clearer plan.' }));
+  }
   function viewDashboard(box) {
     var a = analyze(state.trades);
     var today = todayStr();
@@ -761,6 +792,7 @@
         h('div', null, h('span', { class: 'stat-label', text: 'Trades logged' }), h('strong', { class: 'dashboard-today-value', text: String(todaysTrades.length) })),
         h('div', null, h('span', { class: 'stat-label', text: 'Daily status' }), h('strong', { class: 'dashboard-today-status', text: todaysTrades.length ? 'Activity recorded' : 'Not started yet' }))));
     box.appendChild(activity);
+    var reminder = motivationReminderPanel(); if (reminder) box.appendChild(reminder);
     if (!a.n) {
       box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },
         h('p', { class: 'eyebrow', text: 'A CLEAR START' }),
@@ -1241,12 +1273,13 @@
     var tgt = h('input', { id: 's-tgt', type: 'number', step: 'any', min: '0', inputmode: 'decimal', placeholder: '1500' });
     var cap = h('input', { id: 's-cap', type: 'number', step: '1', min: '1', inputmode: 'numeric', placeholder: '3' });
     var dls = h('input', { id: 's-dls', type: 'number', step: 'any', min: '0', inputmode: 'decimal', placeholder: '250' });
+    var streak = h('input', { id: 's-streak', type: 'number', step: '1', min: '2', max: '10', inputmode: 'numeric', placeholder: '3' });
     tgt.value = s.monthlyTarget == null ? '' : s.monthlyTarget; cap.value = s.maxTradesDay == null ? '' : s.maxTradesDay; dls.value = s.dailyLoss == null ? '' : s.dailyLoss;
-    bal.value = s.balance == null ? '' : s.balance; risk.value = s.riskPct == null ? '' : s.riskPct; cur.value = s.currency;
+    bal.value = s.balance == null ? '' : s.balance; risk.value = s.riskPct == null ? '' : s.riskPct; cur.value = s.currency; streak.value = s.lossStreakThreshold || 3;
     var lim = riskLimit(), save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save settings' });
     save.addEventListener('click', function () {
       if (state.readOnlyCloud) { msg.textContent = 'Cloud journal is read-only. Settings cannot be changed in this stage.'; return; }
-      var b = num(bal.value), r = num(risk.value);
+      var b = num(bal.value), r = num(risk.value), streakValue = num(streak.value);
       if (bal.value.trim() && (b == null || b <= 0)) { msg.textContent = 'Starting balance must be a number above zero.'; bal.focus(); return; }
       if (risk.value.trim() && (r == null || r <= 0 || r > 100)) { msg.textContent = 'Risk per trade must be between 0 and 100 percent.'; risk.focus(); return; }
       var goalFields = [[tgt, 'Monthly profit target'], [cap, 'Max trades per day'], [dls, 'Daily loss limit']];
@@ -1254,9 +1287,10 @@
         var gv = num(goalFields[gi][0].value);
         if (goalFields[gi][0].value.trim() && (gv == null || gv <= 0)) { msg.textContent = goalFields[gi][1] + ' must be a number above zero.'; goalFields[gi][0].focus(); return; }
       }
+      if (streakValue == null || streakValue < 2 || streakValue > 10 || Math.floor(streakValue) !== streakValue) { msg.textContent = 'Choose a loss-streak reminder threshold from 2 to 10 trades.'; streak.focus(); return; }
       if (state.mode === 'pending') { msg.textContent = 'Still connecting to your saved journal. Try again in a moment.'; return; }
       save.disabled = true; msg.textContent = '';
-      saveSettings(normSettings({ balance: b, riskPct: r, currency: cur.value, monthlyTarget: num(tgt.value), maxTradesDay: num(cap.value), dailyLoss: num(dls.value), example: false })).then(function () { toast('Settings saved'); }).catch(function (e) { msg.textContent = failMsg(e); }).then(function () { save.disabled = false; });
+      saveSettings(normSettings({ balance: b, riskPct: r, currency: cur.value, monthlyTarget: num(tgt.value), maxTradesDay: num(cap.value), dailyLoss: num(dls.value), lossStreakThreshold: streakValue, example: false })).then(function () { toast('Settings saved'); }).catch(function (e) { msg.textContent = failMsg(e); }).then(function () { save.disabled = false; });
     });
     var acct = h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Account, risk and goals' })),
       h('div', { class: 'fields' },
@@ -1266,6 +1300,7 @@
         h('div', { class: 'field' }, h('label', { for: 's-tgt', text: 'Monthly profit target' }), tgt),
         h('div', { class: 'field' }, h('label', { for: 's-cap', text: 'Max trades per day' }), cap),
         h('div', { class: 'field' }, h('label', { for: 's-dls', text: 'Daily loss limit' }), dls),
+        h('div', { class: 'field' }, h('label', { for: 's-streak', text: 'Motivation reminder after consecutive losses' }), streak),
         h('div', { class: 'field full' }, h('p', { class: 'hint', style: 'margin:0', text: lim ? 'Your limit is ' + CUR + fmt(lim) + ' per trade, based on your starting balance. Trades that risk more are marked "Over risk".' : 'Set a balance and a risk percent to get a per-trade limit. The symbol appears in front of every amount, for example $ or KSh.' }))),
       msg, h('div', { class: 'form-actions' }, save));
     var data = h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Your data' }), h('span', { class: 'sub', text: state.trades.length + (state.trades.length === 1 ? ' trade' : ' trades') })),

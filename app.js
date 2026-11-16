@@ -1173,6 +1173,43 @@
   }
 
   /* ---------- view: calendar ---------- */
+  function calendarSessionHeatmap(trades) {
+    var sessions = ['Asian','London','New York','Sydney','Other'], max = 1, matrix = {};
+    sessions.forEach(function (session) {
+      matrix[session] = {};
+      DOW.forEach(function (_,day) { matrix[session][day] = { pnl:0,pips:0,pipsN:0,n:0 }; });
+    });
+    trades.forEach(function (t) {
+      if (!t.session || !matrix[t.session]) return;
+      var cell = matrix[t.session][weekdayIdx(t.date)];
+      cell.pnl += t.pnl; cell.n++;
+      if (t.pips != null) { cell.pips += t.pips; cell.pipsN++; }
+      max = Math.max(max,Math.abs(cell.pnl));
+    });
+    var tagged = trades.filter(function (t) { return !!t.session; }).length;
+    var panel = h('section', { class: 'panel session-heatmap' },
+      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'INTRADAY PATTERNS' }), h('h2', { text: 'Session × weekday heatmap' })), h('span', { class: 'sub', text: tagged + ' tagged trades' })));
+    if (!tagged) { panel.appendChild(h('p', { class: 'empty', text: 'Tag a session when logging trades to see where your strongest and weakest trading windows occur.' })); return panel; }
+    var table = h('table', { class: 'session-heatmap-table' }), thead = h('thead'), header = h('tr', null, h('th', { text: 'Session' }));
+    DOW.forEach(function (day) { header.appendChild(h('th', { text: day })); });
+    thead.appendChild(header); table.appendChild(thead);
+    var body = h('tbody');
+    sessions.forEach(function (session) {
+      var row = h('tr'); row.appendChild(h('th', { text: session }));
+      DOW.forEach(function (_,day) {
+        var cell = matrix[session][day], pct = cell.n ? Math.max(12,Math.round(Math.abs(cell.pnl)/max*64)) : 0;
+        var tint = cell.pnl > 0 ? 'var(--win)' : cell.pnl < 0 ? 'var(--loss)' : 'var(--surface-2)';
+        var content = cell.n
+          ? h('div', { class: 'heat-cell-content' }, h('strong', { text: signed(cell.pnl) }), h('span', { text: cell.pipsN ? fmtPips(cell.pips) : cell.n + (cell.n === 1 ? ' trade' : ' trades') }), cell.pipsN ? h('small', { text: cell.n + (cell.n === 1 ? ' trade' : ' trades') }) : null)
+          : h('span', { class: 'heat-empty', text: '—' });
+        row.appendChild(h('td', null, h('div', { class: 'heat-cell' + (cell.n ? ' has-data' : ''), style: 'background:' + (cell.n ? 'color-mix(in srgb,' + tint + ' ' + pct + '%,var(--surface-2))' : 'var(--surface-2)') }, content)));
+      });
+      body.appendChild(row);
+    });
+    table.appendChild(body); panel.appendChild(h('div', { class: 'session-heatmap-scroll' },table));
+    panel.appendChild(h('p', { class: 'heatmap-legend', text: 'Green indicates positive net P&L · Red indicates negative net P&L · Cells without data are neutral' }));
+    return panel;
+  }
   function viewCalendar(box) {
     var now = new Date(), m = state.month || (state.month = { y: now.getFullYear(), m: now.getMonth() });
     var a = analyze(state.trades), first = new Date(m.y, m.m, 1), dim = new Date(m.y, m.m + 1, 0).getDate(), lead = (first.getDay() + 6) % 7, weeks = Math.ceil((lead + dim) / 7);
@@ -1213,9 +1250,10 @@
     var monthKey = m.y + '-' + String(m.m + 1).padStart(2, '0');
     var monthTrades = state.trades.filter(function (t) { return t.date.slice(0,7) === monthKey; });
     var sessionRows = groupBy(monthTrades, function (t) { return t.session; }).sort(function (x,y) { return y.pnl-x.pnl; });
-    var sessionPanel = h('section', { class: 'panel session-heatmap' },
-      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'INTRADAY PATTERNS' }), h('h2', { text: 'Session performance' }))));
-    sessionPanel.appendChild(sessionRows.length ? breakdown(sessionRows) : h('p', { class: 'empty', text: 'Add a session to your trades to see which market window performs best.' }));
+    box.appendChild(calendarSessionHeatmap(monthTrades));
+    var sessionPanel = h('section', { class: 'panel session-bars' },
+      h('div', { class: 'dash-panel-head' }, h('div', null, h('p', { class: 'eyebrow', text: 'SESSION RANKING' }), h('h2', { text: 'Net performance by session' }))));
+    sessionPanel.appendChild(sessionRows.length ? breakdown(sessionRows) : h('p', { class: 'empty', text: 'Add a session to your trades to compare trading windows.' }));
     box.appendChild(sessionPanel);
     if (!state.trades.length) box.appendChild(h('div', { style: 'margin-top:16px' }, emptyHero()));
     if (state.selDay) {

@@ -1735,3 +1735,24 @@ label,.lbl {
 }
 .cal .day.wk,.cal .cal-h:last-child { position:sticky;right:0;z-index:2;background:var(--surface); }
 .cal .day.wk { border-color:var(--line-strong);box-shadow:-7px 0 12px rgba(0,0,0,.12); }
+
+
+.session-heatmap-table { min-width:680px;table-layout:fixed;border-collapse:separate;border-spacing:5px; }
+.session-heatmap-table th { padding:7px 8px;border:0;color:var(--muted);font:650 10px var(--font-body);letter-spacing:.04em;text-transform:none;text-align:center; }
+.session-heatmap-table th:first-child { width:94px;text-align:left; }
+.session-heatmap-table td { padding:0;border:0; }
+.session-heatmap-scroll { overflow-x:auto; }
+.heat-cell { min-height:76px;display:flex;align-items:center;justify-content:center;padding:8px 5px;border:1px solid rgba(255,255,255,.035);border-radius:9px;text-align:center; }
+.heat-cell-content { display:grid;gap:4px;min-width:0; }
+.heat-cell-content strong { font:750 12px var(--font-body);color:var(--fg); }
+.heat-cell-content span { color:var(--muted);font:500 10px var(--font-body); }
+.heat-cell-content small { color:var(--faint);font:500 9px var(--font-body); }
+.heat-empty { color:var(--faint);font:500 11px var(--font-body); }
+.heatmap-legend { margin:10px 0 0;color:var(--faint);font:500 10px var(--font-body); }
+.session-bars { margin-top:14px; }
+@media(max-width:560px) {
+  .session-heatmap-table { min-width:640px; }
+  .heat-cell { min-height:68px;padding:6px 3px; }
+  .heat-cell-content strong { font-size:11px; }
+  .heat-cell-content span { font-size:9px; }
+}

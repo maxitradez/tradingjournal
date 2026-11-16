@@ -199,6 +199,18 @@
 </aside>
 
 <div class="toasts" aria-live="polite"><div class="toast" id="toast" hidden></div></div>
+<aside class="trade-success" id="trade-success" role="dialog" aria-modal="true" aria-labelledby="trade-success-title" hidden>
+  <div class="trade-success-card">
+    <span class="success-mark" aria-hidden="true">✓</span>
+    <p class="eyebrow">JOURNAL UPDATED</p>
+    <h2 id="trade-success-title">Trade saved successfully.</h2>
+    <p>Your trade is now part of your PIPBOOK history. Add the detail later if you want to reflect on the setup and decision.</p>
+    <div class="trade-success-actions">
+      <button class="btn btn-primary" id="trade-success-view" type="button">View Trade</button>
+      <button class="btn" id="trade-success-dashboard" type="button">Return to Dashboard</button>
+    </div>
+  </div>
+</aside>
 
 <!-- Supabase client and public configuration; keep these before app.js. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

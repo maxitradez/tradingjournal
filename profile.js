@@ -6,6 +6,7 @@
   var onboarding = document.getElementById('profile-onboarding');
   var currentUser = null;
   var cachedProfile = null;
+  var savingOnboarding = false;
   function el(tag, attrs, text) {
     var n = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) { if (k === 'class') n.className = attrs[k]; else n.setAttribute(k, attrs[k]); });
@@ -140,7 +141,7 @@
       var sessions = data.getAll('pip_sessions');
       var reasons = data.getAll('pip_reasons');
       var personalReason = String(data.get('motivation_note') || '').trim();
-      submit.disabled = true; note.textContent = 'Saving your PIPBOOK profile…';
+      submit.disabled = true; savingOnboarding = true; note.textContent = 'Saving your PIPBOOK profile…';
       try {
         var metaUpdate = await api.auth.updateUser({ data: {
           preferred_sessions: sessions,
@@ -158,9 +159,11 @@
         var saved = await api.from('profiles').update(payload).eq('id', user.id).select('*').single();
         if (saved.error) throw saved.error;
         cachedProfile = saved.data;
+        savingOnboarding = false;
         var updatedUser = metaUpdate.data && metaUpdate.data.user ? metaUpdate.data.user : user;
         buildWelcomeScreen(updatedUser, reasons, personalReason);
       } catch (error) {
+        savingOnboarding = false;
         note.textContent = error && error.code === '23505' ? 'That username is already taken. Try another.' : (error.message || 'Could not save your profile. Please try again.');
         submit.disabled = false;
       }
@@ -191,7 +194,9 @@
     onboarding.appendChild(card);
   }
   async function handleSession(session) {
-    currentUser = session && session.user ? session.user : null;
+    var nextUser = session && session.user ? session.user : null;
+    if (savingOnboarding && currentUser && nextUser && currentUser.id === nextUser.id) { currentUser = nextUser; return; }
+    currentUser = nextUser;
     if (!currentUser) {
       cachedProfile = null;
       document.body.classList.add('account-required');

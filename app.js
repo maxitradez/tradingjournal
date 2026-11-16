@@ -1341,6 +1341,7 @@
     $('f-shotfile').disabled = state.mode === 'cloud' ? !activeCloudAdapter : !state.assets;
     if (t && t.shotId) $('sec-prices').open = true;
     updateLimitWarn();
+    showTradeStep(0);
     openDrawer($('drawer-trade'), t ? null : 'f-asset');
   }
   function submitTrade(another) {
@@ -1372,7 +1373,7 @@
       toast(screenshotCleanupFailed
         ? (wasEdit ? 'Trade updated, but the old screenshot could not be removed from storage.' : 'Trade saved, but an old screenshot could not be removed from storage.')
         : (wasEdit ? 'Trade updated' : 'Trade saved'));
-      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
+      if (another && !wasEdit) { resetTradeForm(true); fillSelects(); updateLimitWarn(); showTradeStep(0); $('f-asset').focus(); } else { resetTradeForm(false); closeDrawers(); }
     }).catch(function (err) {
       if (uploadedScreenshot && !tradeSaved) {
         dropAsset(uploadedScreenshot).catch(function () { screenshotCleanupFailed = true; }).then(function () {
@@ -1441,13 +1442,80 @@
     state.view = name;
     VIEWS.forEach(function (v) { var el = $('v-' + v); el.hidden = v !== name; if (v !== name) el.textContent = ''; });
     Array.prototype.forEach.call($('nav').querySelectorAll('a'), function (a) { if (a.getAttribute('data-v') === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    var moreNav = $('nav').querySelector('.nav-more');
+    if (moreNav) {
+      var moreActive = ['playbooks', 'reports', 'insights', 'settings', 'profile'].indexOf(name) >= 0;
+      moreNav.open = false;
+      moreNav.querySelector('summary').classList.toggle('is-active', moreActive);
+    }
     renderView();
   }
 
   /* ---------- boot ---------- */
   $('f-date').value = todayStr();
   fillSelects();
-  $('trade-form').addEventListener('submit', function (e) { e.preventDefault(); submitTrade(false); });
+  var tradeStep = 0;
+  var tradeStepNames = ['BASICS', 'EXECUTION', 'STRATEGY', 'REVIEW'];
+  function tradeReviewRow(label, value) {
+    var row = h('div', { class: 'trade-review-row' });
+    row.appendChild(h('span', { class: 'trade-review-label', text: label }));
+    row.appendChild(h('strong', { text: value || '—' }));
+    return row;
+  }
+  function refreshTradeReview() {
+    var box = $('trade-review-summary');
+    if (!box) return;
+    box.textContent = '';
+    var side = sideVal();
+    box.appendChild(tradeReviewRow('Instrument', $('f-asset').value.trim().toUpperCase()));
+    box.appendChild(tradeReviewRow('Direction', side === 'sell' ? 'Sell' : 'Buy'));
+    box.appendChild(tradeReviewRow('P&L', $('f-pnl').value ? CUR + $('f-pnl').value : 'Not entered'));
+    box.appendChild(tradeReviewRow('Trade date', $('f-date').value));
+    box.appendChild(tradeReviewRow('Entry / stop / exit', [$('f-entry').value, $('f-sl').value, $('f-exit').value].map(function (v) { return v || '—'; }).join(' / ')));
+    box.appendChild(tradeReviewRow('Risk amount', $('f-risk').value ? CUR + $('f-risk').value : 'Not entered'));
+    box.appendChild(tradeReviewRow('Playbook', $('f-pb').selectedOptions[0] ? $('f-pb').selectedOptions[0].textContent : 'None selected'));
+    box.appendChild(tradeReviewRow('Emotion', $('f-emotion').value));
+    box.appendChild(tradeReviewRow('Plan followed', $('plan-yes').checked ? 'Yes' : 'No'));
+  }
+  function showTradeStep(index) {
+    tradeStep = Math.max(0, Math.min(3, index));
+    Array.prototype.forEach.call(document.querySelectorAll('[data-trade-step]'), function (panel) {
+      var active = Number(panel.getAttribute('data-trade-step')) === tradeStep;
+      panel.hidden = !active;
+      panel.classList.toggle('is-current', active);
+    });
+    $('trade-step-label').textContent = String(tradeStep + 1).padStart(2, '0') + ' / 04 · ' + tradeStepNames[tradeStep];
+    $('trade-step-count').textContent = 'Step ' + (tradeStep + 1) + ' of 4';
+    $('trade-progress-fill').style.width = ((tradeStep + 1) * 25) + '%';
+    $('trade-back').hidden = tradeStep === 0;
+    $('trade-next').hidden = tradeStep === 3;
+    $('btn-save').hidden = tradeStep !== 3;
+    $('btn-another').hidden = tradeStep !== 3 || !!state.editingTrade;
+    if (tradeStep === 3) refreshTradeReview();
+    $('drawer-trade').scrollTop = 0;
+  }
+  function validateTradeBasics() {
+    var msg = $('form-msg');
+    if (!$('f-asset').value.trim()) { msg.textContent = 'Enter the pair or asset you traded.'; $('f-asset').focus(); return false; }
+    if (num($('f-pnl').value) == null) { msg.textContent = 'Enter the P&L amount. Use a minus sign for a loss.'; $('f-pnl').focus(); return false; }
+    if (!$('f-date').value) { msg.textContent = 'Pick the trade date.'; $('f-date').focus(); return false; }
+    msg.textContent = '';
+    return true;
+  }
+  $('trade-next').addEventListener('click', function () {
+    if (tradeStep === 0 && !validateTradeBasics()) return;
+    showTradeStep(tradeStep + 1);
+  });
+  $('trade-back').addEventListener('click', function () { showTradeStep(tradeStep - 1); });
+  $('trade-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (tradeStep < 3) {
+      if (tradeStep === 0 && !validateTradeBasics()) return;
+      showTradeStep(tradeStep + 1);
+      return;
+    }
+    submitTrade(false);
+  });
   $('btn-another').addEventListener('click', function () { submitTrade(true); });
   $('pb-form').addEventListener('submit', function (e) { e.preventDefault(); submitPb(); });
   $('f-pb').addEventListener('change', function () { renderChecks(null); });

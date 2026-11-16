@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Maxi Trades Journal</title>
 <meta name="description" content="Trading Journal. Every trade, every lesson, every step forward.">
-<meta name="theme-color" content="#0b1530">
+<meta name="theme-color" content="#202123">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1530'/%3E%3Crect x='6' y='6' width='14' height='4' fill='%23d9c29a'/%3E%3Cpath d='M6 26 L13 18 L18 22 L27 11' stroke='%23ecd9b3' stroke-width='3' fill='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,6 +40,16 @@
     <a href="#insights" data-v="insights">Insights</a>
     <a href="#settings" data-v="settings">Settings</a>
     <a href="#profile" data-v="profile">Profile</a>
+    <details class="nav-more">
+      <summary aria-label="More sections">More <span aria-hidden="true">⌄</span></summary>
+      <div class="nav-more-menu" aria-label="More sections">
+        <a href="#playbooks" data-v="playbooks">Playbooks</a>
+        <a href="#reports" data-v="reports">Reports</a>
+        <a href="#insights" data-v="insights">Insights</a>
+        <a href="#settings" data-v="settings">Settings</a>
+        <a href="#profile" data-v="profile">Profile</a>
+      </div>
+    </details>
   </nav>
   <div class="banner" id="banner" hidden>
     <p>You are looking at example data so you can see how every page works. Clear it before you log your own trades.</p>
@@ -65,7 +75,13 @@
   <div class="drawer-head"><h2 id="dt-title">Log a trade</h2><button class="xbtn" type="button" data-close aria-label="Close">&times;</button></div>
   <p class="warn" id="limit-warn" role="alert" hidden></p>
   <form id="trade-form" novalidate autocomplete="off">
-    <div class="fields">
+    <div class="trade-progress" aria-label="Trade entry progress">
+      <div class="trade-progress-track"><span id="trade-progress-fill"></span></div>
+      <div class="trade-progress-meta"><span id="trade-step-label">01 / 04 · BASICS</span><span id="trade-step-count">Step 1 of 4</span></div>
+    </div>
+    <section class="trade-step is-current" data-trade-step="0" aria-label="Trade basics">
+      <p class="trade-step-intro">Start with the essentials. You can add the detail as you go.</p>
+          <div class="fields">
       <div class="field"><label for="f-asset">Pair / asset</label><input id="f-asset" list="dl-assets" placeholder="EURUSD, BTC, AAPL"></div>
       <div class="field"><label for="f-pnl">P&amp;L amount</label><input id="f-pnl" type="number" step="any" inputmode="decimal" placeholder="65 or -40"></div>
       <div class="field full" id="asset-chips-wrap" hidden><span class="lbl">Recent</span><div class="chips" id="asset-chips" style="margin-top:0"></div></div>
@@ -78,7 +94,28 @@
       <div class="field"><label for="f-time">Time (optional)</label><input id="f-time" type="time"></div>
       <div class="field full"><label for="f-risk">Amount risked (optional)</label><input id="f-risk" type="number" step="any" min="0" inputmode="decimal" placeholder="What you stood to lose if stopped out"><p class="hint" id="risk-hint">Add it to track R-multiple and your risk limit.</p></div>
     </div>
-    <details class="sec" id="sec-plan" open>
+    </section>
+    <section class="trade-step" data-trade-step="1" aria-label="Execution details" hidden>
+      <h3>Execution details</h3>
+      <p class="trade-step-intro">Capture your prices and risk so the journal can calculate your R-multiple.</p>
+      <details class="sec" id="sec-prices">
+      <summary>Prices and R-multiple</summary>
+      <div class="fields">
+        <div class="field"><label for="f-entry">Entry</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="1.0850"></div>
+        <div class="field"><label for="f-sl">Stop loss</label><input id="f-sl" type="number" step="any" inputmode="decimal" placeholder="1.0820"></div>
+        <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
+        <div class="field"><label for="f-exit">Exit</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="1.0915"></div>
+        <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
+        <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
+        <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/jpeg,image/png,image/webp"><p class="hint">Private to your account. Images are compressed before upload; maximum stored size is 10 MB.</p><div id="shot-prev" class="shotprev"></div></div>
+        <div class="field full"><p class="hint" id="r-hint" style="margin:0">R is worked out from entry, stop loss and exit. Type a value to override it.</p></div>
+      </div>
+    </details>
+    </section>
+    <section class="trade-step" data-trade-step="2" aria-label="Strategy and psychology" hidden>
+      <h3>Strategy &amp; psychology</h3>
+      <p class="trade-step-intro">Record the quality of your decision, not just the financial result.</p>
+      <details class="sec" id="sec-plan" open>
       <summary>Plan and psychology</summary>
       <div class="fields">
         <div class="field full"><label for="f-pb">Playbook</label><select id="f-pb"></select>
@@ -93,23 +130,18 @@
         <div class="field full"><label for="f-lesson">Lesson learned</label><textarea id="f-lesson" placeholder="What did this trade teach you?"></textarea></div>
       </div>
     </details>
-    <details class="sec" id="sec-prices">
-      <summary>Prices and R-multiple</summary>
-      <div class="fields">
-        <div class="field"><label for="f-entry">Entry</label><input id="f-entry" type="number" step="any" inputmode="decimal" placeholder="1.0850"></div>
-        <div class="field"><label for="f-sl">Stop loss</label><input id="f-sl" type="number" step="any" inputmode="decimal" placeholder="1.0820"></div>
-        <div class="field"><label for="f-tp">Take profit</label><input id="f-tp" type="number" step="any" inputmode="decimal" placeholder="1.0930"></div>
-        <div class="field"><label for="f-exit">Exit</label><input id="f-exit" type="number" step="any" inputmode="decimal" placeholder="1.0915"></div>
-        <div class="field"><label for="f-r">R-multiple</label><input id="f-r" type="number" step="any" inputmode="decimal" placeholder="auto"></div>
-        <div class="field"><label for="f-shot">Screenshot link</label><input id="f-shot" type="url" inputmode="url" placeholder="https://..."></div>
-        <div class="field full" id="shot-wrap" hidden><label for="f-shotfile">Chart screenshot (upload)</label><input id="f-shotfile" type="file" accept="image/jpeg,image/png,image/webp"><p class="hint">Private to your account. Images are compressed before upload; maximum stored size is 10 MB.</p><div id="shot-prev" class="shotprev"></div></div>
-        <div class="field full"><p class="hint" id="r-hint" style="margin:0">R is worked out from entry, stop loss and exit. Type a value to override it.</p></div>
-      </div>
-    </details>
+    </section>
+    <section class="trade-step trade-review" data-trade-step="3" aria-label="Review trade" hidden>
+      <h3>Review your trade</h3>
+      <p class="trade-step-intro">Check the details before saving. You can go back to change anything.</p>
+      <div id="trade-review-summary" class="trade-review-summary"></div>
+    </section>
     <p class="form-msg" id="form-msg" role="alert"></p>
-    <div class="form-actions">
-      <button class="btn btn-primary" id="btn-save" type="submit">Save trade</button>
-      <button class="btn" id="btn-another" type="button">Save &amp; add another</button>
+    <div class="trade-wizard-actions">
+      <button class="btn" id="trade-back" type="button" hidden>Back</button>
+      <button class="btn btn-primary" id="trade-next" type="button">Continue</button>
+      <button class="btn btn-primary" id="btn-save" type="submit" hidden>Save trade</button>
+      <button class="btn" id="btn-another" type="button" hidden>Save &amp; add another</button>
     </div>
     <datalist id="dl-assets"></datalist>
   </form>

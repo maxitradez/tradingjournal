@@ -1924,7 +1924,7 @@
   document.addEventListener('paste', function (e) {
     if (!$('drawer-trade') || $('drawer-trade').hidden || !e.clipboardData) return;
     var text = (e.clipboardData.getData('text/plain') || '').trim();
-    if (!text || !/^(https?:\\/\\/)?(www\\.)?tradingview\\.com\\//i.test(text)) return;
+    if (!text || !/^(https?:\/\/)?(www\.)?tradingview\.com\//i.test(text)) return;
     var link = safeUrl(text);
     if (!link) return;
     e.preventDefault();

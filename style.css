@@ -826,3 +826,5 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 @media (min-width: 980px) {
   .nav-more { display: none; }
 }
+
+@media (max-width: 979px) { .nav-more > summary.is-active { color: var(--accent-hot); background: var(--surface-2); } }

@@ -651,7 +651,7 @@
   }
   function tradeCard(t) {
     var link = safeUrl(t.shot);
-    return h('div', { class: 'tcard', id: 'trade-card-' + t.id },
+    return h('div', { class: 'tcard' + (state.focusTradeId === t.id ? ' is-focused' : ''), id: 'trade-card-' + t.id },
       h('div', { class: 'tcard-top' },
         h('div', { class: 'asset' }, h('strong', { text: t.asset }), h('span', { class: 'pill', text: t.side === 'sell' ? 'Sell' : 'Buy' }), t.time ? h('span', { class: 'sub', text: t.time }) : null, t.example ? h('span', { class: 'pill ex', text: 'Example' }) : null),
         h('div', { class: 'pn ' + cls(t.pnl), text: signed(t.pnl) + (t.r != null ? '  ' + fmtR(t.r) : '') })),

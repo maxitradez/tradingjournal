@@ -643,7 +643,7 @@
       ['Win rate', has ? (a.winRate * 100).toFixed(1) + '%' : '—', '', has ? a.wins + 'W · ' + a.losses + 'L · ' + a.be + 'BE' : ''],
       ['Profit factor', !has ? '—' : a.pf == null ? '—' : a.pf === Infinity ? '∞' : a.pf.toFixed(2), '', 'Gross win / gross loss'],
       ['Avg R', a.rN ? fmtR(a.avgR) : '—', a.rN ? cls(a.avgR) : '', a.rN ? 'Over ' + a.rN + (a.rN === 1 ? ' trade' : ' trades') : 'Needs R values'],
-      ['Account', bal ? CUR + fmt(bal + a.total) : '—', bal ? cls(a.total) : '', bal ? pcts(a.total / bal * 100) + ' since start' : 'Set it in Settings'],
+      ['Account', bal ? CUR + fmt(bal + a.total) : '—', bal ? cls(a.total) : '', bal ? pcts(a.total / bal * 100) + ' since start' : 'Set it in Trading Setup'],
       ['Max drawdown', has ? (a.maxDD ? MINUS + CUR + fmt(a.maxDD) : CUR + '0.00') : '—', a.maxDD ? 'neg' : '', bal && a.maxDD ? MINUS + (a.maxDD / bal * 100).toFixed(1) + '% of account' : 'Peak to trough']
     ];
     tiles.forEach(function (t) { box.appendChild(h('div', { class: 'stat' }, h('div', { class: 'stat-label', text: t[0] }), h('div', { class: 'stat-value ' + t[2], text: t[1] }), h('div', { class: 'stat-sub', text: t[3] }))); });
@@ -1276,7 +1276,7 @@
     var streak = h('input', { id: 's-streak', type: 'number', step: '1', min: '2', max: '10', inputmode: 'numeric', placeholder: '3' });
     tgt.value = s.monthlyTarget == null ? '' : s.monthlyTarget; cap.value = s.maxTradesDay == null ? '' : s.maxTradesDay; dls.value = s.dailyLoss == null ? '' : s.dailyLoss;
     bal.value = s.balance == null ? '' : s.balance; risk.value = s.riskPct == null ? '' : s.riskPct; cur.value = s.currency; streak.value = s.lossStreakThreshold || 3;
-    var lim = riskLimit(), save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save settings' });
+    var lim = riskLimit(), save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save trading setup' });
     save.addEventListener('click', function () {
       if (state.readOnlyCloud) { msg.textContent = 'Cloud journal is read-only. Settings cannot be changed in this stage.'; return; }
       var b = num(bal.value), r = num(risk.value), streakValue = num(streak.value);
@@ -1290,7 +1290,7 @@
       if (streakValue == null || streakValue < 2 || streakValue > 10 || Math.floor(streakValue) !== streakValue) { msg.textContent = 'Choose a loss-streak reminder threshold from 2 to 10 trades.'; streak.focus(); return; }
       if (state.mode === 'pending') { msg.textContent = 'Still connecting to your saved journal. Try again in a moment.'; return; }
       save.disabled = true; msg.textContent = '';
-      saveSettings(normSettings({ balance: b, riskPct: r, currency: cur.value, monthlyTarget: num(tgt.value), maxTradesDay: num(cap.value), dailyLoss: num(dls.value), lossStreakThreshold: streakValue, example: false })).then(function () { toast('Settings saved'); }).catch(function (e) { msg.textContent = failMsg(e); }).then(function () { save.disabled = false; });
+      saveSettings(normSettings({ balance: b, riskPct: r, currency: cur.value, monthlyTarget: num(tgt.value), maxTradesDay: num(cap.value), dailyLoss: num(dls.value), lossStreakThreshold: streakValue, example: false })).then(function () { toast('Trading setup saved'); }).catch(function (e) { msg.textContent = failMsg(e); }).then(function () { save.disabled = false; });
     });
     var acct = h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Account, risk and goals' })),
       h('div', { class: 'fields' },
@@ -1379,7 +1379,7 @@
     $('r-hint').textContent = r == null ? 'R is worked out from the amount risked, or from entry, stop loss and exit. Type a value to override it.' : 'Calculated: ' + fmtR(r) + '. Type a value to override it.';
     if (!risk) el.textContent = lim ? 'Your limit is ' + CUR + fmt(lim) + ' per trade (' + state.settings.riskPct + '% of ' + CUR + fmt(state.settings.balance) + ').' : 'Add it to track R-multiple. Set an account size in Settings to check it against a risk limit.';
     else if (lim) { over = risk > lim * 1.05; el.textContent = (risk / state.settings.balance * 100).toFixed(2) + '% of your starting balance. ' + (over ? 'Over your ' + state.settings.riskPct + '% limit.' : 'Within your limit.'); }
-    else el.textContent = 'Set an account size in Settings to check this against a risk limit.';
+    else el.textContent = 'Set an account size in Trading Setup to check this against a risk limit.';
     el.style.color = over ? 'var(--loss)' : '';
   }
   function fillSelects() {
@@ -1552,7 +1552,7 @@
     if (VIEWS.indexOf(name) < 0) name = 'dashboard';
     state.view = name;
     $('fab').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';
-    var pageTitles = { dashboard: 'Dashboard', trades: 'Trade Log', calendar: 'Calendar', playbooks: 'Playbooks', reports: 'Reports', insights: 'Analytics', settings: 'Settings', profile: 'Profile' };
+    var pageTitles = { dashboard: 'Dashboard', trades: 'Trade Log', calendar: 'Calendar', playbooks: 'Playbooks', reports: 'Reports', insights: 'Analytics', settings: 'Trading Setup', profile: 'Profile' };
     var pageTitle = $('workspace-title');
     if (pageTitle) pageTitle.textContent = pageTitles[name] || 'Dashboard';
     VIEWS.forEach(function (v) { var el = $('v-' + v); el.hidden = v !== name; if (v !== name) el.textContent = ''; });

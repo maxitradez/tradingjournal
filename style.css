@@ -1990,3 +1990,79 @@ input::placeholder,textarea::placeholder { color:#7F8DA2; }
     font-weight:760;
   }
 }
+
+
+/* PLAYBOOK CONTRAST + LOCKED DARK BRAND MODE
+   The device's light-mode preference was overriding --fg/--muted on dark cards.
+   PIPBOOK's selected Midnight Cobalt workspace stays dark regardless of OS mode.
+*/
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme:dark;
+    --bg:#0D1422;
+    --surface:#1D293A;
+    --surface-2:#172235;
+    --line:#2A3A52;
+    --line-strong:#40536F;
+    --fg:#F3F6FC;
+    --muted:#AAB6C8;
+    --faint:#7F8DA2;
+    --accent:#4778F5;
+    --accent-hot:#89A7FF;
+    --on-accent:#FFFFFF;
+    --win:#36B58E;
+    --loss:#D86F78;
+    --amber:#D0AC68;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme:dark;
+  --bg:#0D1422;
+  --surface:#1D293A;
+  --surface-2:#172235;
+  --line:#2A3A52;
+  --line-strong:#40536F;
+  --fg:#F3F6FC;
+  --muted:#AAB6C8;
+  --faint:#7F8DA2;
+  --accent:#4778F5;
+  --accent-hot:#89A7FF;
+  --on-accent:#FFFFFF;
+  --win:#36B58E;
+  --loss:#D86F78;
+  --amber:#D0AC68;
+}
+
+/* Playbook cards: explicit readable text on Slate surfaces. */
+#v-playbooks .pb {
+  color:#F3F6FC;
+  background:linear-gradient(145deg,#1D293A,#19263A);
+  border-color:#354965;
+}
+#v-playbooks .pb h3,
+#v-playbooks .pb-stats b {
+  color:#F3F6FC;
+  opacity:1;
+}
+#v-playbooks .pb-desc,
+#v-playbooks .pb ul,
+#v-playbooks .pb ul li {
+  color:#DCE4F0;
+  opacity:1;
+}
+#v-playbooks .pb .lbl,
+#v-playbooks .pb-stats span {
+  color:#AAB6C8;
+  opacity:1;
+}
+#v-playbooks .pb-stats div {
+  background:#172235;
+  border:1px solid #30425C;
+  border-radius:8px;
+}
+#v-playbooks .pb .acts .btn {
+  color:#F3F6FC;
+}
+#v-playbooks .pb .acts .btn-primary {
+  color:#FFFFFF;
+}

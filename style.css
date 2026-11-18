@@ -2626,3 +2626,8 @@ input::placeholder,textarea::placeholder { color:#8999AE; }
   .workspace-topbar .fab { padding:8px 10px;font-size:10px; }
   .goals .goal-v { font-size:22px; }
 }
+
+
+/* Trade drawer must sit above sticky masthead and workspace page heading. */
+.scrim { z-index:90; }
+.drawer { z-index:100; }

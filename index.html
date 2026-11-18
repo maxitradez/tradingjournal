@@ -66,34 +66,31 @@
       <h1>PIPBOOK</h1>
       <p class="tagline"><span>Every trade</span><span>Every lesson</span><span>Every step forward</span></p>
     </div>
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="nav"><span></span><span></span><span></span><b>Menu</b></button>
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="Open navigation menu"><span></span><span></span><span></span><b>Menu</b></button>
     <span class="chip" id="sync" data-state="loading" role="status"><i></i><span id="sync-text">Connecting</span></span>
   </header>
   <nav class="nav" id="nav" aria-label="Sections">
     <a href="#dashboard" data-v="dashboard">Dashboard</a>
+    <a href="#trades" data-v="trades">Trade Log</a>
     <a href="#calendar" data-v="calendar">Calendar</a>
-    <a href="#trades" data-v="trades">Trades</a>
     <a href="#playbooks" data-v="playbooks">Playbooks</a>
-    <a href="#reports" data-v="reports">Reports</a>
     <a href="#insights" data-v="insights">Analytics</a>
-    <a href="#settings" data-v="settings">Settings</a>
+    <a href="#reports" data-v="reports">Reports</a>
     <a href="#profile" data-v="profile">Profile</a>
-    <details class="nav-more">
-      <summary aria-label="More sections">More <span aria-hidden="true">⌄</span></summary>
-      <div class="nav-more-menu" aria-label="More sections">
-        <a href="#playbooks" data-v="playbooks">Playbooks</a>
-        <a href="#reports" data-v="reports">Reports</a>
-        <a href="#insights" data-v="insights">Analytics</a>
-        <a href="#settings" data-v="settings">Settings</a>
-        <a href="#profile" data-v="profile">Profile</a>
-      </div>
-    </details>
+    <a href="#settings" data-v="settings">Settings</a>
   </nav>
   <div class="banner" id="banner" hidden>
     <p>You are looking at example data so you can see how every page works. Clear it before you log your own trades.</p>
     <button class="btn btn-sm" id="btn-clear-ex" type="button">Clear examples</button>
   </div>
   <main>
+    <div class="workspace-topbar">
+      <div class="workspace-heading">
+        <p class="workspace-kicker">PIPBOOK / JOURNAL WORKSPACE</p>
+        <h2 id="workspace-title">Dashboard</h2>
+      </div>
+      <button class="btn btn-primary fab" id="fab" type="button">+ Log trade</button>
+    </div>
     <section id="v-dashboard" hidden></section>
     <section id="v-calendar" hidden></section>
     <section id="v-trades" hidden></section>
@@ -106,7 +103,6 @@
   <p class="foot">R-multiple is profit or loss measured in units of your starting risk. 1R is the distance from entry to stop loss. Weeks run Monday to Sunday. Nothing here is financial advice.</p>
 </div>
 
-<button class="btn btn-primary fab" id="fab" type="button">+ Log trade</button>
 <div class="scrim" id="scrim" hidden></div>
 
 <aside class="drawer" id="drawer-trade" role="dialog" aria-modal="true" aria-labelledby="dt-title" hidden>

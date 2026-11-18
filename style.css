@@ -1849,3 +1849,83 @@ tr:last-child td { border-bottom:0; }
       "recent recent recent recent recent recent recent recent recent recent recent recent";
   }
 }
+
+
+/* ==========================================================================
+   PIPBOOK OFFICIAL PALETTE — MIDNIGHT COBALT
+   Midnight #0D1422 | Slate #1D293A | Cobalt #4778F5
+   White/cool-grey are typography neutrals; green/red remain P&L semantics.
+   ========================================================================== */
+:root {
+  color-scheme:dark;
+  --bg:#0D1422;
+  --surface:#1D293A;
+  --surface-2:#172235;
+  --line:#2A3A52;
+  --line-strong:#40536F;
+  --fg:#F3F6FC;
+  --muted:#AAB6C8;
+  --faint:#7F8DA2;
+  --accent:#4778F5;
+  --accent-hot:#89A7FF;
+  --on-accent:#FFFFFF;
+  --action:#4778F5;
+  --action-hover:#6390FF;
+  --win:#36B58E;
+  --loss:#D86F78;
+  --amber:#D0AC68;
+}
+html,body { background-color:var(--bg); }
+body {
+  background:
+    radial-gradient(ellipse at 82% -10%,rgba(71,120,245,.09),transparent 38rem),
+    var(--bg);
+  color:var(--fg);
+}
+.wrap {
+  border-color:#26364D;
+  background:rgba(13,20,34,.96);
+  box-shadow:0 24px 70px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.025);
+}
+.brand,#sync,.nav { background-color:#111C2D; }
+.brand { background:linear-gradient(145deg,#1D293A,#152136); }
+.nav a[aria-current="page"] {
+  background:linear-gradient(100deg,rgba(71,120,245,.24),rgba(71,120,245,.10));
+  border-color:rgba(71,120,245,.28);
+}
+.nav a[aria-current="page"]::before { color:#89A7FF; }
+.masthead { border-color:var(--line); }
+.btn-primary,.btn-primary:hover,.fab,.fab:hover {
+  background:var(--action);border-color:var(--action);color:#fff;
+}
+.fab:hover,.btn-primary:hover { background:var(--action-hover);border-color:var(--action-hover); }
+.workspace-topbar { border-color:var(--line); }
+.panel,.stat,.mini,.icard,.pb,.tcard,.feature-card,.auth-panel,.profile-card {
+  border-color:var(--line);
+  background:linear-gradient(145deg,#1D293A,#19263A);
+}
+.dashboard-today {
+  border-color:#30466B;
+  background:linear-gradient(112deg,#1D293A,#17243A 78%);
+}
+.dashboard-today-metrics>div,.pb-stats div,.mini {
+  background:#172235;
+  border-color:#2A3A52;
+}
+input,select,textarea {
+  background:#111C2D;
+  border-color:#40536F;
+  color:#F3F6FC;
+}
+input::placeholder,textarea::placeholder { color:#7F8DA2; }
+.nav a:hover,.btn:hover { border-color:#52698B; }
+.btn:hover { background:#263750; }
+.btn-primary:hover { background:var(--action-hover);color:#fff; }
+.trade-view-switch .is-selected {
+  background:rgba(71,120,245,.18);border-color:var(--action);color:#fff;
+}
+.foot { border-color:var(--line); }
+@media(max-width:979px) {
+  .masthead { background:rgba(13,20,34,.96); }
+  .nav { background:rgba(17,28,45,.99); }
+}

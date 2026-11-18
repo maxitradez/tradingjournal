@@ -1825,3 +1825,16 @@ tr:last-child td { border-bottom:0; }
   .day .dc { display:none; }
   .foot { font-size:9px; }
 }
+
+
+/* Final reference-layout overrides: shared top action replaces the former FAB. */
+@media (min-width:980px) {
+  body:has(#v-dashboard:not([hidden])) .fab { display:inline-flex!important; }
+  #sync { width:auto;justify-self:stretch; }
+  .nav a[data-v="settings"] { margin-top:auto; }
+}
+.dashboard-today-head .btn { display:none; }
+@media (max-width:979px) {
+  .fab { display:inline-flex;align-items:center;justify-content:center; }
+  body:has(#v-dashboard:not([hidden])) .fab { display:inline-flex!important; }
+}

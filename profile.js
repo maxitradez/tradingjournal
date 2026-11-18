@@ -34,16 +34,16 @@
     var meta = user.user_metadata || {};
     var card = el('div', { class: 'profile-card pipbook-onboard-card' });
     card.appendChild(el('p', { class: 'eyebrow' }, 'WELCOME TO PIPBOOK'));
-    card.appendChild(el('h2', {}, 'Let’s make this journal yours.'));
-    card.appendChild(el('p', { class: 'profile-intro' }, 'A few thoughtful details help PIPBOOK understand the markets you follow and the reason you started.'));
+    card.appendChild(el('h2', {}, 'Let’s build your trading journal.'));
+    card.appendChild(el('p', { class: 'profile-intro' }, 'Two short steps to make PIPBOOK feel like your journal: tell us a little about you, then choose the markets and motivations that shape your trading.'));
     var form = el('form', { class: 'profile-form', autocomplete: 'off' });
     var steps = [
-      { title: 'First, the basics', intro: 'Tell us a little about yourself.', fields: [
+      { title: 'Your profile', intro: 'Start with the basics. These details help us personalise your journal.', fields: [
         field('Your name', 'display_name', 'text', profile.display_name || meta.full_name || '', 'How should we address you?'),
         field('Username', 'username', 'text', profile.username || '', 'Choose a unique username'),
         field('Country', 'country', 'text', profile.country || '', 'Your country')
       ]},
-      { title: 'Your trading world', intro: 'Choose the markets and sessions that are part of your routine.', fields: [] }
+      { title: 'Your trading world', intro: 'Choose the markets you follow, the sessions you trade and what brought you to this journey.', fields: [] }
     ];
     steps[0].fields.forEach(function (control) { form.appendChild(control); });
     var panels = [el('section', { class: 'onboard-step is-current', 'data-step': '0' })];
@@ -91,7 +91,7 @@
     panels.forEach(function (panel) { form.appendChild(panel); });
 
     var stepper = el('div', { class: 'onboard-stepper', 'aria-label': 'Onboarding progress' });
-    ['01', '02'].forEach(function (n, i) { stepper.appendChild(el('span', { class: 'onboard-step-dot' + (i ? '' : ' is-current') }, n)); });
+    ['01 · YOUR PROFILE', '02 · YOUR TRADING WORLD'].forEach(function (n, i) { stepper.appendChild(el('span', { class: 'onboard-step-dot' + (i ? '' : ' is-current') }, n)); });
     form.insertBefore(stepper, form.firstChild);
     var note = el('p', { class: 'profile-message', role: 'status', 'aria-live': 'polite' });
     var actions = el('div', { class: 'onboard-actions' });
@@ -178,7 +178,7 @@
     card.appendChild(el('span', { class: 'brand-mark' }, 'P'));
     card.appendChild(el('p', { class: 'eyebrow' }, 'YOUR JOURNEY STARTS HERE'));
     card.appendChild(el('h2', {}, 'Welcome to PIPBOOK, ' + ((cachedProfile && cachedProfile.display_name) || 'trader') + '.'));
-    card.appendChild(el('p', { class: 'profile-intro' }, 'You started this journey for a reason. Keep it close, especially on the days that test your patience.'));
+    card.appendChild(el('p', { class: 'profile-intro' }, 'Every trader has a reason for starting. Keep yours close — especially on the days when the process tests you.'));
     if (reasons && reasons.length) card.appendChild(el('div', { class: 'welcome-reasons' }, reasons.join(' · ')));
     if (personalReason) card.appendChild(el('blockquote', { class: 'welcome-quote' }, '“' + personalReason + '”'));
     else card.appendChild(el('blockquote', { class: 'welcome-quote' }, 'Your trading journey, documented. Your progress, understood.'));

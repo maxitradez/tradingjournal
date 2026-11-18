@@ -1929,3 +1929,64 @@ input::placeholder,textarea::placeholder { color:#7F8DA2; }
   .masthead { background:rgba(13,20,34,.96); }
   .nav { background:rgba(17,28,45,.99); }
 }
+
+
+/* VISIBILITY FIX — retire leftover sand-ink text styles on dark KPI cards. */
+#v-dashboard .stats .stat {
+  color:#F3F6FC;
+  background:linear-gradient(145deg,#1D293A 0%,#1A2739 100%);
+  border:1px solid #354965;
+  border-top:1px solid #354965;
+}
+#v-dashboard .stats .stat .stat-label,
+#v-dashboard .stats .stat .stat-title,
+#v-dashboard .stats .stat h3 {
+  color:#B9C5D7;
+}
+#v-dashboard .stats .stat .stat-value {
+  color:#F3F6FC;
+  font-weight:760;
+  text-shadow:none;
+}
+#v-dashboard .stats .stat .stat-value.pos { color:#36B58E; }
+#v-dashboard .stats .stat .stat-value.neg { color:#F07E87; }
+#v-dashboard .stats .stat .stat-sub {
+  color:#9EACC0;
+  opacity:1;
+}
+#v-dashboard .stats .stat:first-child {
+  border-top:1px solid #4778F5;
+  box-shadow:inset 0 2px 0 rgba(71,120,245,.08);
+}
+
+/* Keep the product identity and current page title in view on long pages. */
+@media (min-width:980px) {
+  .brand {
+    position:sticky;
+    top:12px;
+    z-index:38;
+    align-self:start;
+    background:linear-gradient(145deg,#1D293A,#152136);
+  }
+  .nav {
+    position:sticky;
+    top:112px;
+    height:calc(100vh - 230px);
+    min-height:340px;
+    z-index:30;
+  }
+  .workspace-topbar {
+    position:sticky;
+    top:0;
+    z-index:36;
+    padding:13px 0 14px;
+    background:rgba(13,20,34,.97);
+    backdrop-filter:blur(14px);
+  }
+  .workspace-heading h2 {
+    color:#F3F6FC;
+    font-size:26px;
+    line-height:1.2;
+    font-weight:760;
+  }
+}

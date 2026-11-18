@@ -324,6 +324,16 @@
     var forgot = authPanel.querySelector('.auth-forgot');
     var email = authPanel.querySelector('#maxi-auth-email');
     var password = authPanel.querySelector('#maxi-auth-password');
+    var introHeading = document.querySelector('.auth-screen-intro h1');
+    var introCopy = document.querySelector('.auth-intro-copy');
+    var stageMode = document.querySelector('.auth-stage-heading span:last-child');
+    if (introHeading) introHeading.textContent = mode === 'signup' ? 'Start with a clean journal.' : mode === 'recovery' ? 'Get back to your journal.' : 'Welcome back.';
+    if (introCopy) introCopy.textContent = mode === 'signup'
+      ? 'Create your free account. We’ll guide you through your profile, the markets you follow and the reason you started.'
+      : mode === 'recovery'
+        ? 'Choose a new password to securely return to your PIPBOOK account.'
+        : 'Sign in to return to your trade history, playbooks and the lessons you have recorded.';
+    if (stageMode) stageMode.textContent = mode === 'signup' ? 'CREATE ACCOUNT' : mode === 'recovery' ? 'PASSWORD RECOVERY' : 'WELCOME BACK';
     heading.textContent = mode === 'signup' ? 'Create your free account' : mode === 'recovery' ? 'Set a new password' : 'Sign in to your account';
     submit.textContent = mode === 'signup' ? 'Create account' : mode === 'recovery' ? 'Update password' : 'Sign in';
     toggle.textContent = mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account';
@@ -471,6 +481,12 @@
           authNotice('Your password has been updated. Sign in with your new password.', false);
         } else if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
           showAuthForm('signin');
+          var confirmationTitle = document.querySelector('.auth-screen-intro h1');
+          var confirmationCopy = document.querySelector('.auth-intro-copy');
+          var confirmationMode = document.querySelector('.auth-stage-heading span:last-child');
+          if (confirmationTitle) confirmationTitle.textContent = 'Check your inbox.';
+          if (confirmationCopy) confirmationCopy.textContent = 'Your account is created. Confirm your email using the link we sent, then return here to sign in and complete your PIPBOOK setup.';
+          if (confirmationMode) confirmationMode.textContent = 'EMAIL CONFIRMATION';
           authNotice('Account created. Check your email for the confirmation link, then sign in here to open your journal.', false);
         } else {
           authUser = result.data && result.data.user ? result.data.user : null;

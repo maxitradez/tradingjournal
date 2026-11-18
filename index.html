@@ -11,52 +11,132 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="premium.css">
 </head>
 <body class="account-required">
 <section class="public-home" id="public-home">
   <div id="public-marketing">
-    <div class="public-top">
-      <a class="public-brand" href="#" aria-label="PIPBOOK home"><span class="brand-mark">P</span><span>PIPBOOK<small>TRADING JOURNAL</small></span></a>
-      <span class="public-free">FREE · BUILT FOR TRADERS</span>
-    </div>
-    <div class="public-hero">
+    <header class="public-top">
+      <a class="public-brand" href="#" aria-label="PIPBOOK home">
+        <span class="brand-mark">P</span>
+        <span>PIPBOOK<small>TRADING JOURNAL</small></span>
+      </a>
+      <nav class="marketing-nav" aria-label="Explore PIPBOOK">
+        <a href="#product-features">The journal</a>
+        <a href="#how-it-works">How it works</a>
+      </nav>
+      <div class="marketing-actions">
+        <span class="public-free"><i></i> FREE · BUILT FOR TRADERS</span>
+        <button class="btn marketing-login" id="public-login" type="button">Log in</button>
+      </div>
+    </header>
+
+    <section class="public-hero">
       <div class="public-copy">
-        <p class="eyebrow">A JOURNAL THAT GROWS WITH YOUR PROCESS</p>
-        <h1>Your trading journey,<br><em>documented.</em></h1>
-        <p class="public-lede">Your progress, understood. Record every trade, recognise your patterns, and build a clearer picture of the trader you're becoming.</p>
+        <p class="eyebrow"><span class="eyebrow-mark"></span> THE JOURNAL BEHIND YOUR PROCESS</p>
+        <h1>Trade with intent.<br><em>Learn with evidence.</em></h1>
+        <p class="public-lede">Your trading journey deserves more than scattered screenshots and half-remembered lessons. Bring your trades, decisions and progress into one place — and understand the trader you're becoming.</p>
+        <div class="public-proof-points">
+          <span><b>01</b> Record the execution</span>
+          <span><b>02</b> Review the decision</span>
+          <span><b>03</b> Learn the pattern</span>
+        </div>
         <div class="public-actions">
-          <button class="btn btn-primary" id="public-create" type="button">Get Started Free</button>
-          <button class="btn" id="public-login" type="button">Log In</button>
+          <button class="btn btn-primary" id="public-create" type="button">Create your free journal <span aria-hidden="true">↗</span></button>
+          <a class="public-secondary-link" href="#how-it-works">See how PIPBOOK works <span aria-hidden="true">↓</span></a>
         </div>
-        <p class="public-note">One place for your trades, your thinking, and your progress.</p>
+        <p class="public-note">Free to use. Built around the process, not just the outcome.</p>
       </div>
-      <div class="public-art" aria-label="Preview of a trading journal dashboard">
-        <div class="art-label"><span>PIPBOOK / YOUR JOURNAL</span><span>LIVE PREVIEW</span></div>
+
+      <div class="public-art" aria-label="Illustrative preview of the PIPBOOK trading journal">
+        <div class="art-chrome">
+          <div class="art-product"><span class="brand-mark">P</span><span><b>PIPBOOK</b><small>YOUR JOURNAL</small></span></div>
+          <span class="art-preview-tag"><i></i> PRODUCT PREVIEW</span>
+        </div>
         <div class="preview-window">
-          <div class="preview-top"><span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span><b>OVERVIEW</b><span>THIS WEEK</span></div>
-          <div class="preview-metrics"><div><small>NET P&amp;L</small><strong>+$1,284.50</strong><em>+8.4% this week</em></div><div><small>WIN RATE</small><strong>68.2%</strong><em>34 trades logged</em></div></div>
-          <div class="preview-chart"><div class="preview-chart-label"><span>PERFORMANCE</span><span>MON — FRI</span></div><svg viewBox="0 0 520 190" role="img" aria-label="Illustrative performance line chart"><path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12 L520 190 L0 190Z" fill="currentColor" opacity=".08"/></svg></div>
-          <div class="preview-trades"><div><span>RECENT TRADE</span><b>XAUUSD · BUY</b><strong>+$186.00</strong></div><div><span>RECENT TRADE</span><b>EURUSD · SELL</b><strong>+$92.50</strong></div></div>
+          <div class="preview-top"><span class="preview-caption">PERFORMANCE OVERVIEW</span><span class="preview-period">SAMPLE DATA</span></div>
+          <div class="preview-metrics">
+            <div><small>NET P&amp;L</small><strong>+$1,284.50</strong><em>+8.4% this week</em></div>
+            <div><small>WIN RATE</small><strong>68.2%</strong><em>34 trades logged</em></div>
+          </div>
+          <div class="preview-chart">
+            <div class="preview-chart-label"><span>EQUITY PROGRESSION</span><span>MON — FRI</span></div>
+            <svg viewBox="0 0 520 190" role="img" aria-label="Illustrative equity curve">
+              <defs><linearGradient id="pipbook-preview-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+              <g class="preview-gridlines"><path d="M0 40H520M0 85H520M0 130H520M0 175H520"/></g>
+              <path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12 L520 190 L0 190Z" fill="url(#pipbook-preview-fill)"/>
+              <path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="520" cy="12" r="5" fill="#F4F7FB" stroke="currentColor" stroke-width="3"/>
+            </svg>
+          </div>
+          <div class="preview-trades">
+            <div><span>RECENT EXECUTION</span><b>XAUUSD · BUY</b><strong>+$186.00</strong></div>
+            <div><span>RECENT EXECUTION</span><b>EURUSD · SELL</b><strong>+$92.50</strong></div>
+          </div>
         </div>
-        <div class="art-footer"><span>RECORD THE PROCESS</span><span>UNDERSTAND THE PROGRESS</span></div>
-      </div>
-    </div>
-    <section class="public-features">
-      <div class="feature-heading"><p class="eyebrow">BUILT AROUND THE TRADER</p><h2>Make every trade<br><em>mean something.</em></h2><p>More than a trade log. A clear view of your decisions, habits and development.</p></div>
-      <div class="feature-grid">
-        <article class="feature-card"><span>01</span><h3>Journal every trade</h3><p>Capture the setup, execution, result and lesson behind every position.</p></article>
-        <article class="feature-card"><span>02</span><h3>Understand your numbers</h3><p>Explore performance by instrument, session, strategy and time period.</p></article>
-        <article class="feature-card"><span>03</span><h3>Know your patterns</h3><p>Connect your trading decisions with discipline, emotions and consistency.</p></article>
-        <article class="feature-card"><span>04</span><h3>Keep your why close</h3><p>Reconnect with the reason you started when the process gets difficult.</p></article>
+        <div class="art-bottomline"><span>CAPTURE THE PROCESS</span><span>UNDERSTAND THE PROGRESS</span></div>
+        <p class="art-disclaimer">Illustrative sample figures · not live account performance</p>
       </div>
     </section>
-    <div class="public-cta"><div><p class="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p><h2>Your trading journey deserves a record.</h2></div><button class="btn btn-primary" type="button" id="public-create-bottom">Get Started Free</button></div>
-    <div class="public-bottom"><span>YOUR TRADING JOURNEY, DOCUMENTED.</span><span>PIPBOOK © 2026 · FREE TO USE</span></div>
+
+    <section class="public-value-strip" aria-label="PIPBOOK principles">
+      <span>BUILT FOR THE LONG GAME</span>
+      <b>Trade history</b><b>Personal playbooks</b><b>Performance insights</b><b>Mindset &amp; discipline</b>
+    </section>
+
+    <section class="public-features" id="product-features">
+      <div class="feature-heading">
+        <div><p class="eyebrow">ONE JOURNAL. A CLEARER PROCESS.</p><h2>Make every trade<br><em>mean something.</em></h2></div>
+        <p>Your results tell you what happened. Your journal helps you understand why. PIPBOOK connects the numbers with the decisions behind them.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card"><span class="feature-number">01</span><div class="feature-icon">↗</div><h3>Journal the execution</h3><p>Capture the setup, entry, exit, outcome and lesson behind every position.</p><small>TRADE HISTORY</small></article>
+        <article class="feature-card"><span class="feature-number">02</span><div class="feature-icon">⌁</div><h3>Understand your numbers</h3><p>Review performance, equity progression, drawdown and the patterns in your results.</p><small>PERFORMANCE</small></article>
+        <article class="feature-card"><span class="feature-number">03</span><div class="feature-icon">◇</div><h3>Build your playbook</h3><p>Keep your setups and rules organised, then review how consistently you follow them.</p><small>PROCESS &amp; SETUPS</small></article>
+        <article class="feature-card"><span class="feature-number">04</span><div class="feature-icon">◎</div><h3>Keep your why close</h3><p>Record the reason you started and reconnect with it when the journey gets difficult.</p><small>MINDSET &amp; DISCIPLINE</small></article>
+      </div>
+    </section>
+
+    <section class="public-how" id="how-it-works">
+      <div class="how-heading">
+        <p class="eyebrow">A SIMPLE ROUTINE. A STRONGER RECORD.</p>
+        <h2>From execution<br>to <em>understanding.</em></h2>
+        <p>PIPBOOK fits around the way traders already work. Log what happened, reflect on what mattered, and return to the dashboard with a clearer picture.</p>
+      </div>
+      <div class="how-steps">
+        <article><span>01 / CAPTURE</span><h3>Log the trade</h3><p>Record the instrument, direction, execution, outcome and the context behind the decision.</p></article>
+        <article><span>02 / REVIEW</span><h3>Reflect honestly</h3><p>Connect the result to your setup, plan, emotions and the lesson worth keeping.</p></article>
+        <article><span>03 / IMPROVE</span><h3>Spot the pattern</h3><p>Use your history, calendar, playbooks and insights to understand your process over time.</p></article>
+      </div>
+    </section>
+
+    <section class="public-cta">
+      <div><p class="eyebrow">YOUR PROCESS DESERVES A RECORD</p><h2>Stop relying on memory.<br><em>Start learning from the evidence.</em></h2><p>Build a journal that grows with every trade you take.</p></div>
+      <button class="btn btn-primary" type="button" id="public-create-bottom">Start your free journal <span aria-hidden="true">↗</span></button>
+    </section>
+    <footer class="public-bottom"><span>PIPBOOK · YOUR TRADING JOURNEY, DOCUMENTED.</span><span>FREE TO USE · BUILT FOR SELF-REVIEW</span></footer>
   </div>
+
   <section class="auth-screen" id="auth-screen" hidden>
-    <button class="auth-back" id="auth-back" type="button">← Back to PIPBOOK</button>
-    <div class="auth-screen-intro"><span class="brand-mark">P</span><p class="eyebrow">WELCOME TO PIPBOOK</p><h1>Your process starts here.</h1><p>Sign in to continue, or create your free account to start documenting your trading journey.</p></div>
-    <div id="public-auth"></div>
+    <button class="auth-back" id="auth-back" type="button"><span aria-hidden="true">←</span> Back to PIPBOOK</button>
+    <div class="auth-screen-layout">
+      <div class="auth-screen-intro">
+        <span class="brand-mark">P</span>
+        <p class="eyebrow">YOUR JOURNAL. YOUR PROCESS.</p>
+        <h1>Your next chapter starts here.</h1>
+        <p class="auth-intro-copy">Sign in to continue where you left off, or create your free account and make PIPBOOK your own.</p>
+        <div class="auth-benefits">
+          <div><span>01</span><p><b>Your trade history</b><small>One place for every execution and lesson.</small></p></div>
+          <div><span>02</span><p><b>Your trading world</b><small>Markets, sessions and setups that matter to you.</small></p></div>
+          <div><span>03</span><p><b>Your reason</b><small>A reminder of why you started.</small></p></div>
+        </div>
+        <p class="auth-side-note">PIPBOOK is free to use. No trading results are promised.</p>
+      </div>
+      <div class="auth-form-stage">
+        <div class="auth-stage-heading"><span>ACCOUNT ACCESS</span><span>SECURE SIGN IN</span></div>
+        <div id="public-auth"></div>
+      </div>
+    </div>
   </section>
 </section>
 <div id="profile-onboarding" class="profile-onboarding" hidden></div>

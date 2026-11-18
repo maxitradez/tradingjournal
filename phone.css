@@ -1,0 +1,228 @@
+
+/* PIPBOOK PHONE REFINEMENT — readable type, generous spacing, true 8th calendar column */
+@media (max-width:640px) {
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    font-size:15px;
+    line-height:1.6;
+    padding:12px 14px 34px;
+  }
+  .wrap {
+    width:100%;
+    max-width:none;
+    min-width:0;
+  }
+  main,#v-dashboard,#v-trades,#v-calendar,#v-playbooks,#v-reports,#v-insights,#v-settings,#v-profile {
+    min-width:0;
+    width:100%;
+  }
+  .masthead {
+    min-height:64px;
+    padding:9px 0 13px;
+    gap:12px;
+  }
+  .masthead .brand h1 { font-size:25px; }
+  .masthead .tagline { font-size:9px; }
+  .mobile-menu-toggle { width:50px;height:48px;flex-basis:50px; }
+  .mobile-menu-toggle b { font-size:9px; }
+  .workspace-topbar {
+    min-height:56px;
+    gap:10px;
+    margin-bottom:15px;
+    padding:13px 0 12px;
+  }
+  .workspace-kicker { font-size:9px; }
+  .workspace-heading h2 { font-size:23px; }
+  .fab { min-height:42px;padding:10px 14px;font-size:12px; }
+  main > section:not([hidden]) { gap:14px; }
+  .panel { padding:16px 15px;border-radius:14px; }
+  .panel-head { gap:9px;margin-bottom:14px; }
+  .panel-head h2 { font-size:17px; }
+  .eyebrow { font-size:10px; }
+  .sub,.hint,.empty,.form-msg,.profile-message { font-size:12px; }
+  .btn { min-height:43px;padding:11px 14px;font-size:12px; }
+  .btn-sm { min-height:37px;padding:8px 11px;font-size:11px; }
+  label,.lbl,.field label { font-size:11px;line-height:1.45; }
+  input,select,textarea { min-height:47px;padding:11px 13px;font-size:14px; }
+  textarea { line-height:1.55; }
+  .stat-label { font-size:10px; }
+  .stat-value { font-size:23px; }
+  .stat-sub { font-size:11px;line-height:1.45; }
+
+  /* Dashboard gets more breathing room and clearer reading hierarchy. */
+  #v-dashboard { gap:14px; }
+  #v-dashboard .dashboard-today {
+    padding:17px;
+    border-radius:15px;
+  }
+  #v-dashboard .dashboard-today-head { margin-bottom:15px; }
+  #v-dashboard .dashboard-today-head h2 { font-size:21px; }
+  #v-dashboard .dashboard-today-head .sub { font-size:12px; }
+  #v-dashboard .dashboard-today-metrics { gap:9px; }
+  #v-dashboard .dashboard-today-metrics>div {
+    min-height:70px;
+    padding:12px;
+    gap:8px;
+  }
+  #v-dashboard .dashboard-today-metrics .stat-label { font-size:10px; }
+  #v-dashboard .dashboard-today-value { font-size:25px; }
+  #v-dashboard .dashboard-today-status { font-size:12px; }
+  #v-dashboard .stats { gap:10px; }
+  #v-dashboard .stats .stat {
+    min-height:102px;
+    padding:14px;
+    border-radius:13px;
+  }
+  #v-dashboard .stats .stat .stat-label { font-size:10px;line-height:1.4; }
+  #v-dashboard .stats .stat .stat-value { margin-top:7px;font-size:23px; }
+  #v-dashboard .stats .stat .stat-sub { font-size:10px;line-height:1.45; }
+  #v-dashboard .goals { padding:16px; }
+  #v-dashboard .goals .goal-row { gap:15px 12px; }
+  #v-dashboard .goals .goal .stat-label { font-size:10px; }
+  #v-dashboard .goals .goal-v { font-size:24px; }
+  #v-dashboard .goals .goal .sub { font-size:11px; }
+  #v-dashboard .g-dash { gap:13px; }
+  #v-dashboard .g-dash>.panel { padding:16px; }
+  #v-dashboard .g-dash .panel-head h2 { font-size:17px; }
+  #v-dashboard .g-dash .a-eq .chart { min-height:190px; }
+  #v-dashboard .g-dash .a-recent .recent li { padding:14px 0; }
+  #v-dashboard .g-dash .a-recent .recent { font-size:13px; }
+
+  /* Trade Log controls and trade cards must remain finger-friendly. */
+  #v-trades>.panel { padding:15px; }
+  #v-trades .toolbar { gap:9px; }
+  #v-trades .toolbar input,#v-trades .toolbar select { min-height:46px;font-size:12px; }
+  #v-trades .trade-view-switch { padding:4px; }
+  #v-trades .trade-view-switch .btn { min-height:39px;font-size:12px; }
+  #v-trades .trade-card-grid { gap:11px; }
+  #v-trades .tcard { padding:15px; }
+  #v-trades .tablewrap { border-radius:10px; }
+  #v-trades th { font-size:10px; }
+  #v-trades td { font-size:11px; }
+
+  /* Calendar: 7 daily cells plus a narrow Week-total column at far right.
+     The week summary is kept on the same row, never pushed below the days. */
+  #v-calendar>.panel {
+    padding:13px 10px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+  }
+  #v-calendar .cal-head { gap:9px;margin-bottom:13px; }
+  #v-calendar .cal-head .nv { gap:6px; }
+  #v-calendar .cal-title { font-size:20px; }
+  #v-calendar .cal-tiles { gap:8px;margin-bottom:14px; }
+  #v-calendar .cal-tiles .mini { padding:11px; }
+  #v-calendar .cal-tiles .stat-label { font-size:10px; }
+  #v-calendar .cal-tiles .stat-value { font-size:21px; }
+  #v-calendar .cal {
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr)) minmax(66px, .92fr);
+    gap:4px;
+    width:100%;
+    min-width:0;
+    align-items:stretch;
+  }
+  #v-calendar .cal-h {
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
+    padding:7px 1px;
+    color:#AFC0D4;
+    font-size:9px;
+    line-height:1.2;
+    white-space:nowrap;
+  }
+  #v-calendar .cal-h:nth-child(8) {
+    justify-content:center;
+    color:var(--pip-emerald-bright);
+    font-size:8px;
+    letter-spacing:.04em;
+  }
+  #v-calendar .day {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    min-width:0;
+    min-height:70px;
+    gap:5px;
+    padding:7px 2px;
+    border-radius:8px;
+    text-align:center;
+  }
+  #v-calendar .day .dn { font-size:10px;line-height:1.2; }
+  #v-calendar .day .dp {
+    max-width:100%;
+    font-size:9px;
+    line-height:1.2;
+    overflow-wrap:anywhere;
+  }
+  #v-calendar .day .dc { display:none; }
+  #v-calendar .day.wk {
+    grid-column:auto!important;
+    display:flex!important;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    min-width:0;
+    min-height:70px;
+    padding:6px 2px;
+    border:1px solid rgba(16,185,129,.3);
+    border-radius:8px;
+    background:linear-gradient(180deg,rgba(16,185,129,.10),#13243A);
+    text-align:center;
+  }
+  #v-calendar .day.wk .dn {
+    color:#AFC0D4;
+    font-size:8px;
+    line-height:1.15;
+    white-space:nowrap;
+  }
+  #v-calendar .day.wk .dp {
+    color:var(--pip-emerald-bright);
+    font-size:10px;
+    line-height:1.2;
+    font-weight:750;
+    overflow-wrap:anywhere;
+  }
+  #v-calendar .day.wk .dc {
+    display:block;
+    color:#AABBD0;
+    font-size:8px;
+    line-height:1.2;
+    white-space:nowrap;
+  }
+  #v-calendar .day.today { box-shadow:inset 0 0 0 1px rgba(16,185,129,.2); }
+
+  /* Playbooks and analysis pages: larger text and calmer spacing. */
+  #v-playbooks .pb { padding:16px;gap:13px; }
+  #v-playbooks .pb h3 { font-size:19px; }
+  #v-playbooks .pb-desc { font-size:13px; }
+  #v-playbooks .pb-stats b { font-size:19px; }
+  #v-playbooks .pb-stats span,#v-playbooks .pb .lbl { font-size:10px; }
+  #v-playbooks .pb ul { font-size:13px;line-height:1.65; }
+  #v-reports .g-two,#v-insights .g-two { gap:12px; }
+  #v-reports .g-two>.panel,#v-insights .g-two>.panel { padding:15px; }
+  #v-insights .icard { padding:14px; }
+  #v-insights .icard p { font-size:12px; }
+  #v-settings .g-two>.panel { padding:16px; }
+  #v-settings .hint { font-size:12px; }
+  #v-profile .profile-view,#v-profile .password-card { padding:16px; }
+  #v-profile .profile-view h2 { font-size:24px; }
+  #v-profile .auth-fields { gap:13px; }
+}
+
+/* Narrow phones retain usable day-cell widths with a local calendar scroll.
+   Week totals remain the rightmost column in the same calendar row. */
+@media (max-width:360px) {
+  body { padding-left:12px;padding-right:12px; }
+  #v-calendar>.panel { padding-left:9px;padding-right:9px; }
+  #v-calendar .cal { min-width:336px; }
+  #v-calendar .day.wk { position:sticky;right:0;z-index:2;box-shadow:-5px 0 9px rgba(0,0,0,.18); }
+  #v-calendar .cal-h:nth-child(8) { position:sticky;right:0;z-index:3;background:#142238; }
+  #v-dashboard .stats .stat { min-height:98px;padding:12px; }
+  #v-dashboard .stats .stat .stat-value { font-size:21px; }
+}

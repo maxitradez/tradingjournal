@@ -481,6 +481,12 @@
           authNotice('Your password has been updated. Sign in with your new password.', false);
         } else if (authFormMode === 'signup' && result.data && result.data.user && !result.data.session) {
           showAuthForm('signin');
+          var confirmationTitle = document.querySelector('.auth-screen-intro h1');
+          var confirmationCopy = document.querySelector('.auth-intro-copy');
+          var confirmationMode = document.querySelector('.auth-stage-heading span:last-child');
+          if (confirmationTitle) confirmationTitle.textContent = 'Check your inbox.';
+          if (confirmationCopy) confirmationCopy.textContent = 'Your account is created. Confirm your email using the link we sent, then return here to sign in and complete your PIPBOOK setup.';
+          if (confirmationMode) confirmationMode.textContent = 'EMAIL CONFIRMATION';
           authNotice('Account created. Check your email for the confirmation link, then sign in here to open your journal.', false);
         } else {
           authUser = result.data && result.data.user ? result.data.user : null;

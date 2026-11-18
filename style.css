@@ -1838,3 +1838,14 @@ tr:last-child td { border-bottom:0; }
   .fab { display:inline-flex;align-items:center;justify-content:center; }
   body:has(#v-dashboard:not([hidden])) .fab { display:inline-flex!important; }
 }
+
+
+/* Dashboard's existing three panels follow the reference 8 / 4 / full-width rhythm. */
+@media (min-width:980px) {
+  .g-dash {
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    grid-template-areas:
+      "eq eq eq eq eq eq eq eq score score score score"
+      "recent recent recent recent recent recent recent recent recent recent recent recent";
+  }
+}

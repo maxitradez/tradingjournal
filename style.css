@@ -2255,3 +2255,20 @@ input::placeholder,textarea::placeholder { color:#8999AE; }
   --action:#10B981;--action-hover:#34D399;
   --win:#10B981;--loss:#E87979;--amber:#D6B56D;
 }
+
+
+/* Playbooks: keep the secondary starter action readable on navy surfaces. */
+#v-playbooks > .panel-head .row-btns > .btn:not(.btn-primary),
+#v-playbooks .hero-empty .row-btns > .btn:not(.btn-primary) {
+  color:#FFFFFF;
+  -webkit-text-fill-color:#FFFFFF;
+  border-color:#435A78;
+  background:#1B2C43;
+}
+#v-playbooks > .panel-head .row-btns > .btn:not(.btn-primary):hover,
+#v-playbooks .hero-empty .row-btns > .btn:not(.btn-primary):hover {
+  color:#FFFFFF;
+  -webkit-text-fill-color:#FFFFFF;
+  background:#263B54;
+  border-color:#6A829F;
+}

@@ -324,6 +324,16 @@
     var forgot = authPanel.querySelector('.auth-forgot');
     var email = authPanel.querySelector('#maxi-auth-email');
     var password = authPanel.querySelector('#maxi-auth-password');
+    var introHeading = document.querySelector('.auth-screen-intro h1');
+    var introCopy = document.querySelector('.auth-screen-intro > p:last-child');
+    var stageMode = document.querySelector('.auth-stage-heading span:last-child');
+    if (introHeading) introHeading.textContent = mode === 'signup' ? 'Start with a clean journal.' : mode === 'recovery' ? 'Get back to your journal.' : 'Welcome back.';
+    if (introCopy) introCopy.textContent = mode === 'signup'
+      ? 'Create your free account. We’ll guide you through your profile, the markets you follow and the reason you started.'
+      : mode === 'recovery'
+        ? 'Choose a new password to securely return to your PIPBOOK account.'
+        : 'Sign in to return to your trade history, playbooks and the lessons you have recorded.';
+    if (stageMode) stageMode.textContent = mode === 'signup' ? 'CREATE ACCOUNT' : mode === 'recovery' ? 'PASSWORD RECOVERY' : 'WELCOME BACK';
     heading.textContent = mode === 'signup' ? 'Create your free account' : mode === 'recovery' ? 'Set a new password' : 'Sign in to your account';
     submit.textContent = mode === 'signup' ? 'Create account' : mode === 'recovery' ? 'Update password' : 'Sign in';
     toggle.textContent = mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account';

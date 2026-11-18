@@ -2066,3 +2066,192 @@ input::placeholder,textarea::placeholder { color:#7F8DA2; }
 #v-playbooks .pb .acts .btn-primary {
   color:#FFFFFF;
 }
+
+
+/* ==========================================================================
+   PIPBOOK OFFICIAL PALETTE — MIDNIGHT NAVY / CLOUD WHITE / EMERALD
+   Palette updates only: preserve existing layouts, screens and behaviours.
+   ========================================================================== */
+:root {
+  color-scheme:dark;
+  --bg:#0B1426;
+  --surface:#142238;
+  --surface-2:#1B2C43;
+  --line:#2B3E58;
+  --line-strong:#435A78;
+  --fg:#F4F7FB;
+  --muted:#B8C4D5;
+  --faint:#8999AE;
+  --accent:#10B981;
+  --accent-hot:#34D399;
+  --on-accent:#06251B;
+  --action:#10B981;
+  --action-hover:#34D399;
+  --win:#10B981;
+  --loss:#E87979;
+  --amber:#D6B56D;
+}
+html,body { background-color:#0B1426; }
+body {
+  color:#F4F7FB;
+  background:
+    radial-gradient(ellipse at 80% -12%,rgba(16,185,129,.075),transparent 38rem),
+    #0B1426;
+}
+.wrap {
+  border-color:#263A53;
+  background:rgba(11,20,38,.97);
+}
+.brand,#sync,.nav {
+  background-color:#111F34;
+}
+.brand {
+  background:linear-gradient(145deg,#172941,#111F34);
+}
+.nav a { color:#B8C4D5; }
+.nav a:hover {
+  color:#F4F7FB;
+  background:#1B2C43;
+}
+.nav a[aria-current="page"] {
+  color:#F4F7FB;
+  background:linear-gradient(100deg,rgba(16,185,129,.22),rgba(16,185,129,.09));
+  border-color:rgba(16,185,129,.28);
+}
+.nav a[aria-current="page"]::before { color:#34D399; }
+.nav a[data-v="dashboard"]::before,
+.nav a[data-v="trades"]::before,
+.nav a[data-v="calendar"]::before,
+.nav a[data-v="playbooks"]::before,
+.nav a[data-v="reports"]::before,
+.nav a[data-v="insights"]::before,
+.nav a[data-v="profile"]::before,
+.nav a[data-v="settings"]::before { color:#AFC2D9; }
+.eyebrow { color:#34D399; }
+.btn-primary,.btn-primary:hover,.fab,.fab:hover {
+  color:#06251B;
+  background:#10B981;
+  border-color:#10B981;
+}
+.btn-primary:hover,.fab:hover {
+  color:#06251B;
+  background:#34D399;
+  border-color:#34D399;
+}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+:focus-visible { outline-color:#34D399; }
+.workspace-topbar { border-color:#2B3E58; }
+.workspace-heading h2 { color:#F4F7FB; }
+.panel,.stat,.mini,.icard,.pb,.tcard,.feature-card,.auth-panel,.profile-card {
+  color:#F4F7FB;
+  border-color:#2B3E58;
+  background:linear-gradient(145deg,#172941,#142238);
+}
+.stat {
+  color:#F4F7FB;
+  background:linear-gradient(145deg,#172941,#142238);
+}
+.stat-label,.stat-sub,.sub,.hint { color:#B8C4D5; }
+.stat-value { color:#F4F7FB; }
+.stat-value.pos,.pos { color:#10B981; }
+.stat-value.neg,.neg { color:#E87979; }
+.hero-empty,.profile-card {
+  color:#F4F7FB;
+  border-color:#2B3E58;
+  background:linear-gradient(145deg,#172941,#142238);
+}
+.hero-empty h2,.profile-card h2,.onboard-step h3 { color:#F4F7FB; }
+.hero-empty p,.profile-card .profile-intro,.profile-card .eyebrow { color:#B8C4D5; }
+.profile-card .field label { color:#B8C4D5; }
+.profile-card input,.profile-card select,.profile-card textarea {
+  color:#F4F7FB;background:#0F1B2E;border-color:#435A78;
+}
+.profile-card input::placeholder,.profile-card textarea::placeholder { color:#8999AE; }
+.profile-card .profile-message { color:#F4F7FB; }
+.dashboard-today {
+  border-color:#2B4E53;
+  background:linear-gradient(112deg,#172941,#14263A 78%);
+}
+.dashboard-today-metrics>div,.pb-stats div,.mini {
+  color:#F4F7FB;
+  background:#1B2C43;
+  border-color:#2B3E58;
+}
+.dashboard-today-metrics .stat-label,
+.dashboard-today-status { color:#B8C4D5; }
+input,select,textarea {
+  color:#F4F7FB;
+  background:#111F34;
+  border-color:#435A78;
+}
+input::placeholder,textarea::placeholder { color:#8999AE; }
+.brk .track { background:#20334B; }
+.brk .track i { background:#10B981; }
+.nav a:hover,.btn:hover { border-color:#52718D; }
+.btn:hover { background:#223650; }
+.trade-view-switch .is-selected {
+  color:#F4F7FB;
+  background:rgba(16,185,129,.16);
+  border-color:#10B981;
+}
+.chart .line,.chart path.line,.equity-line { stroke:#10B981; }
+.chart .area,.equity-area { fill:rgba(16,185,129,.14); }
+.public-copy h1 em,.public-points strong { color:#10B981; }
+.public-art,.preview-window {
+  color:#F4F7FB;
+  border-color:#2B3E58;
+  background:linear-gradient(145deg,#172941,#111F34);
+}
+.feature-card { background:#142238; }
+.brand-mark { color:#10B981;border-color:#10B981; }
+.auth-screen-intro h1 { color:#F4F7FB; }
+.trade-success-card { color:#F4F7FB;background:#142238;border-color:#2B3E58; }
+.motivation-reminder { border-left-color:#10B981; }
+.motivation-quote { border-left-color:#10B981; }
+.onboard-choice input:checked+span {
+  color:#F4F7FB;
+  border-color:#10B981;
+  background:rgba(16,185,129,.15);
+}
+.onboard-step-dot.is-current,.onboard-step-dot.is-done {
+  color:#06251B;background:#10B981;border-color:#10B981;
+}
+#v-dashboard .stats .stat,
+#v-playbooks .pb {
+  color:#F4F7FB;
+  border-color:#2B3E58;
+  background:linear-gradient(145deg,#172941,#142238);
+}
+#v-dashboard .stats .stat .stat-label,
+#v-dashboard .stats .stat .stat-sub,
+#v-playbooks .pb .pb-desc,
+#v-playbooks .pb .pb-stats span,
+#v-playbooks .pb .lbl { color:#B8C4D5; }
+#v-dashboard .stats .stat .stat-value,
+#v-playbooks .pb h3,
+#v-playbooks .pb .pb-stats b,
+#v-playbooks .pb ul { color:#F4F7FB; }
+#v-dashboard .stats .stat .stat-value.pos,
+#v-playbooks .pb .pb-stats b.pos { color:#10B981; }
+#v-dashboard .stats .stat .stat-value.neg,
+#v-playbooks .pb .pb-stats b.neg { color:#E87979; }
+@media (prefers-color-scheme:light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme:dark;
+    --bg:#0B1426;--surface:#142238;--surface-2:#1B2C43;
+    --line:#2B3E58;--line-strong:#435A78;
+    --fg:#F4F7FB;--muted:#B8C4D5;--faint:#8999AE;
+    --accent:#10B981;--accent-hot:#34D399;--on-accent:#06251B;
+    --action:#10B981;--action-hover:#34D399;
+    --win:#10B981;--loss:#E87979;--amber:#D6B56D;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme:dark;
+  --bg:#0B1426;--surface:#142238;--surface-2:#1B2C43;
+  --line:#2B3E58;--line-strong:#435A78;
+  --fg:#F4F7FB;--muted:#B8C4D5;--faint:#8999AE;
+  --accent:#10B981;--accent-hot:#34D399;--on-accent:#06251B;
+  --action:#10B981;--action-hover:#34D399;
+  --win:#10B981;--loss:#E87979;--amber:#D6B56D;
+}

@@ -325,7 +325,7 @@
     var email = authPanel.querySelector('#maxi-auth-email');
     var password = authPanel.querySelector('#maxi-auth-password');
     var introHeading = document.querySelector('.auth-screen-intro h1');
-    var introCopy = document.querySelector('.auth-screen-intro > p:last-child');
+    var introCopy = document.querySelector('.auth-intro-copy');
     var stageMode = document.querySelector('.auth-stage-heading span:last-child');
     if (introHeading) introHeading.textContent = mode === 'signup' ? 'Start with a clean journal.' : mode === 'recovery' ? 'Get back to your journal.' : 'Welcome back.';
     if (introCopy) introCopy.textContent = mode === 'signup'

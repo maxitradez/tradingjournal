@@ -1,0 +1,181 @@
+/* PIPBOOK professional marketing homepage
+   Restrained product-led layout. No invented testimonials, performance claims or counters. */
+.marketing-site {
+  position: relative;
+  z-index: 1;
+  color: #edf3fa;
+  font-family: "IBM Plex Sans", Inter, sans-serif;
+}
+.site-header {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid rgba(105,129,153,.25);
+}
+.site-brand { display:flex;align-items:center;gap:10px;color:#f2f6fb;text-decoration:none; }
+.site-brand-mark,.preview-brand-mark {
+  display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(25,197,139,.52);
+  border-radius:8px;color:#45d6a6;background:#102a2b;font:800 23px/.9 "Big Shoulders Display",sans-serif;
+}
+.site-brand-name { font:800 19px/.9 "Big Shoulders Display",sans-serif;letter-spacing:.08em; }
+.site-nav { display:flex;align-items:center;gap:28px; }
+.site-nav a { color:#aab9ca;text-decoration:none;font-size:12px;font-weight:500;transition:color .15s; }
+.site-nav a:hover { color:#f2f6fb; }
+.site-header-actions { display:flex;align-items:center;gap:16px; }
+.site-plan { color:#8195a9;font-size:10px;font-weight:600;letter-spacing:.04em; }
+.site-login { min-height:38px;padding:0 15px;border:1px solid #3a5067;border-radius:7px;background:#14243a;color:#edf3fa;font:600 12px "IBM Plex Sans",sans-serif;cursor:pointer; }
+.site-login:hover { border-color:#19c58b; }
+.site-hero {
+  display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);align-items:center;
+  gap:clamp(32px,5vw,70px);padding:clamp(58px,8vw,94px) 0 76px;
+  border-bottom:1px solid rgba(105,129,153,.25);
+}
+.site-hero-copy { max-width:570px; }
+.site-eyebrow { margin:0 0 17px;color:#42c99a;font-size:9px;font-weight:700;letter-spacing:.16em; }
+.site-hero h1 { max-width:590px;margin:0;color:#f2f6fb;font:800 clamp(43px,5.3vw,70px)/.99 "Big Shoulders Display",sans-serif;letter-spacing:.005em; }
+.site-hero h1 span { color:#39d19e; }
+.site-lede { max-width:510px;margin:22px 0 0;color:#b5c3d2;font-size:15px;line-height:1.8; }
+.site-hero-actions { display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:27px; }
+.site-primary { display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:48px;padding:0 19px;border:1px solid #19c58b;border-radius:7px;background:#19c58b;color:#06251b;font:700 12px "IBM Plex Sans",sans-serif;cursor:pointer;transition:background .15s,transform .15s; }
+.site-primary:hover { background:#48dfb0;transform:translateY(-1px); }
+.site-action-note,.site-plain-note { color:#8598ad;font-size:10px; }
+.site-plain-note { margin:15px 0 0; }
+
+.product-preview { min-width:0;padding:13px;border:1px solid #30465d;border-radius:12px;background:#111e30;box-shadow:0 22px 55px rgba(0,0,0,.22); }
+.preview-appbar { display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 3px 13px;border-bottom:1px solid #273b51; }
+.preview-brand { display:flex;align-items:center;gap:8px;color:#f2f6fb;font-size:11px;letter-spacing:.09em; }
+.preview-brand-mark { width:25px;height:25px;font-size:17px;border-radius:6px; }
+.preview-account { color:#7f93a8;font-size:8px;font-weight:600;letter-spacing:.12em; }
+.preview-layout { display:grid;grid-template-columns:105px minmax(0,1fr);min-height:320px;padding-top:12px; }
+.preview-sidebar { display:flex;flex-direction:column;gap:5px;padding:4px 10px 0 0;border-right:1px solid #273b51; }
+.preview-sidebar span { padding:8px 9px;border-radius:5px;color:#8498ad;font-size:9px; }
+.preview-sidebar .is-active { background:#183b3a;color:#4ad8a9; }
+.preview-main { min-width:0;padding:2px 0 0 14px; }
+.preview-pagehead { display:flex;align-items:center;justify-content:space-between;gap:8px; }
+.preview-pagehead>div { display:grid;gap:3px; }
+.preview-pagehead small { color:#7f93a8;font-size:7px;font-weight:700;letter-spacing:.13em; }
+.preview-pagehead b { color:#edf3fa;font:700 19px "Big Shoulders Display",sans-serif; }
+.preview-pagehead>span { padding:7px 9px;border-radius:5px;background:#19b985;color:#06251b;font-size:8px;font-weight:700;white-space:nowrap; }
+.preview-stat-row { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px; }
+.preview-stat-row>div { min-width:0;display:grid;gap:5px;padding:9px 8px;border:1px solid #2b4057;border-radius:6px;background:#17283d; }
+.preview-stat-row small { color:#91a4b8;font-size:7px;font-weight:700;letter-spacing:.08em; }
+.preview-stat-row b { color:#edf3fa;font:600 18px "IBM Plex Mono",monospace; }
+.preview-stat-row em { color:#8195a9;font-size:7px;font-style:normal; }
+.preview-chart-panel { margin-top:9px;padding:10px;border:1px solid #2b4057;border-radius:6px;background:#14243a; }
+.preview-panel-head { display:flex;justify-content:space-between;align-items:center;gap:8px; }
+.preview-panel-head b { color:#e8eef5;font-size:9px; }
+.preview-panel-head small { color:#8296ab;font-size:7px; }
+.preview-chart-empty { position:relative;display:flex;align-items:center;justify-content:center;min-height:100px;margin-top:8px;overflow:hidden;color:#8195a9;font-size:8px; }
+.preview-chart-empty::before { content:"";position:absolute;inset:8px 0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 24px,#2a3c50 25px); }
+.preview-chart-empty::after { content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #38536a; }
+.preview-chart-empty span:last-child { position:relative;padding:7px 9px;border:1px solid #2b4057;border-radius:5px;background:#14243a; }
+.preview-bottom-row { display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px; }
+.preview-bottom-row>div { display:grid;gap:5px;padding:9px;border:1px solid #2b4057;border-radius:6px;background:#17283d; }
+.preview-bottom-row b { color:#dfe8f1;font-size:8px; }
+.preview-bottom-row span { color:#8195a9;font-size:7px; }
+.preview-caption { margin:10px 2px 0;color:#72869b;font-size:8px;text-align:right; }
+
+.site-features { padding:72px 0 68px;border-bottom:1px solid rgba(105,129,153,.25); }
+.site-section-heading { display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.65fr);align-items:end;gap:28px;margin-bottom:27px; }
+.site-section-heading .site-eyebrow { margin-bottom:12px; }
+.site-section-heading h2,.site-workflow-intro h2,.site-faq-heading h2 { max-width:570px;margin:0;color:#f2f6fb;font:750 clamp(31px,3.8vw,46px)/1.04 "Big Shoulders Display",sans-serif;letter-spacing:.005em; }
+.site-section-heading>p,.site-workflow-intro>p:last-child { max-width:430px;margin:0 0 3px;color:#aab9ca;font-size:13px;line-height:1.75; }
+.site-feature-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px; }
+.site-feature { min-height:205px;display:flex;flex-direction:column;padding:17px;border:1px solid #2a3f55;border-radius:8px;background:#111f32; }
+.site-feature-index { color:#3bcf9c;font:600 10px "IBM Plex Mono",monospace; }
+.site-feature h3 { margin:26px 0 8px;color:#edf3fa;font:700 20px "Big Shoulders Display",sans-serif; }
+.site-feature p { margin:0;color:#aab9ca;font-size:11px;line-height:1.7; }
+.site-feature-meta { margin-top:auto;padding-top:17px;color:#74899f;font-size:8px;font-weight:700;letter-spacing:.1em; }
+
+.site-workflow { display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:45px 70px;padding:68px 0;border-bottom:1px solid rgba(105,129,153,.25); }
+.site-workflow-intro .site-eyebrow,.site-faq-heading .site-eyebrow { margin-bottom:13px; }
+.site-workflow-intro h2 { max-width:390px; }
+.site-workflow-intro>p:last-child { margin-top:15px; }
+.site-workflow-steps { list-style:none;margin:0;padding:0; }
+.site-workflow-steps li { display:grid;grid-template-columns:42px 1fr;gap:14px;padding:17px 0;border-bottom:1px solid #26394e; }
+.site-workflow-steps li:first-child { padding-top:3px; }
+.site-workflow-steps li:last-child { border-bottom:0; }
+.site-workflow-steps li>span { color:#3bcf9c;font:600 11px "IBM Plex Mono",monospace; }
+.site-workflow-steps h3 { margin:0 0 5px;color:#edf3fa;font:700 18px "Big Shoulders Display",sans-serif; }
+.site-workflow-steps p { max-width:500px;margin:0;color:#aab9ca;font-size:11px;line-height:1.7; }
+
+.site-faq { display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:40px 70px;padding:68px 0; }
+.site-faq-heading h2 { font-size:clamp(29px,3.4vw,40px); }
+.site-faq-list details { border-bottom:1px solid #2a3e53; }
+.site-faq-list details:first-child { border-top:1px solid #2a3e53; }
+.site-faq-list summary { position:relative;padding:16px 30px 16px 0;color:#eaf0f6;font-size:12px;font-weight:600;cursor:pointer;list-style:none; }
+.site-faq-list summary::-webkit-details-marker { display:none; }
+.site-faq-list summary::after { content:"+";position:absolute;right:3px;top:13px;color:#43d3a2;font-size:18px;font-weight:400; }
+.site-faq-list details[open] summary::after { content:"−"; }
+.site-faq-list details p { max-width:650px;margin:0;padding:0 25px 16px 0;color:#aab9ca;font-size:11px;line-height:1.7; }
+
+.site-footer { display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 0 5px;border-top:1px solid rgba(105,129,153,.25); }
+.site-footer-brand { color:#edf3fa;text-decoration:none;font:800 17px "Big Shoulders Display",sans-serif;letter-spacing:.08em; }
+.site-footer p { margin:0;color:#8ea1b5;font-size:10px; }
+.site-footer>span { margin-left:auto;color:#72869b;font-size:9px; }
+
+@media(max-width:900px) {
+  .site-hero { grid-template-columns:1fr;gap:34px;padding:55px 0 58px; }
+  .site-hero-copy { max-width:720px; }
+  .product-preview { width:100%;max-width:720px;margin:0 auto; }
+  .site-feature-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:620px) {
+  .site-header { min-height:58px;gap:10px; }
+  .site-brand { gap:7px; }
+  .site-brand-mark { width:30px;height:30px;font-size:20px; }
+  .site-brand-name { font-size:17px; }
+  .site-nav { display:none; }
+  .site-header-actions { gap:9px; }
+  .site-plan { font-size:9px; }
+  .site-login { min-height:34px;padding:0 11px;font-size:11px; }
+  .site-hero { gap:25px;padding:43px 0 44px; }
+  .site-eyebrow { margin-bottom:12px;font-size:8px; }
+  .site-hero h1 { max-width:440px;font-size:clamp(42px,11vw,57px);line-height:.98; }
+  .site-lede { margin-top:16px;font-size:13px;line-height:1.7; }
+  .site-hero-actions { align-items:stretch;flex-direction:column;gap:10px;margin-top:21px; }
+  .site-primary { width:100%;min-height:47px; }
+  .site-action-note { text-align:center; }
+  .site-plain-note { font-size:9px;text-align:center; }
+  .product-preview { padding:9px;border-radius:9px; }
+  .preview-layout { grid-template-columns:73px minmax(0,1fr);min-height:265px;padding-top:9px; }
+  .preview-sidebar { gap:4px;padding-right:6px; }
+  .preview-sidebar span { padding:7px 5px;font-size:7px; }
+  .preview-main { padding-left:8px; }
+  .preview-account { font-size:6px; }
+  .preview-pagehead b { font-size:17px; }
+  .preview-pagehead>span { padding:6px 7px;font-size:7px; }
+  .preview-stat-row { gap:4px;margin-top:9px; }
+  .preview-stat-row>div { gap:4px;padding:7px 5px; }
+  .preview-stat-row small { font-size:6px; }
+  .preview-stat-row b { font-size:14px; }
+  .preview-stat-row em { font-size:6px; }
+  .preview-chart-panel { margin-top:6px;padding:7px; }
+  .preview-panel-head small { font-size:6px; }
+  .preview-chart-empty { min-height:78px;font-size:7px; }
+  .preview-bottom-row { gap:5px;margin-top:6px; }
+  .preview-bottom-row>div { padding:7px; }
+  .preview-bottom-row b { font-size:7px; }
+  .preview-bottom-row span { font-size:6px; }
+  .site-features { padding:46px 0 43px; }
+  .site-section-heading { grid-template-columns:1fr;gap:10px;margin-bottom:17px; }
+  .site-section-heading h2,.site-workflow-intro h2 { font-size:35px; }
+  .site-section-heading>p,.site-workflow-intro>p:last-child { font-size:11px; }
+  .site-feature-grid { grid-template-columns:1fr;gap:7px; }
+  .site-feature { min-height:0;padding:14px; }
+  .site-feature h3 { margin:13px 0 5px;font-size:19px; }
+  .site-feature p { font-size:10px; }
+  .site-feature-meta { padding-top:12px;font-size:7px; }
+  .site-workflow { grid-template-columns:1fr;gap:18px;padding:44px 0; }
+  .site-workflow-steps li { grid-template-columns:30px 1fr;gap:10px;padding:13px 0; }
+  .site-workflow-steps h3 { font-size:17px; }
+  .site-workflow-steps p { font-size:10px; }
+  .site-faq { grid-template-columns:1fr;gap:15px;padding:44px 0; }
+  .site-faq-heading h2 { font-size:33px; }
+  .site-faq-list summary { font-size:11px; }
+  .site-faq-list details p { font-size:10px; }
+  .site-footer { align-items:flex-start;flex-direction:column;gap:6px;padding-top:14px; }
+  .site-footer>span { margin-left:0; }
+}

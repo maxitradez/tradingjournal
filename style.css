@@ -315,7 +315,7 @@ button.day:disabled { cursor: default; color: var(--fg); }
 
 /* Account-first access gate: no journal UI is exposed until cloud data loads. */
 body.account-required #nav,
-body.account-required main,
+body.account-required .wrap > main,
 body.account-required .foot,
 body.account-required #fab,
 body.account-required #banner { display: none !important; }

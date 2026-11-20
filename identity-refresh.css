@@ -1,0 +1,221 @@
+/* ==========================================================================
+   PIPBOOK — EDITORIAL IDENTITY PASS
+   Distinctive display typography, stronger page hierarchy and richer depth.
+   Presentation only. Existing application behaviour and data are untouched.
+   ========================================================================== */
+
+:root {
+  --font-display: "Big Shoulders Display", "IBM Plex Sans", sans-serif;
+  --font-body: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Give the wordmark and page titles a recognisable silhouette. */
+.masthead .brand h1 {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-size: clamp(39px, 5vw, 48px);
+  font-weight: 900;
+  line-height: .82;
+  letter-spacing: .018em;
+  text-transform: uppercase;
+}
+.masthead .tagline {
+  flex-wrap: nowrap;
+  gap: 0;
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: .005em;
+}
+.masthead .tagline span + span::before {
+  content: "·";
+  color: var(--accent-hot);
+  margin: 0 7px;
+  font-weight: 800;
+}
+
+/* Page heading becomes an editorial masthead, not a default app heading. */
+.workspace-topbar {
+  position: relative;
+  isolation: isolate;
+  min-height: 100px;
+  align-items: center;
+  margin: 0 0 20px;
+  padding: 17px 17px 19px;
+  border: 1px solid rgba(56,81,109,.62);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 92% 12%, rgba(25,197,139,.13), transparent 35%),
+    linear-gradient(105deg, rgba(19,34,54,.98), rgba(13,25,42,.92));
+  overflow: hidden;
+}
+.workspace-topbar::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -55px;
+  right: 6%;
+  width: 180px;
+  height: 180px;
+  border: 1px solid rgba(76,210,166,.12);
+  border-radius: 50%;
+  box-shadow: 0 0 0 22px rgba(76,210,166,.025), 0 0 0 46px rgba(76,210,166,.02);
+  pointer-events: none;
+}
+.workspace-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 7px;
+  color: #8fa6bd;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .19em;
+}
+.workspace-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(25,197,139,.45);
+}
+.workspace-heading h2 {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-size: clamp(39px, 5.5vw, 52px);
+  font-weight: 800;
+  line-height: .91;
+  letter-spacing: .012em;
+  text-transform: uppercase;
+}
+.workspace-topbar .fab {
+  position: relative;
+  z-index: 1;
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .015em;
+  box-shadow: 0 7px 24px rgba(25,197,139,.2);
+}
+
+/* Use the display face selectively; keep data itself easy to scan. */
+.panel-head h2,
+#v-calendar .cal-title,
+#v-playbooks .pb h3,
+.drawer-head h2,
+.trade-step h3 {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+.panel-head h2 { font-size: 24px; }
+.dashboard-today-head h2 {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .012em;
+}
+#v-dashboard .dashboard-today {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(25,197,139,.19), transparent 43%),
+    radial-gradient(ellipse at 0% 100%, rgba(50,91,133,.17), transparent 48%),
+    linear-gradient(125deg,#192f49,#122238 72%);
+}
+#v-dashboard .dashboard-today::after {
+  content: "01";
+  position: absolute;
+  top: -24px;
+  right: 15px;
+  color: rgba(223,241,248,.035);
+  font: 900 150px/.9 "Big Shoulders Display", sans-serif;
+  pointer-events: none;
+}
+.dashboard-today-head,
+.dashboard-today-metrics { position: relative; z-index: 1; }
+
+/* Sharper performance tiles: quiet surfaces, stronger typographic contrast. */
+.stats .stat,.stats .stat:nth-child(n) {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg,rgba(27,46,70,.98),rgba(17,31,49,.98));
+  transition: transform .18s ease,border-color .18s ease,background .18s ease;
+}
+.stats .stat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  width: 28px;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: rgba(133,157,183,.38);
+}
+.stats .stat:hover {
+  transform: translateY(-2px);
+  border-color: #45617e;
+}
+.stat-value {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 600;
+  letter-spacing: -.065em;
+}
+.stat-label { letter-spacing: .12em; }
+.dashboard-today-value {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 600;
+  letter-spacing: -.055em;
+}
+
+/* Add depth without turning every surface into a glowing card. */
+#v-dashboard .g-dash>.panel,
+#v-calendar>.panel,
+#v-trades>.panel,
+#v-reports .g-two>.panel,
+#v-insights .g-two>.panel {
+  background:
+    linear-gradient(145deg,rgba(23,41,64,.98),rgba(15,28,46,.98));
+}
+#v-dashboard .a-eq,
+#v-dashboard .a-score,
+#v-dashboard .a-recent {
+  border-top-color: rgba(92,130,163,.48);
+}
+#v-dashboard .a-eq .panel-head h2,
+#v-dashboard .a-score .panel-head h2,
+#v-dashboard .a-recent .panel-head h2 {
+  font-size: 25px;
+}
+
+/* Mobile: keep the identity bold without making the header wrap awkwardly. */
+@media (max-width:760px) {
+  .masthead { min-height: 74px; }
+  .masthead .brand h1 { font-size: 39px; }
+  .masthead .tagline { font-size: 9px; }
+  .masthead .tagline span + span::before { margin: 0 5px; }
+  .workspace-topbar {
+    min-height: 91px;
+    align-items: center;
+    padding: 14px 12px;
+    margin-bottom: 16px;
+    border-radius: 14px;
+  }
+  .workspace-heading h2 { font-size: 42px; }
+  .workspace-kicker { font-size: 8px; letter-spacing: .16em; }
+  .workspace-topbar .fab { min-height: 42px; padding: 9px 11px; }
+  .dashboard-today-head h2 { font-size: 29px; }
+  .panel-head h2 { font-size: 22px; }
+  #v-dashboard .dashboard-today::after { top: -13px; right: 8px; font-size: 112px; }
+}
+@media (max-width:380px) {
+  .masthead .brand h1 { font-size: 36px; }
+  .masthead .tagline { font-size: 8px; }
+  .masthead .tagline span + span::before { margin: 0 4px; }
+  .workspace-heading h2 { font-size: 37px; }
+  .workspace-topbar .fab { font-size: 10px; padding: 8px 9px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .stats .stat { transition: none; }
+}

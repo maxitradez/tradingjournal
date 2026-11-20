@@ -19,106 +19,128 @@
 </head>
 <body class="account-required">
 <section class="public-home" id="public-home">
-  <div id="public-marketing">
-    <header class="public-top">
-      <a class="public-brand" href="#" aria-label="PIPBOOK home">
-        <span class="brand-mark">P</span>
-        <span>PIPBOOK<small>TRADING JOURNAL</small></span>
+  <div id="public-marketing" class="marketing-site">
+    <header class="site-header">
+      <a class="site-brand" href="#" aria-label="PIPBOOK home">
+        <span class="site-brand-mark">P</span>
+        <span class="site-brand-name">PIPBOOK</span>
       </a>
-      <nav class="marketing-nav" aria-label="Explore PIPBOOK">
-        <a href="#product-features">The journal</a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="#product-features">Product</a>
         <a href="#how-it-works">How it works</a>
+        <a href="#common-questions">FAQ</a>
       </nav>
-      <div class="marketing-actions">
-        <span class="public-free"><i></i> FREE · BUILT FOR TRADERS</span>
-        <button class="btn marketing-login" id="public-login" type="button">Log in</button>
+      <div class="site-header-actions">
+        <span class="site-plan">Currently free</span>
+        <button class="site-login" id="public-login" type="button">Log in</button>
       </div>
     </header>
 
-    <section class="public-hero">
-      <div class="public-copy">
-        <p class="eyebrow"><span class="eyebrow-mark"></span> THE JOURNAL BEHIND YOUR PROCESS</p>
-        <h1>Trade with intent.<br><em>Learn with evidence.</em></h1>
-        <p class="public-lede">Your trading journey deserves more than scattered screenshots and half-remembered lessons. Bring your trades, decisions and progress into one place — and understand the trader you're becoming.</p>
-        <div class="public-proof-points">
-          <span><b>01</b> Record the execution</span>
-          <span><b>02</b> Review the decision</span>
-          <span><b>03</b> Learn the pattern</span>
-        </div>
-        <div class="public-actions">
-          <button class="btn btn-primary" id="public-create" type="button">Create your free journal <span aria-hidden="true">↗</span></button>
-          <a class="public-secondary-link" href="#how-it-works">See how PIPBOOK works <span aria-hidden="true">↓</span></a>
-        </div>
-        <p class="public-note">Free to use. Built around the process, not just the outcome.</p>
-      </div>
-
-      <div class="public-art" aria-label="Illustrative preview of the PIPBOOK trading journal">
-        <div class="art-chrome">
-          <div class="art-product"><span class="brand-mark">P</span><span><b>PIPBOOK</b><small>YOUR JOURNAL</small></span></div>
-          <span class="art-preview-tag"><i></i> PRODUCT PREVIEW</span>
-        </div>
-        <div class="preview-window">
-          <div class="preview-top"><span class="preview-caption">PERFORMANCE OVERVIEW</span><span class="preview-period">SAMPLE DATA</span></div>
-          <div class="preview-metrics">
-            <div><small>NET P&amp;L</small><strong>+$1,284.50</strong><em>+8.4% this week</em></div>
-            <div><small>WIN RATE</small><strong>68.2%</strong><em>34 trades logged</em></div>
+    <main>
+      <section class="site-hero" aria-labelledby="site-hero-title">
+        <div class="site-hero-copy">
+          <p class="site-eyebrow">A TRADING JOURNAL FOR YOUR OWN PROCESS</p>
+          <h1 id="site-hero-title">Keep a clear record of <span>every trade.</span></h1>
+          <p class="site-lede">PIPBOOK brings your trade history, performance, setups and reviews into one workspace. Record what happened, then use your own data to understand how you trade.</p>
+          <div class="site-hero-actions">
+            <button class="site-primary" id="public-create" type="button">Create your journal <span aria-hidden="true">↗</span></button>
+            <span class="site-action-note">Free to use · Account required</span>
           </div>
-          <div class="preview-chart">
-            <div class="preview-chart-label"><span>EQUITY PROGRESSION</span><span>MON — FRI</span></div>
-            <svg viewBox="0 0 520 190" role="img" aria-label="Illustrative equity curve">
-              <defs><linearGradient id="pipbook-preview-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
-              <g class="preview-gridlines"><path d="M0 40H520M0 85H520M0 130H520M0 175H520"/></g>
-              <path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12 L520 190 L0 190Z" fill="url(#pipbook-preview-fill)"/>
-              <path d="M0 155 L60 130 L105 142 L160 84 L215 104 L275 58 L330 75 L385 30 L445 48 L520 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="520" cy="12" r="5" fill="#F4F7FB" stroke="currentColor" stroke-width="3"/>
-            </svg>
-          </div>
-          <div class="preview-trades">
-            <div><span>RECENT EXECUTION</span><b>XAUUSD · BUY</b><strong>+$186.00</strong></div>
-            <div><span>RECENT EXECUTION</span><b>EURUSD · SELL</b><strong>+$92.50</strong></div>
-          </div>
+          <p class="site-plain-note">For traders who want a more consistent review process.</p>
         </div>
-        <div class="art-bottomline"><span>CAPTURE THE PROCESS</span><span>UNDERSTAND THE PROGRESS</span></div>
-        <p class="art-disclaimer">Illustrative sample figures · not live account performance</p>
-      </div>
-    </section>
 
-    <section class="public-value-strip" aria-label="PIPBOOK principles">
-      <span>BUILT FOR THE LONG GAME</span>
-      <b>Trade history</b><b>Personal playbooks</b><b>Performance insights</b><b>Mindset &amp; discipline</b>
-    </section>
+        <div class="product-preview" aria-label="Illustrative preview of the PIPBOOK journal interface">
+          <div class="preview-appbar">
+            <div class="preview-brand"><span class="preview-brand-mark">P</span><b>PIPBOOK</b></div>
+            <span class="preview-account">JOURNAL WORKSPACE</span>
+          </div>
+          <div class="preview-layout">
+            <aside class="preview-sidebar" aria-hidden="true">
+              <span class="is-active">Overview</span><span>Trade log</span><span>Calendar</span><span>Playbooks</span><span>Analytics</span>
+            </aside>
+            <div class="preview-main">
+              <div class="preview-pagehead"><div><small>YOUR WORKSPACE</small><b>Dashboard</b></div><span>+ Log trade</span></div>
+              <div class="preview-stat-row">
+                <div><small>NET P&amp;L</small><b>—</b><em>From your records</em></div>
+                <div><small>WIN RATE</small><b>—</b><em>From your records</em></div>
+                <div><small>PROFIT FACTOR</small><b>—</b><em>From your records</em></div>
+              </div>
+              <div class="preview-chart-panel">
+                <div class="preview-panel-head"><b>Equity curve</b><small>Updates as trades are logged</small></div>
+                <div class="preview-chart-empty"><span class="preview-chart-axis"></span><span>Your trade history builds this chart.</span></div>
+              </div>
+              <div class="preview-bottom-row">
+                <div><b>Recent trades</b><span>Instrument · Direction · Result</span></div>
+                <div><b>Journal calendar</b><span>Daily activity and results</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="preview-caption">Interface preview · figures populate from your journal</p>
+        </div>
+      </section>
 
-    <section class="public-features" id="product-features">
-      <div class="feature-heading">
-        <div><p class="eyebrow">ONE JOURNAL. A CLEARER PROCESS.</p><h2>Make every trade<br><em>mean something.</em></h2></div>
-        <p>Your results tell you what happened. Your journal helps you understand why. PIPBOOK connects the numbers with the decisions behind them.</p>
-      </div>
-      <div class="feature-grid">
-        <article class="feature-card"><span class="feature-number">01</span><div class="feature-icon">↗</div><h3>Journal the execution</h3><p>Capture the setup, entry, exit, outcome and lesson behind every position.</p><small>TRADE HISTORY</small></article>
-        <article class="feature-card"><span class="feature-number">02</span><div class="feature-icon">⌁</div><h3>Understand your numbers</h3><p>Review performance, equity progression, drawdown and the patterns in your results.</p><small>PERFORMANCE</small></article>
-        <article class="feature-card"><span class="feature-number">03</span><div class="feature-icon">◇</div><h3>Build your playbook</h3><p>Keep your setups and rules organised, then review how consistently you follow them.</p><small>PROCESS &amp; SETUPS</small></article>
-        <article class="feature-card"><span class="feature-number">04</span><div class="feature-icon">◎</div><h3>Keep your why close</h3><p>Record the reason you started and reconnect with it when the journey gets difficult.</p><small>MINDSET &amp; DISCIPLINE</small></article>
-      </div>
-    </section>
+      <section class="site-features" id="product-features" aria-labelledby="features-title">
+        <div class="site-section-heading">
+          <div><p class="site-eyebrow">THE WORKSPACE</p><h2 id="features-title">Everything you need to review your trading.</h2></div>
+          <p>Each part of PIPBOOK has a specific job: capture your trades, organise your process and make your performance easier to assess.</p>
+        </div>
+        <div class="site-feature-grid">
+          <article class="site-feature">
+            <span class="site-feature-index">01</span>
+            <h3>Trade log</h3>
+            <p>Record the market, direction, entry, exit, result, risk multiple and notes for each position. Attach a chart screenshot to keep the context.</p>
+            <span class="site-feature-meta">EXECUTION RECORDS</span>
+          </article>
+          <article class="site-feature">
+            <span class="site-feature-index">02</span>
+            <h3>Calendar</h3>
+            <p>See trading activity by day and month. Review daily results and identify how your performance changes over time.</p>
+            <span class="site-feature-meta">DAILY &amp; MONTHLY VIEW</span>
+          </article>
+          <article class="site-feature">
+            <span class="site-feature-index">03</span>
+            <h3>Analytics &amp; reports</h3>
+            <p>Review net P&amp;L, win rate, profit factor, average R, drawdown and your equity curve using the trades you have recorded.</p>
+            <span class="site-feature-meta">PERFORMANCE REVIEW</span>
+          </article>
+          <article class="site-feature">
+            <span class="site-feature-index">04</span>
+            <h3>Playbooks</h3>
+            <p>Document your trading setups and rules, then connect them to trades to review how each setup performs.</p>
+            <span class="site-feature-meta">SETUPS &amp; RULES</span>
+          </article>
+        </div>
+      </section>
 
-    <section class="public-how" id="how-it-works">
-      <div class="how-heading">
-        <p class="eyebrow">A SIMPLE ROUTINE. A STRONGER RECORD.</p>
-        <h2>From execution<br>to <em>understanding.</em></h2>
-        <p>PIPBOOK fits around the way traders already work. Log what happened, reflect on what mattered, and return to the dashboard with a clearer picture.</p>
-      </div>
-      <div class="how-steps">
-        <article><span>01 / CAPTURE</span><h3>Log the trade</h3><p>Record the instrument, direction, execution, outcome and the context behind the decision.</p></article>
-        <article><span>02 / REVIEW</span><h3>Reflect honestly</h3><p>Connect the result to your setup, plan, emotions and the lesson worth keeping.</p></article>
-        <article><span>03 / IMPROVE</span><h3>Spot the pattern</h3><p>Use your history, calendar, playbooks and insights to understand your process over time.</p></article>
-      </div>
-    </section>
+      <section class="site-workflow" id="how-it-works" aria-labelledby="workflow-title">
+        <div class="site-workflow-intro">
+          <p class="site-eyebrow">A PRACTICAL ROUTINE</p>
+          <h2 id="workflow-title">A journal is only useful when you use it.</h2>
+          <p>PIPBOOK is designed to fit into the routine around your trading, not replace your trading platform.</p>
+        </div>
+        <ol class="site-workflow-steps">
+          <li><span>01</span><div><h3>Record the trade</h3><p>Enter the details after execution and save the chart or notes that explain the decision.</p></div></li>
+          <li><span>02</span><div><h3>Review the result</h3><p>Use the calendar, trade history and performance reports to see what your records show.</p></div></li>
+          <li><span>03</span><div><h3>Refine your process</h3><p>Compare trades against your playbooks and carry the lessons into your next session.</p></div></li>
+        </ol>
+      </section>
 
-    <section class="public-cta">
-      <div><p class="eyebrow">YOUR PROCESS DESERVES A RECORD</p><h2>Stop relying on memory.<br><em>Start learning from the evidence.</em></h2><p>Build a journal that grows with every trade you take.</p></div>
-      <button class="btn btn-primary" type="button" id="public-create-bottom">Start your free journal <span aria-hidden="true">↗</span></button>
-    </section>
-    <footer class="public-bottom"><span>PIPBOOK · YOUR TRADING JOURNEY, DOCUMENTED.</span><span>FREE TO USE · BUILT FOR SELF-REVIEW</span></footer>
+      <section class="site-faq" id="common-questions" aria-labelledby="faq-title">
+        <div class="site-faq-heading"><p class="site-eyebrow">COMMON QUESTIONS</p><h2 id="faq-title">Before you get started.</h2></div>
+        <div class="site-faq-list">
+          <details><summary>Is PIPBOOK free to use?</summary><p>Yes. PIPBOOK is currently free to use. You need an account to access your journal.</p></details>
+          <details><summary>Does PIPBOOK place or manage trades?</summary><p>No. PIPBOOK is a journaling and review workspace. You continue to place and manage trades through your broker or trading platform.</p></details>
+          <details><summary>Does PIPBOOK guarantee better trading results?</summary><p>No. It organises the records you enter and helps you review them. Your results depend on your own decisions and market conditions.</p></details>
+          <details><summary>Can I keep chart screenshots with my trades?</summary><p>Yes. You can attach a chart screenshot to a trade entry so the setup and execution have visual context.</p></details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="site-footer-brand" href="#">PIPBOOK</a>
+      <p>Trading journal and performance review workspace.</p>
+      <span>For record-keeping and self-review. Not financial advice.</span>
+    </footer>
   </div>
 
   <section class="auth-screen" id="auth-screen" hidden>

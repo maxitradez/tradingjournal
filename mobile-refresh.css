@@ -373,3 +373,36 @@
   .nav { gap: 4px; padding: 9px; }
   .nav > a, .nav > a[data-v] { min-height: 42px; padding: 8px 10px; }
 }
+
+
+/* MOBILE NAV PANEL HEIGHT FIX
+   The earlier mobile breakpoint left the desktop/tablet bottom anchor active.
+   That stretched the fixed menu to the viewport height and distributed grid rows. */
+@media (max-width: 760px) {
+  #nav {
+    top: calc(76px + env(safe-area-inset-top));
+    right: 12px;
+    bottom: auto !important;
+    left: 12px;
+    width: auto;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 100px - env(safe-area-inset-top));
+    align-content: start;
+    grid-auto-rows: minmax(44px, auto);
+    overflow-y: auto;
+    justify-content: stretch;
+  }
+  body.mobile-nav-open #nav {
+    display: grid;
+    height: auto !important;
+    align-content: start;
+  }
+}
+@media (max-width: 420px) {
+  #nav {
+    top: calc(72px + env(safe-area-inset-top));
+    max-height: calc(100dvh - 88px - env(safe-area-inset-top));
+    bottom: auto !important;
+  }
+}

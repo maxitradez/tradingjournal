@@ -1,0 +1,331 @@
+/* PIPBOOK MOBILE-FIRST PRODUCT PASS
+   Additive overrides only: desktop layout and existing app behaviour remain unchanged. */
+
+:root {
+  --pip-mobile-ink: #f2f6fc;
+  --pip-mobile-muted: #a9b9ce;
+  --pip-mobile-line: rgba(148, 169, 196, .17);
+  --pip-mobile-card: #15253b;
+  --pip-mobile-card-raised: #1a2d46;
+}
+
+@media (max-width: 760px) {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    padding: 14px 16px calc(34px + env(safe-area-inset-bottom));
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .wrap { width: 100%; max-width: 100%; min-width: 0; }
+  main, main > section:not([hidden]), #v-dashboard, #v-calendar, #v-trades,
+  #v-playbooks, #v-reports, #v-insights, #v-settings, #v-profile {
+    width: 100%; min-width: 0; max-width: 100%;
+  }
+  main > section:not([hidden]) { gap: 18px; }
+
+  /* Header and navigation */
+  .masthead {
+    min-height: 68px;
+    padding: 8px 0 15px;
+    gap: 12px;
+    align-items: center;
+  }
+  .masthead .brand h1 { font-size: 29px; line-height: 1; letter-spacing: -.035em; }
+  .masthead .tagline { margin-top: 6px; font-size: 10px; line-height: 1.35; gap: 7px; flex-wrap: wrap; }
+  .mobile-menu-toggle {
+    width: 52px; height: 50px; flex: 0 0 52px;
+    border-radius: 14px; gap: 4px;
+  }
+  .mobile-menu-toggle span { width: 21px; }
+  .mobile-menu-toggle b { font-size: 10px; letter-spacing: .04em; }
+  .masthead .chip { display: none; }
+  .nav {
+    position: fixed;
+    z-index: 120;
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+    overflow-y: auto;
+    padding: 12px;
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    border: 1px solid rgba(148,169,196,.22);
+    border-radius: 18px;
+    background: #101d30;
+    box-shadow: 0 24px 70px rgba(0,0,0,.48);
+  }
+  body.mobile-nav-open .nav { display: grid; }
+  .nav > a, .nav > a[data-v] {
+    min-width: 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 11px 12px;
+    border-radius: 11px;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+  .nav > a[aria-current="page"] { font-weight: 700; }
+  .scrim { z-index: 110; }
+  .workspace-topbar {
+    min-height: 68px;
+    margin-bottom: 18px;
+    padding: 15px 0 16px;
+    gap: 12px;
+    align-items: center;
+  }
+  .workspace-kicker { font-size: 10px; letter-spacing: .13em; line-height: 1.4; }
+  .workspace-heading h2 { font-size: clamp(24px, 6vw, 29px); line-height: 1.12; margin-top: 4px; }
+  .fab { min-height: 46px; padding: 11px 15px; border-radius: 12px; font-size: 13px; white-space: nowrap; }
+
+  /* Readability and card rhythm */
+  .panel {
+    padding: 19px 17px;
+    border-radius: 17px;
+    min-width: 0;
+  }
+  .panel-head { gap: 12px; margin-bottom: 17px; align-items: flex-start; }
+  .panel-head h2 { font-size: 19px; line-height: 1.3; }
+  .eyebrow, .stat-label { font-size: 11px; line-height: 1.45; letter-spacing: .09em; }
+  .sub, .hint, .empty, .form-msg, .profile-message { font-size: 13px; line-height: 1.55; }
+  .btn {
+    min-height: 46px;
+    padding: 11px 15px;
+    border-radius: 11px;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+  .btn-sm { min-height: 40px; padding: 9px 12px; font-size: 12px; }
+  label, .lbl, .field label { display: block; font-size: 13px; line-height: 1.45; margin-bottom: 7px; }
+  input, select, textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 50px;
+    padding: 12px 14px;
+    border-radius: 11px;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  textarea { min-height: 112px; line-height: 1.55; }
+  .field { min-width: 0; }
+  .fields { gap: 15px 12px; }
+  .form-actions { gap: 10px; }
+  .form-actions .btn { flex: 1 1 auto; }
+  .foot { margin: 22px 2px 0; font-size: 11px; line-height: 1.55; }
+
+  /* Summary metrics */
+  .stats { gap: 10px; }
+  .stat {
+    min-width: 0;
+    min-height: 106px;
+    padding: 15px;
+    border-radius: 14px;
+  }
+  .stat-label { font-size: 10px; line-height: 1.45; }
+  .stat-value { margin-top: 6px; font-size: clamp(22px, 5.8vw, 27px); line-height: 1.15; overflow-wrap: anywhere; }
+  .stat-sub { margin-top: 5px; font-size: 12px; line-height: 1.45; }
+  .grid { gap: 13px; }
+  .toolbar { gap: 10px; }
+  .toolbar input, .toolbar select { min-height: 48px; font-size: 14px; }
+  .chart { min-width: 0; }
+
+  /* Dashboard: strong hierarchy without tiny labels */
+  #v-dashboard { gap: 17px; }
+  #v-dashboard .dashboard-today { padding: 19px; border-radius: 17px; }
+  #v-dashboard .dashboard-today-head { margin-bottom: 17px; gap: 10px; }
+  #v-dashboard .dashboard-today-head h2 { font-size: 22px; }
+  #v-dashboard .dashboard-today-head .sub { font-size: 13px; }
+  #v-dashboard .dashboard-today-metrics { gap: 10px; }
+  #v-dashboard .dashboard-today-metrics > div { min-height: 78px; padding: 13px; gap: 8px; }
+  #v-dashboard .dashboard-today-metrics .stat-label { font-size: 10px; }
+  #v-dashboard .dashboard-today-value { font-size: 26px; }
+  #v-dashboard .dashboard-today-status { font-size: 13px; }
+  #v-dashboard .stats .stat { min-height: 104px; padding: 14px; }
+  #v-dashboard .stats .stat .stat-value { font-size: 24px; }
+  #v-dashboard .goals { padding: 18px; }
+  #v-dashboard .goals .goal-v { font-size: 25px; }
+  #v-dashboard .g-dash { gap: 15px; }
+  #v-dashboard .g-dash > .panel { padding: 17px; }
+  #v-dashboard .g-dash .a-eq .chart { min-height: 205px; }
+  #v-dashboard .g-dash .a-recent .recent li { padding: 15px 0; }
+  #v-dashboard .g-dash .a-recent .recent { font-size: 14px; }
+
+  /* Calendar: prioritise legibility over forcing eight columns into a phone.
+     The calendar gets its own horizontal scroll area; the rest of the page does not. */
+  #v-calendar > .panel {
+    padding: 16px 13px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  #v-calendar .cal-head { gap: 10px; margin-bottom: 15px; }
+  #v-calendar .cal-head .nv { gap: 8px; }
+  #v-calendar .cal-title { font-size: 21px; line-height: 1.25; }
+  #v-calendar .cal-head .btn, #v-calendar .cal-head button { min-width: 42px; min-height: 44px; }
+  #v-calendar .cal-tiles { gap: 9px; margin-bottom: 16px; }
+  #v-calendar .cal-tiles .mini { min-width: 0; padding: 13px; }
+  #v-calendar .cal-tiles .stat-label { font-size: 10px; }
+  #v-calendar .cal-tiles .stat-value { font-size: 22px; }
+  #v-calendar .cal {
+    width: max(100%, 610px);
+    min-width: 610px;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(78px, .95fr);
+    gap: 6px;
+  }
+  #v-calendar .cal-h {
+    min-height: 32px;
+    padding: 7px 2px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  #v-calendar .cal-h:nth-child(8) { font-size: 10px; }
+  #v-calendar .day {
+    min-width: 0;
+    min-height: 82px;
+    padding: 9px 4px;
+    border-radius: 10px;
+    gap: 7px;
+  }
+  #v-calendar .day .dn { font-size: 12px; line-height: 1.25; }
+  #v-calendar .day .dp { font-size: 11px; line-height: 1.25; overflow-wrap: anywhere; }
+  #v-calendar .day .dc { display: block; font-size: 10px; line-height: 1.25; }
+  #v-calendar .day.wk {
+    min-height: 82px;
+    padding: 8px 4px;
+    gap: 6px;
+    border-radius: 10px;
+  }
+  #v-calendar .day.wk .dn { font-size: 10px; }
+  #v-calendar .day.wk .dp { font-size: 12px; }
+  #v-calendar .day.wk .dc { font-size: 9px; }
+  #v-calendar .day.sel { outline-offset: 1px; }
+  #v-calendar .day-detail { margin-top: 18px; }
+
+  /* Trade log, playbooks and insight cards */
+  #v-trades > .panel { padding: 17px; }
+  #v-trades .toolbar { gap: 10px; }
+  #v-trades .trade-view-tools { gap: 9px; flex-wrap: wrap; }
+  #v-trades .trade-view-switch { padding: 4px; }
+  #v-trades .trade-view-switch .btn { min-height: 42px; font-size: 12px; }
+  #v-trades .trade-card-grid { gap: 13px; }
+  #v-trades .tcard { padding: 17px; border-radius: 15px; }
+  #v-trades .tablewrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #v-trades table { min-width: 620px; }
+  #v-trades th { font-size: 11px; padding: 11px 9px; }
+  #v-trades td { font-size: 12px; padding: 12px 9px; }
+  #v-playbooks .pb { padding: 18px; gap: 14px; }
+  #v-playbooks .pb h3 { font-size: 20px; }
+  #v-playbooks .pb-desc, #v-playbooks .pb ul { font-size: 14px; line-height: 1.6; }
+  #v-playbooks .pb-stats b { font-size: 20px; }
+  #v-playbooks .pb-stats span, #v-playbooks .pb .lbl { font-size: 11px; }
+  #v-reports .g-two, #v-insights .g-two { gap: 13px; }
+  #v-reports .g-two > .panel, #v-insights .g-two > .panel { padding: 17px; }
+  #v-insights .icard { padding: 16px; }
+  #v-insights .icard p { font-size: 13px; line-height: 1.55; }
+  #v-settings .g-two > .panel { padding: 17px; }
+  #v-settings .hint { font-size: 13px; }
+  #v-profile .profile-view, #v-profile .password-card { padding: 18px; }
+  #v-profile .profile-view h2 { font-size: 26px; }
+
+  /* Trade-entry drawer: comfortable form controls and safe-area spacing */
+  .drawer {
+    width: min(100%, 620px);
+    max-width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    padding: 18px 17px calc(22px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .drawer-head { gap: 12px; padding-bottom: 14px; }
+  .drawer-head h2 { font-size: 22px; }
+  .xbtn { width: 44px; height: 44px; flex: 0 0 44px; }
+  .trade-progress { margin-bottom: 17px; }
+  .trade-progress-meta { font-size: 11px; }
+  .trade-step h3 { font-size: 20px; }
+  .trade-step-intro { font-size: 14px; line-height: 1.55; }
+  .trade-wizard-actions { gap: 10px; padding-top: 14px; }
+  .trade-wizard-actions .btn { min-height: 49px; flex: 1 1 0; }
+  .trade-review-summary { padding: 15px; }
+  .trade-review-row { gap: 12px; padding: 12px 0; }
+  .trade-review-label { font-size: 12px; }
+  .trade-review-row strong { font-size: 14px; text-align: right; overflow-wrap: anywhere; }
+  .seg { min-height: 48px; }
+  .seg label { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .mchips, .chips { gap: 8px; }
+  .mchips label, .chips button { min-height: 42px; padding: 9px 12px; font-size: 13px; }
+
+  /* Public landing and sign-in also share the mobile typography scale */
+  .public-home { padding-left: 0; padding-right: 0; }
+  .public-top { min-height: 60px; gap: 10px; }
+  .public-brand { font-size: 16px; }
+  .public-brand small { font-size: 9px; }
+  .public-hero { padding: 42px 0; gap: 25px; }
+  .public-copy > .eyebrow, .public-copy .eyebrow { font-size: 10px; }
+  .public-lede { font-size: 15px; line-height: 1.65; }
+  .public-proof-points span { font-size: 12px; }
+  .public-actions .btn, .public-cta .btn { min-height: 50px; font-size: 14px; }
+  .public-note { font-size: 11px; }
+  .public-features { padding: 42px 0; }
+  .feature-heading h2, .how-heading h2 { font-size: clamp(30px, 8vw, 38px); }
+  .feature-heading > p { font-size: 14px; line-height: 1.6; }
+  .feature-card { padding: 15px; min-height: 210px; }
+  .feature-card h3 { font-size: 16px; }
+  .feature-card p { font-size: 12px; line-height: 1.55; }
+  .feature-card small { font-size: 9px; }
+  .how-steps h3 { font-size: 17px; }
+  .how-steps p { font-size: 13px; line-height: 1.6; }
+  .auth-screen { padding: 15px 0 30px; }
+  .auth-screen-intro { padding: 21px; }
+  .auth-screen-intro h1 { font-size: 32px; }
+  .auth-screen-intro > p:not(.eyebrow) { font-size: 14px; line-height: 1.6; }
+  .auth-benefits b { font-size: 13px; }
+  .auth-benefits small { font-size: 12px; }
+  .auth-form-stage { padding: 20px; }
+  #public-auth .auth-form h2 { font-size: 24px; }
+  #public-auth input { min-height: 49px; font-size: 15px; }
+  #public-auth .auth-submit { min-height: 49px; }
+  .profile-card { padding: 22px 18px; }
+  .profile-card input, .profile-card select { min-height: 49px; }
+}
+
+@media (max-width: 420px) {
+  body { padding-left: 13px; padding-right: 13px; }
+  .workspace-topbar { align-items: flex-end; }
+  .workspace-heading h2 { font-size: 24px; }
+  .fab { min-height: 43px; padding: 10px 12px; font-size: 12px; }
+  .stats { gap: 9px; }
+  .stat { padding: 12px; min-height: 98px; }
+  .stat-value { font-size: 22px; }
+  #v-dashboard .stats .stat .stat-value { font-size: 22px; }
+  .panel { padding: 16px 14px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .feature-card { min-height: 0; }
+  .public-value-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 360px) {
+  body { padding-left: 11px; padding-right: 11px; }
+  .masthead .brand h1 { font-size: 26px; }
+  .masthead .tagline { font-size: 9px; }
+  .workspace-kicker { font-size: 9px; }
+  .workspace-heading h2 { font-size: 22px; }
+  .fab { padding: 9px 10px; font-size: 11px; }
+  .stat { padding: 11px; }
+  .stat-value { font-size: 20px; }
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .fields .field.full { grid-column: auto; }
+  #v-calendar .cal { min-width: 610px; }
+  .nav { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

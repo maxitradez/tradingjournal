@@ -329,3 +329,47 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* MENU SPACING FIX — restore the compact, original mobile menu feel. */
+@media (max-width: 760px) {
+  .mobile-menu-toggle {
+    width: 48px;
+    height: 46px;
+    flex: 0 0 48px;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 11px;
+  }
+  .mobile-menu-toggle span { width: 18px; height: 2px; }
+  .mobile-menu-toggle b {
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: .03em;
+  }
+  .nav {
+    gap: 5px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .nav > a, .nav > a[data-v] {
+    min-height: 44px;
+    padding: 9px 11px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+  .nav > a:not([aria-current="page"]) {
+    background: transparent;
+    box-shadow: none;
+  }
+  .nav > a[aria-current="page"] {
+    background: rgba(16, 185, 129, .12);
+    border-color: rgba(16, 185, 129, .22);
+  }
+}
+@media (max-width: 420px) {
+  .nav { gap: 4px; padding: 9px; }
+  .nav > a, .nav > a[data-v] { min-height: 42px; padding: 8px 10px; }
+}

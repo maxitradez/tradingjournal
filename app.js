@@ -14,7 +14,7 @@
     { name: 'Breakout retest', description: 'Trade the break of a key level only after price comes back to test it.', rules: ['Trade with the higher timeframe trend', 'Wait for the retest, never chase the break', 'Stop loss placed before entry', 'Risk no more than 1% of the account'] },
     { name: 'Trend pullback', description: 'Join an established trend when price pulls back to value.', rules: ['Price is pulling back to a key moving average', 'Confirmation candle has closed', 'Target is at least 2R', 'No trade within 15 minutes of major news'] }
   ];
-  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], accounts: [], activeAccount: null, settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
+  var state = { assets: null, shot: { blob: null, preview: '', existing: '', remove: false }, trades: [], playbooks: [], days: [], accounts: [], archivedAccounts: [], activeAccount: null, settings: { balance: null, riskPct: null, currency: '', example: false }, mode: 'signed-out', readOnlyCloud: false, dataState: 'account-required', cols: null, view: 'dashboard', month: null, selDay: null, editingTrade: null, editingPb: null, filters: { q: '', pb: '', outcome: '', plan: '' }, reviewHTML: null, reviewing: false, lastFocus: null };
 
   function $(id) { return document.getElementById(id); }
   function h(tag, attrs) {
@@ -394,7 +394,7 @@
       var cloud = await adapter.load();
       if (token !== authLoadToken || !authUser || authUser.id !== user.id) return;
       activeCloudAdapter = adapter;
-      state.accounts = cloud.accounts || []; state.activeAccount = cloud.activeAccount || null;
+      state.accounts = cloud.accounts || []; state.archivedAccounts = cloud.archivedAccounts || []; state.activeAccount = cloud.activeAccount || null;
       state.trades = (cloud.trades || []).map(normTrade);
       state.playbooks = (cloud.playbooks || []).map(normPb);
       state.days = (cloud.days || []).map(normDay);
@@ -412,7 +412,7 @@
       authNotice('Your private journal is ready. Trades, playbooks, daily notes, settings and private chart screenshots save to your account.', false);
     } catch (error) {
       if (token !== authLoadToken) return;
-      activeCloudAdapter = null; state.mode = 'signed-out'; state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
+      activeCloudAdapter = null; state.mode = 'signed-out'; state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.archivedAccounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings(); setDataState('cloud-load-error'); renderAll(); setAccountGate(false);
       authNotice('Could not load your cloud journal: ' + ((error && error.message) || 'Please try again. Your journal remains locked; refresh or sign out and try again.'), true);
     }
   }
@@ -421,7 +421,7 @@
     if (!nextUser) {
       authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
       state.mode = 'signed-out'; state.readOnlyCloud = false;
-      state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings();
+      state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.archivedAccounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings();
       setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll();
       if (window.PipbookAuthPage) window.PipbookAuthPage.close();
       return;
@@ -1608,14 +1608,16 @@
       state.playbooks = (cloud.playbooks || []).map(normPb);
       state.days = (cloud.days || []).map(normDay);
       var rules = state.activeAccount && state.activeAccount.prop_rules || {};
-      state.settings = normSettings(Object.assign({}, cloud.settings, {
-        balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
-        currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: Object.prototype.hasOwnProperty.call(rules, 'riskPct') ? rules.riskPct : cloud.settings.riskPct,
-        dailyLoss: Object.prototype.hasOwnProperty.call(rules, 'dailyLossLimit') ? rules.dailyLossLimit : cloud.settings.dailyLoss,
-        maxTradesDay: Object.prototype.hasOwnProperty.call(rules, 'maxTradesDay') ? rules.maxTradesDay : cloud.settings.maxTradesDay,
-        monthlyTarget: Object.prototype.hasOwnProperty.call(rules, 'profitTarget') ? rules.profitTarget : cloud.settings.monthlyTarget
-      }));
+      state.settings = normSettings({
+        balance: state.activeAccount ? state.activeAccount.starting_balance : null,
+        currency: state.activeAccount ? state.activeAccount.currency : '',
+        riskPct: Object.prototype.hasOwnProperty.call(rules, 'riskPct') ? rules.riskPct : null,
+        dailyLoss: Object.prototype.hasOwnProperty.call(rules, 'dailyLossLimit') ? rules.dailyLossLimit : null,
+        maxTradesDay: Object.prototype.hasOwnProperty.call(rules, 'maxTradesDay') ? rules.maxTradesDay : null,
+        monthlyTarget: Object.prototype.hasOwnProperty.call(rules, 'profitTarget') ? rules.profitTarget : null,
+        lossStreakThreshold: Object.prototype.hasOwnProperty.call(rules, 'lossStreakThreshold') ? rules.lossStreakThreshold : 3,
+        example: false
+      });
       state.mode = 'cloud'; applySettings(); setDataState('cloud-ready'); renderAll();
       toast('Switched to ' + (state.activeAccount.account_name || 'account'));
     } catch (error) {

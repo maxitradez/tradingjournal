@@ -1597,13 +1597,13 @@
     if (state.readOnlyCloud || state.dataState === 'cloud-loading') Array.prototype.forEach.call(box.querySelectorAll('.hero-empty .row-btns'), function (el) { el.hidden = true; });
   }
   async function switchTradingAccount(accountId) {
-    if (!activeCloudAdapter || !accountId || !authUser || state.dataState === 'cloud-loading' || state.dataState === 'cloud-syncing') return;
+    if (!activeCloudAdapter || !accountId || !authUser || state.dataState === 'cloud-loading' || state.dataState === 'cloud-syncing') return false;
     var token = ++authLoadToken;
     setDataState('cloud-loading'); renderAll();
     try {
       var cloud = await activeCloudAdapter.load(accountId);
       if (token !== authLoadToken || !authUser) return;
-      state.accounts = cloud.accounts || []; state.activeAccount = cloud.activeAccount || null;
+      state.accounts = cloud.accounts || []; state.archivedAccounts = cloud.archivedAccounts || []; state.activeAccount = cloud.activeAccount || null;
       state.trades = (cloud.trades || []).map(normTrade);
       state.playbooks = (cloud.playbooks || []).map(normPb);
       state.days = (cloud.days || []).map(normDay);
@@ -1620,10 +1620,12 @@
       });
       state.mode = 'cloud'; applySettings(); setDataState('cloud-ready'); renderAll();
       toast('Switched to ' + (state.activeAccount.account_name || 'account'));
+      return true;
     } catch (error) {
       if (token !== authLoadToken) return;
       state.mode = 'cloud'; setDataState('cloud-error'); renderAll();
       toast('Could not switch account: ' + ((error && error.message) || 'Please try again.'));
+      return false;
     }
   }
   function openAccountRulesDialog() {
@@ -1726,6 +1728,143 @@
     var first = dialog.querySelector('input'); if (first) first.focus();
   }
 
+  function accountDialog(title, subtitle) {
+    var overlay = h('div', { class: 'rules-overlay account-dialog-overlay' });
+    var dialog = h('section', { class: 'rules-dialog account-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
+    dialog.appendChild(h('div', { class: 'rules-dialog-head' },
+      h('div', {}, h('span', { class: 'rules-eyebrow', text: 'PIPBOOK WORKSPACE' }), h('h2', { text: title }), h('p', { text: subtitle || '' })),
+      h('button', { type: 'button', class: 'btn btn-sm', text: 'Close', onclick: function () { overlay.remove(); } })
+    ));
+    overlay.addEventListener('click', function (event) { if (event.target === overlay) overlay.remove(); });
+    overlay.appendChild(dialog); document.body.appendChild(overlay);
+    return { overlay: overlay, dialog: dialog };
+  }
+  function openAccountDetailsDialog(editing) {
+    if (!activeCloudAdapter) return;
+    var account = editing ? state.activeAccount : null;
+    var modal = accountDialog(editing ? 'Edit account' : 'Add trading account', editing ? account.account_name : 'Create a separate workspace for another broker, prop firm or personal account.');
+    var form = h('form', { class: 'rules-form' });
+    var fields = [
+      { key: 'account_name', label: 'Account name', placeholder: 'e.g. GoFund 10K', value: account ? account.account_name : '' },
+      { key: 'broker', label: 'Broker or prop firm', placeholder: 'e.g. GoFund', value: account ? account.broker || '' : '' }
+    ];
+    fields.forEach(function (field) {
+      var label = h('label', { class: 'rules-field' });
+      label.appendChild(h('span', { class: 'rules-field-label', text: field.label }));
+      label.appendChild(h('input', { name: field.key, required: field.key === 'account_name', maxlength: '80', placeholder: field.placeholder, value: field.value }));
+      form.appendChild(label);
+    });
+    if (!editing) {
+      var typeLabel = h('label', { class: 'rules-field' });
+      typeLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Account type' }));
+      var type = h('select', { name: 'account_type' });
+      [['prop','Prop firm'],['live','Live'],['demo','Demo']].forEach(function (pair) { type.appendChild(h('option', { value: pair[0], text: pair[1] })); });
+      typeLabel.appendChild(type); form.appendChild(typeLabel);
+      var balanceLabel = h('label', { class: 'rules-field' });
+      balanceLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Starting balance' }));
+      balanceLabel.appendChild(h('input', { name: 'starting_balance', type: 'number', min: '0', step: 'any', value: '0', required: true }));
+      balanceLabel.appendChild(h('small', { text: 'Enter the starting balance in the currency selected for this account.' }));
+      form.appendChild(balanceLabel);
+      var currencyLabel = h('label', { class: 'rules-field' });
+      currencyLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Currency code' }));
+      currencyLabel.appendChild(h('input', { name: 'currency', maxlength: '4', value: state.activeAccount && state.activeAccount.currency || 'USD', required: true }));
+      form.appendChild(currencyLabel);
+      form.appendChild(h('p', { class: 'rules-disclaimer', text: 'This account starts with its own blank risk limits and trading setup. It will not copy the current account’s risk settings.' }));
+    }
+    var error = h('p', { class: 'rules-error', role: 'alert', hidden: true });
+    form.appendChild(error);
+    var actions = h('div', { class: 'rules-actions' });
+    actions.appendChild(h('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: function () { modal.overlay.remove(); } }));
+    var save = h('button', { type: 'submit', class: 'btn btn-primary', text: editing ? 'Save changes' : 'Create account' });
+    actions.appendChild(save); form.appendChild(actions); modal.dialog.appendChild(form);
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      var name = form.elements.account_name.value.trim();
+      if (!name) { error.textContent = 'Enter an account name.'; error.hidden = false; return; }
+      save.disabled = true; save.textContent = editing ? 'Saving…' : 'Creating…'; error.hidden = true;
+      try {
+        if (editing) {
+          var updated = await activeCloudAdapter.updateAccount(account.id, { account_name: name, broker: form.elements.broker.value.trim() || null });
+          state.activeAccount = updated;
+          state.accounts = state.accounts.map(function (item) { return item.id === updated.id ? updated : item; });
+          modal.overlay.remove(); renderAll(); toast('Account details updated.');
+        } else {
+          var balance = Number(form.elements.starting_balance.value);
+          var currency = form.elements.currency.value.trim().toUpperCase();
+          if (!isFinite(balance) || balance < 0) throw new Error('Starting balance must be zero or greater.');
+          if (!/^[A-Z]{3,4}$/.test(currency)) throw new Error('Enter a valid 3–4 letter currency code.');
+          var created = await activeCloudAdapter.createAccount({
+            account_name: name, account_type: form.elements.account_type.value,
+            broker: form.elements.broker.value.trim() || null, starting_balance: balance, currency: currency,
+            prop_rules: { riskPct: null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null, profitTarget: null, consistencyPercent: null, minimumTradingDays: null, maxTradesDay: null, lossStreakThreshold: 3, newsTradingAllowed: null, weekendHoldingAllowed: null }
+          });
+          modal.overlay.remove();
+          var switched = await switchTradingAccount(created.id);
+          if (!switched) toast('Account created, but could not switch to it. Refresh the account list and try again.');
+        }
+      } catch (err) {
+        save.disabled = false; save.textContent = editing ? 'Save changes' : 'Create account';
+        error.textContent = (err && err.message) || 'Please try again.'; error.hidden = false;
+      }
+    });
+    var focus = modal.dialog.querySelector('input'); if (focus) focus.focus();
+  }
+  function openArchivedAccountsDialog() {
+    if (!activeCloudAdapter) return;
+    var modal = accountDialog('Archived accounts', 'Archived accounts are hidden from your active selector. Their trades, journals and rules remain saved.');
+    var list = h('div', { class: 'archived-account-list' });
+    var archived = state.archivedAccounts || [];
+    if (!archived.length) list.appendChild(h('p', { class: 'rules-intro', text: 'No archived accounts. When you archive an account, it will appear here and can be restored at any time.' }));
+    archived.forEach(function (account) {
+      var row = h('div', { class: 'archived-account-row' });
+      var details = h('div', { class: 'archived-account-details' },
+        h('strong', { text: account.account_name || 'Untitled account' }),
+        h('small', { text: (account.broker || 'No broker specified') + ' · ' + (account.account_type || 'account') })
+      );
+      var restore = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Restore' });
+      restore.addEventListener('click', async function () {
+        restore.disabled = true; restore.textContent = 'Restoring…';
+        try {
+          var restored = await activeCloudAdapter.restoreAccount(account.id);
+          state.archivedAccounts = state.archivedAccounts.filter(function (item) { return item.id !== account.id; });
+          state.accounts = (state.accounts || []).concat([restored]);
+          modal.overlay.remove(); renderAll(); toast('Account restored. Its previous history and settings are available again.');
+        } catch (err) { restore.disabled = false; restore.textContent = 'Restore'; toast('Could not restore account: ' + ((err && err.message) || 'Please try again.')); }
+      });
+      row.appendChild(details); row.appendChild(restore); list.appendChild(row);
+    });
+    modal.dialog.appendChild(list);
+  }
+  function openArchiveAccountDialog() {
+    if (!state.activeAccount || !activeCloudAdapter) return;
+    if (state.accounts.length < 2) { toast('Create or restore another active account before archiving this one.'); return; }
+    var retiring = state.activeAccount;
+    var modal = accountDialog('Archive account?', 'Your trades, journals, account rules and setup will be kept. You can restore this account later.');
+    modal.dialog.appendChild(h('p', { class: 'rules-disclaimer', text: 'PIPBOOK will first switch to another active account, then archive this one. No trading history will be deleted.' }));
+    var actions = h('div', { class: 'rules-actions' });
+    actions.appendChild(h('button', { type: 'button', class: 'btn', text: 'Keep account', onclick: function () { modal.overlay.remove(); } }));
+    var confirm = h('button', { type: 'button', class: 'btn btn-primary', text: 'Archive account' });
+    confirm.addEventListener('click', async function () {
+      var fallback = state.accounts.find(function (item) { return item.id !== retiring.id; });
+      if (!fallback) { toast('No other active account is available.'); return; }
+      confirm.disabled = true; confirm.textContent = 'Switching…';
+      var switched = await switchTradingAccount(fallback.id);
+      if (!switched || !state.activeAccount || state.activeAccount.id !== fallback.id) {
+        confirm.disabled = false; confirm.textContent = 'Archive account';
+        toast('Could not switch accounts. Nothing was archived.'); return;
+      }
+      try {
+        await activeCloudAdapter.archiveAccount(retiring.id);
+        state.accounts = state.accounts.filter(function (item) { return item.id !== retiring.id; });
+        state.archivedAccounts = (state.archivedAccounts || []).concat([Object.assign({}, retiring, { is_archived: true })]);
+        modal.overlay.remove(); renderAll(); toast('Account archived. Its history is safe and can be restored.');
+      } catch (err) {
+        toast('The account switch succeeded, but archiving failed: ' + ((err && err.message) || 'Please try again.'));
+        modal.overlay.remove();
+      }
+    });
+    actions.appendChild(confirm); modal.dialog.appendChild(actions);
+  }
   function renderAccountWorkspace() {
     var topbar = document.querySelector('.workspace-topbar');
     if (!topbar) return;
@@ -1737,65 +1876,12 @@
       var select = h('select', { id: 'account-workspace-select', 'aria-label': 'Active trading account', class: 'account-select' });
       select.style.cssText = 'min-height:40px;max-width:210px;padding:8px 12px;border:1px solid var(--line,#333);border-radius:10px;background:var(--panel,#111);color:inherit;font:inherit;';
       select.addEventListener('change', function () { switchTradingAccount(select.value); });
-      var add = h('button', { type: 'button', class: 'btn btn-sm', text: '+ Account', title: 'Create a trading account' });
-      add.addEventListener('click', async function () {
-        if (!activeCloudAdapter || state.dataState !== 'cloud-ready' && state.dataState !== 'cloud-synced') return;
-        var name = window.prompt('Name this trading account (for example, GoFund 10K):');
-        if (!name || !name.trim()) return;
-        var kind = window.prompt('Account type: live, demo, or prop', 'prop');
-        if (kind == null) return;
-        var firm = window.prompt('Broker or prop firm (optional):', '');
-        if (firm == null) return;
-        var balanceText = window.prompt('Starting balance (numbers only):', '10000');
-        if (balanceText == null) return;
-        var balance = Number(balanceText);
-        if (!isFinite(balance) || balance < 0) { toast('Enter a valid starting balance.'); return; }
-        try {
-          var created = await activeCloudAdapter.createAccount({
-            account_name: name.trim(), account_type: ['live','demo','prop'].indexOf(kind.toLowerCase()) >= 0 ? kind.toLowerCase() : 'live',
-            broker: firm.trim(), starting_balance: balance,
-            currency: state.activeAccount && state.activeAccount.currency || 'USD',
-            prop_rules: { riskPct: state.settings.riskPct || null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null, profitTarget: null, consistencyPercent: null, minimumTradingDays: null, maxTradesDay: null, newsTradingAllowed: null, weekendHoldingAllowed: null }
-          });
-          await switchTradingAccount(created.id);
-        } catch (error) { toast('Account could not be created: ' + ((error && error.message) || 'Please try again.')); }
-      });
-      var editAccount = h('button', { type: 'button', class: 'btn btn-sm', text: 'Edit', title: 'Rename this trading account' });
-      editAccount.addEventListener('click', async function () {
-        if (!state.activeAccount || !activeCloudAdapter) return;
-        var nextName = window.prompt('Account name:', state.activeAccount.account_name || '');
-        if (nextName == null || !nextName.trim()) return;
-        var nextFirm = window.prompt('Broker or prop firm:', state.activeAccount.broker || '');
-        if (nextFirm == null) return;
-        try {
-          var updated = await activeCloudAdapter.updateAccount(state.activeAccount.id, {
-            account_name: nextName.trim(), broker: nextFirm.trim() || null
-          });
-          state.activeAccount = updated;
-          state.accounts = state.accounts.map(function (a) { return a.id === updated.id ? updated : a; });
-          renderAll(); toast('Account details updated.');
-        } catch (error) { toast('Account could not be updated: ' + ((error && error.message) || 'Please try again.')); }
-      });
-      var archiveAccount = h('button', { type: 'button', class: 'btn btn-sm', text: 'Archive', title: 'Archive this account without deleting its history' });
-      archiveAccount.addEventListener('click', async function () {
-        if (!state.activeAccount || !activeCloudAdapter) return;
-        if (state.accounts.length < 2) { toast('Keep at least one active account. Create another account before archiving this one.'); return; }
-        var retiring = state.activeAccount;
-        if (!window.confirm('Archive "' + retiring.account_name + '"? Its trades and journal history will be preserved, but it will leave the active account list.')) return;
-        var fallback = state.accounts.find(function (a) { return a.id !== retiring.id; });
-        if (!fallback) return;
-        try {
-          await switchTradingAccount(fallback.id);
-          if (state.activeAccount && state.activeAccount.id !== retiring.id) {
-            await activeCloudAdapter.archiveAccount(retiring.id);
-            state.accounts = state.accounts.filter(function (a) { return a.id !== retiring.id; });
-            renderAll(); toast('Account archived. Its history is preserved.');
-          }
-        } catch (error) { toast('Account could not be archived: ' + ((error && error.message) || 'Please try again.')); }
-      });
-      var rules = h('button', { type: 'button', class: 'btn btn-sm', text: 'Rules', title: 'Edit custom prop-firm rules for this account' });
-      rules.addEventListener('click', function () { openAccountRulesDialog(); });
-      panel.appendChild(select); panel.appendChild(add); panel.appendChild(editAccount); panel.appendChild(rules); panel.appendChild(archiveAccount);
+      var add = h('button', { type: 'button', class: 'btn btn-sm', text: '+ Account', onclick: function () { openAccountDetailsDialog(false); } });
+      var edit = h('button', { type: 'button', class: 'btn btn-sm', text: 'Edit', title: 'Edit the active account', onclick: function () { openAccountDetailsDialog(true); } });
+      var rules = h('button', { type: 'button', class: 'btn btn-sm', text: 'Rules', title: 'Edit the active account trading rules', onclick: function () { openAccountRulesDialog(); } });
+      var archive = h('button', { type: 'button', class: 'btn btn-sm', text: 'Archive', title: 'Archive this account without deleting history', onclick: function () { openArchiveAccountDialog(); } });
+      var archived = h('button', { type: 'button', class: 'btn btn-sm', text: 'Archived', title: 'View and restore archived accounts', onclick: function () { openArchivedAccountsDialog(); } });
+      panel.appendChild(select); panel.appendChild(add); panel.appendChild(edit); panel.appendChild(rules); panel.appendChild(archive); panel.appendChild(archived);
       var heading = topbar.querySelector('.workspace-heading');
       if (heading && heading.nextSibling) topbar.insertBefore(panel, heading.nextSibling); else topbar.insertBefore(panel, topbar.firstChild);
     }

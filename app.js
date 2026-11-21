@@ -1771,7 +1771,7 @@
       balanceLabel.appendChild(h('small', { text: 'Enter the starting balance in the currency selected for this account.' }));
       form.appendChild(balanceLabel);
       var currencyLabel = h('label', { class: 'rules-field' });
-      currencyLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Currency code' }));
+      currencyLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Currency symbol or code' }));
       currencyLabel.appendChild(h('input', { name: 'currency', maxlength: '4', value: state.activeAccount && state.activeAccount.currency || 'USD', required: true }));
       form.appendChild(currencyLabel);
       form.appendChild(h('p', { class: 'rules-disclaimer', text: 'This account starts with its own blank risk limits and trading setup. It will not copy the current account’s risk settings.' }));
@@ -1797,7 +1797,7 @@
           var balance = Number(form.elements.starting_balance.value);
           var currency = form.elements.currency.value.trim().toUpperCase();
           if (!isFinite(balance) || balance < 0) throw new Error('Starting balance must be zero or greater.');
-          if (!/^[A-Z]{3,4}$/.test(currency)) throw new Error('Enter a valid 3–4 letter currency code.');
+          if (!currency || currency.length > 4 || /\\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
           var created = await activeCloudAdapter.createAccount({
             account_name: name, account_type: form.elements.account_type.value,
             broker: form.elements.broker.value.trim() || null, starting_balance: balance, currency: currency,

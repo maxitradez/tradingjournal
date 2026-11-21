@@ -901,7 +901,16 @@
     var info = analyze(state.trades).days[date], n = info ? info.n : 0, net = info ? info.net : 0, msgs = [];
     if (s.maxTradesDay && n >= s.maxTradesDay) msgs.push('You have already logged ' + n + (n === 1 ? ' trade' : ' trades') + ' on this day, at or past your cap of ' + s.maxTradesDay + '.');
     if (s.dailyLoss && -net >= s.dailyLoss) msgs.push('This day is already down ' + CUR + fmt(-net) + ', at or past your loss limit of ' + CUR + fmt(s.dailyLoss) + '.');
-    if (msgs.length) { el.textContent = msgs.join(' ') + ' Consider stopping for the day.'; el.hidden = false; }
+    var rules = state.activeAccount && state.activeAccount.prop_rules || {}, stats = analyze(state.trades);
+    if (Number(rules.maxDrawdownAmount) > 0 && stats.maxDD >= Number(rules.maxDrawdownAmount)) msgs.push('This account has reached its maximum drawdown amount of ' + CUR + fmt(Number(rules.maxDrawdownAmount)) + '.');
+    if (Number(rules.maxDrawdownPercent) > 0 && s.balance > 0 && stats.maxDD / s.balance * 100 >= Number(rules.maxDrawdownPercent)) msgs.push('This account has reached its maximum drawdown of ' + rules.maxDrawdownPercent + '%.');
+    if (Number(rules.profitTarget) > 0 && stats.total >= Number(rules.profitTarget)) msgs.push('The account profit target of ' + CUR + fmt(Number(rules.profitTarget)) + ' has been reached. Check your firm’s remaining requirements before trading further.');
+    if (Number(rules.minimumTradingDays) > 0 && stats.dayCount < Number(rules.minimumTradingDays)) msgs.push('Trading-day requirement: ' + stats.dayCount + ' of ' + Number(rules.minimumTradingDays) + ' days logged.');
+    if (Number(rules.consistencyPercent) > 0 && stats.total > 0) {
+      var bestDay = Object.keys(stats.days).reduce(function (best, key) { return Math.max(best, stats.days[key].net); }, 0);
+      if (bestDay > 0 && bestDay / stats.total * 100 > Number(rules.consistencyPercent)) msgs.push('Your best day is ' + Math.round(bestDay / stats.total * 100) + '% of total profit, above the ' + rules.consistencyPercent + '% consistency limit.');
+    }
+    if (msgs.length) { el.textContent = msgs.join(' ') + ' Review this account’s rules before placing another trade.'; el.hidden = false; }
   }
 
   /* ---------- screenshots + mistakes ---------- */

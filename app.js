@@ -428,6 +428,16 @@
       if (window.PipbookAuthPage) window.PipbookAuthPage.close();
       return;
     }
+    // Never load a journal for an account whose email has not been verified.
+    if (!(nextUser.email_confirmed_at || nextUser.confirmed_at)) {
+      authUser = null; authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
+      state.mode = 'signed-out'; state.readOnlyCloud = false;
+      state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.archivedAccounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings();
+      setAccountGate(false); setDataState('account-required'); refreshAuthPanel(); renderAll();
+      showAuthForm('signin');
+      authNotice('Please confirm your email address using the link we sent before signing in to PIPBOOK.', true);
+      return;
+    }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
       state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings(); setAccountGate(false);
@@ -489,7 +499,7 @@
       authNotice(authFormMode === 'signup' ? 'Creating your account…' : authFormMode === 'recovery' ? 'Updating your password…' : 'Signing you in…', false);
       try {
         var result = authFormMode === 'signup'
-          ? await authClient.auth.signUp({ email: email, password: password, options: { data: { pipbook_welcome_pending: true } } })
+          ? await authClient.auth.signUp({ email: email, password: password, options: { emailRedirectTo: window.location.origin + window.location.pathname, data: { pipbook_welcome_pending: true } } })
           : authFormMode === 'recovery'
             ? await authClient.auth.updateUser({ password: password })
             : await authClient.auth.signInWithPassword({ email: email, password: password });

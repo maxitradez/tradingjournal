@@ -1684,19 +1684,23 @@
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       var parsed = Object.assign({}, current);
-      fields.forEach(function (field) {
-        var raw = form.elements[field.key].value.trim();
-        if (!raw) { delete parsed[field.key]; return; }
-        var value = Number(raw);
-        if (!isFinite(value) || value < 0) throw new Error(field.label + ' must be zero or greater.');
-        if ((field.key === 'riskPct' || field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
-        if ((field.key === 'minimumTradingDays' || field.key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error(field.label + ' must be a whole number.');
-        parsed[field.key] = value;
-      });
-      ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
-        var value = form.elements[key].value;
-        if (!value) delete parsed[key]; else parsed[key] = value === 'true';
-      });
+      try {
+        fields.forEach(function (field) {
+          var raw = form.elements[field.key].value.trim();
+          if (!raw) { delete parsed[field.key]; return; }
+          var value = Number(raw);
+          if (!isFinite(value) || value < 0) throw new Error(field.label + ' must be zero or greater.');
+          if ((field.key === 'riskPct' || field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
+          if ((field.key === 'minimumTradingDays' || field.key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error(field.label + ' must be a whole number.');
+          parsed[field.key] = value;
+        });
+        ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
+          var value = form.elements[key].value;
+          if (!value) delete parsed[key]; else parsed[key] = value === 'true';
+        });
+      } catch (validationError) {
+        error.textContent = validationError.message; error.hidden = false; return;
+      }
       save.disabled = true; save.textContent = 'Saving…'; error.hidden = true;
       try {
         var updated = await activeCloudAdapter.updateAccount(account.id, { prop_rules: parsed });

@@ -919,7 +919,8 @@
     if (Number(rules.maxDrawdownAmount) > 0 && stats.maxDD >= Number(rules.maxDrawdownAmount)) msgs.push('This account has reached its maximum drawdown amount of ' + CUR + fmt(Number(rules.maxDrawdownAmount)) + '.');
     if (Number(rules.maxDrawdownPercent) > 0 && s.balance > 0 && stats.maxDD / s.balance * 100 >= Number(rules.maxDrawdownPercent)) msgs.push('This account has reached its maximum drawdown of ' + rules.maxDrawdownPercent + '%.');
     if (Number(rules.profitTarget) > 0 && stats.total >= Number(rules.profitTarget)) msgs.push('The account profit target of ' + CUR + fmt(Number(rules.profitTarget)) + ' has been reached. Check your firm’s remaining requirements before trading further.');
-    if (rules.weekendHoldingAllowed === false && date) { var tradeDay = new Date(date + 'T00:00:00').getDay(); if (tradeDay === 0 || tradeDay === 6) msgs.push('This account does not allow weekend holding/trading. Confirm the firm’s exact restriction before proceeding.'); }
+    // Weekend-holding restrictions cannot be verified from closed-trade dates alone.
+    // Do not infer a breach without open-position timestamps or broker position data.
     if (Number(rules.minimumTradingDays) > 0 && stats.dayCount < Number(rules.minimumTradingDays)) msgs.push('Trading-day requirement: ' + stats.dayCount + ' of ' + Number(rules.minimumTradingDays) + ' days logged.');
     if (Number(rules.consistencyPercent) > 0 && stats.total > 0) {
       var bestDay = Object.keys(stats.days).reduce(function (best, key) { return Math.max(best, stats.days[key].net); }, 0);
@@ -1694,7 +1695,7 @@
       rules.addEventListener('click', async function () {
         if (!state.activeAccount || !activeCloudAdapter) return;
         var current = state.activeAccount.prop_rules || {};
-        var raw = window.prompt('Edit this account’s custom rules as JSON. Supported keys: riskPct, dailyLossLimit, maxDrawdownAmount, maxDrawdownPercent, profitTarget, consistencyPercent, minimumTradingDays, maxTradesDay, newsTradingAllowed, weekendHoldingAllowed. Use numbers for limits and true/false for permissions.', JSON.stringify(current, null, 2));
+        var raw = window.prompt('Edit this account’s custom rules as JSON. Supported keys: riskPct, dailyLossLimit, maxDrawdownAmount, maxDrawdownPercent, profitTarget, consistencyPercent, minimumTradingDays, maxTradesDay, newsTradingAllowed, weekendHoldingAllowed. Use numbers for limits and true/false for permissions. Note: newsTradingAllowed and weekendHoldingAllowed are stored as account settings but are not automatically verified yet; the journal has no live news calendar or open-position holding data.', JSON.stringify(current, null, 2));
         if (raw == null) return;
         try {
           var parsed = JSON.parse(raw);

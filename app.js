@@ -241,7 +241,7 @@
         state.activeAccount.starting_balance = obj.balance || 0;
         state.activeAccount.currency = obj.currency || 'USD';
         state.activeAccount.prop_rules = Object.assign({}, state.activeAccount.prop_rules || {}, {
-          riskPct: obj.riskPct, dailyLossLimit: obj.dailyLoss, maxTradesDay: obj.maxTradesDay, profitTarget: obj.monthlyTarget
+          riskPct: obj.riskPct, dailyLossLimit: obj.dailyLoss, maxTradesDay: obj.maxTradesDay, profitTarget: obj.monthlyTarget, lossStreakThreshold: obj.lossStreakThreshold
         });
       }
     }); }
@@ -1696,6 +1696,7 @@
           if (!isFinite(value) || value < 0) throw new Error(field.label + ' must be zero or greater.');
           if ((field.key === 'riskPct' || field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
           if ((field.key === 'minimumTradingDays' || field.key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error(field.label + ' must be a whole number.');
+          if (field.key === 'lossStreakThreshold' && (value < 2 || value > 10)) throw new Error('Loss-streak reminder must be between 2 and 10.');
           parsed[field.key] = value;
         });
         ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
@@ -1714,7 +1715,8 @@
           riskPct: Object.prototype.hasOwnProperty.call(parsed, 'riskPct') ? parsed.riskPct : null,
           dailyLoss: Object.prototype.hasOwnProperty.call(parsed, 'dailyLossLimit') ? parsed.dailyLossLimit : null,
           maxTradesDay: Object.prototype.hasOwnProperty.call(parsed, 'maxTradesDay') ? parsed.maxTradesDay : null,
-          monthlyTarget: Object.prototype.hasOwnProperty.call(parsed, 'profitTarget') ? parsed.profitTarget : null
+          monthlyTarget: Object.prototype.hasOwnProperty.call(parsed, 'profitTarget') ? parsed.profitTarget : null,
+          lossStreakThreshold: Object.prototype.hasOwnProperty.call(parsed, 'lossStreakThreshold') ? parsed.lossStreakThreshold : 3
         }));
         applySettings(); overlay.remove(); renderAll(); toast('Account rules saved.');
       } catch (saveError) {

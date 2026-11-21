@@ -49,13 +49,19 @@
       function own(table) { return api.from(table).select('*').eq('user_id', userId); }
       async function legacyRow(table, legacyId) {
         var key = String(legacyId);
-        var found = await own(table).eq('legacy_id', key).maybeSingle();
+        var scoped = own(table);
+        // Trades belong to an account as well as a user. Scope lookups so an
+        // identical legacy ID in another account can never be edited/deleted.
+        if (table === 'trades' && activeAccountId) scoped = scoped.eq('account_id', activeAccountId);
+        var found = await scoped.eq('legacy_id', key).maybeSingle();
         if (found.error || found.data) return found;
         // Older cloud rows may predate legacy_id and use their database UUID
         // as the journal ID. Resolve those rows by primary key without sending
         // arbitrary non-UUID journal IDs to a UUID column.
         if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) {
-          return own(table).eq('id', key).maybeSingle();
+          var byId = own(table).eq('id', key);
+          if (table === 'trades' && activeAccountId) byId = byId.eq('account_id', activeAccountId);
+          return byId.maybeSingle();
         }
         return found;
       }

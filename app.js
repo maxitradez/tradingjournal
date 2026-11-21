@@ -1727,7 +1727,7 @@
   function renderAccountWorkspace() {
     var topbar = document.querySelector('.workspace-topbar');
     if (!topbar) return;
-    if (!authUser) { var oldPanel = document.getElementById('account-workspace'); if (oldPanel) oldPanel.hidden = true; return; }
+    if (!authUser) { var oldPanel = document.getElementById('account-workspace'); if (oldPanel) { oldPanel.hidden = true; oldPanel.style.display = 'none'; } return; }
     var panel = document.getElementById('account-workspace');
     if (!panel) {
       panel = h('div', { id: 'account-workspace', class: 'account-workspace' });
@@ -1806,6 +1806,7 @@
     if (state.activeAccount) picker.value = state.activeAccount.id;
     picker.disabled = state.dataState === 'cloud-loading' || state.dataState === 'cloud-syncing';
     panel.hidden = !state.accounts || !state.accounts.length;
+    panel.style.display = panel.hidden ? 'none' : 'flex';
   }
   function renderAll() {
     $('fab').hidden = !!state.readOnlyCloud || state.dataState === 'cloud-loading';

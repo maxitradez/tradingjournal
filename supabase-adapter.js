@@ -146,7 +146,18 @@
         async load(requestedAccountId) {
           var accountRows = await allOwned('trading_accounts', 'created_at');
           var accounts = accountRows.filter(function (a) { return !a.is_archived; });
-          if (!accounts.length) throw new Error('No active trading account was found. Create an account to continue.');
+          if (!accounts.length) {
+            var seedSettings = await api.from('user_settings').select('default_currency,default_starting_balance').eq('user_id', userId).maybeSingle();
+            if (seedSettings.error) throw seedSettings.error;
+            var seedAccount = await api.from('trading_accounts').insert({
+              user_id: userId, account_name: 'Main Account', account_type: 'live',
+              currency: seedSettings.data && seedSettings.data.default_currency || 'USD',
+              starting_balance: seedSettings.data && seedSettings.data.default_starting_balance || 0,
+              is_default: true, is_archived: false, prop_rules: {}
+            }).select('*').single();
+            if (seedAccount.error) throw seedAccount.error;
+            accounts = [seedAccount.data];
+          }
           var selected = accounts.find(function (a) { return a.id === requestedAccountId; })
             || accounts.find(function (a) { return a.is_default; }) || accounts[0];
           activeAccountId = selected.id;

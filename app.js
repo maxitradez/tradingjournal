@@ -1969,7 +1969,7 @@
     });
     if (state.activeAccount) picker.value = state.activeAccount.id;
     var rulesButton = panel.querySelector('#account-rules-button');
-    if (rulesButton) rulesButton.hidden = !state.activeAccount || state.activeAccount.account_type !== 'prop';
+    if (rulesButton) { var showPropRules = !!state.activeAccount && state.activeAccount.account_type === 'prop'; rulesButton.hidden = !showPropRules; rulesButton.style.display = showPropRules ? '' : 'none'; }
     picker.disabled = state.dataState === 'cloud-loading' || state.dataState === 'cloud-syncing';
     panel.hidden = !state.accounts || !state.accounts.length;
     panel.style.display = panel.hidden ? 'none' : 'flex';

@@ -3217,3 +3217,35 @@ tr:last-child td { border-bottom:0; }
   #v-calendar .day { min-height:52px; }
   #v-playbooks .pb-stats b { font-size:15px; }
 }
+
+
+/* Account-specific rules editor */
+.rules-overlay {
+  position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(3,9,18,.78);backdrop-filter:blur(7px);
+}
+.rules-dialog {
+  width:min(720px,100%);max-height:min(88vh,820px);overflow:auto;
+  padding:22px;border:1px solid #3B526E;border-radius:17px;
+  background:#14243A;color:#F4F7FB;box-shadow:0 24px 90px rgba(0,0,0,.48);
+}
+.rules-dialog-head { display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px; }
+.rules-eyebrow { color:var(--accent-hot);font:700 9px/1.4 var(--font-body);letter-spacing:.14em; }
+.rules-dialog-head h2 { margin:5px 0 3px;font:750 25px/1.1 var(--font-display);letter-spacing:-.04em; }
+.rules-dialog-head p,.rules-intro { margin:0;color:#AEBBD0;font-size:12px;line-height:1.55; }
+.rules-fields,.rules-permissions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px; }
+.rules-field { display:flex;flex-direction:column;gap:7px;min-width:0;padding:13px;border:1px solid #304761;border-radius:11px;background:#192C45; }
+.rules-field-label { color:#E7EDF5;font:700 11px/1.4 var(--font-body);letter-spacing:0;text-transform:none;margin:0; }
+.rules-field input,.rules-field select { width:100%;min-width:0;min-height:41px; }
+.rules-field small { color:#AEBBD0;font:400 10px/1.5 var(--font-body); }
+.rules-permissions { padding-top:14px;border-top:1px solid #304761; }
+.rules-disclaimer { margin:15px 0 0;padding:11px 12px;border-left:3px solid var(--accent-hot);border-radius:5px;background:#1A2B42;color:#C4D0DF;font-size:11px;line-height:1.55; }
+.rules-error { margin:12px 0 0;color:#FF9B9B;font-size:12px; }
+.rules-actions { display:flex;justify-content:flex-end;gap:9px;margin-top:17px;padding-top:14px;border-top:1px solid #304761; }
+@media (max-width:560px) {
+  .rules-overlay { align-items:flex-end;padding:8px; }
+  .rules-dialog { max-height:92vh;padding:16px;border-radius:16px 16px 12px 12px; }
+  .rules-fields,.rules-permissions { grid-template-columns:1fr;gap:9px;margin-top:12px; }
+  .rules-field { padding:11px; }
+  .rules-dialog-head h2 { font-size:22px; }
+}

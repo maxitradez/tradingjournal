@@ -489,7 +489,7 @@
       authNotice(authFormMode === 'signup' ? 'Creating your account…' : authFormMode === 'recovery' ? 'Updating your password…' : 'Signing you in…', false);
       try {
         var result = authFormMode === 'signup'
-          ? await authClient.auth.signUp({ email: email, password: password })
+          ? await authClient.auth.signUp({ email: email, password: password, options: { data: { pipbook_welcome_pending: true } } })
           : authFormMode === 'recovery'
             ? await authClient.auth.updateUser({ password: password })
             : await authClient.auth.signInWithPassword({ email: email, password: password });
@@ -507,6 +507,13 @@
           if (confirmationMode) confirmationMode.textContent = 'EMAIL CONFIRMATION';
           authNotice('Account created. Check your email for the confirmation link, then sign in here to open your journal.', false);
         } else {
+          if ((authFormMode === 'signup' || authFormMode === 'signin') && result.data && result.data.session) {
+            authClient.functions.invoke('pipbook-send-welcome').then(function (emailResult) {
+              if (emailResult.error) console.warn('[PIPBOOK email] Welcome email will be retried on a later sign-in.', emailResult.error);
+            }).catch(function (emailError) {
+              console.warn('[PIPBOOK email] Welcome email request failed.', emailError);
+            });
+          }
           authUser = result.data && result.data.user ? result.data.user : null;
           form.hidden = true;
           if (result.data && result.data.session) handleAuthSession(result.data.session);

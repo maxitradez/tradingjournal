@@ -824,6 +824,20 @@
         h('div', null, h('span', { class: 'stat-label', text: 'Trades logged' }), h('strong', { class: 'dashboard-today-value', text: String(todaysTrades.length) })),
         h('div', null, h('span', { class: 'stat-label', text: 'Daily status' }), h('strong', { class: 'dashboard-today-status', text: todaysTrades.length ? 'Activity recorded' : 'Not started yet' }))));
     box.appendChild(activity);
+    if (state.activeAccount) {
+      var account = state.activeAccount, startBalance = Number(account.starting_balance) || 0;
+      var journalBalance = startBalance + a.total;
+      var summary = h('section', { class: 'panel account-balance-summary' },
+        h('div', { class: 'panel-head' },
+          h('div', null, h('p', { class: 'eyebrow', text: 'ACTIVE TRADING ACCOUNT' }), h('h2', { text: account.account_name || 'Trading account' })),
+          h('span', { class: 'pill', text: String(account.account_type || 'live').toUpperCase() })),
+        h('div', { class: 'dashboard-today-metrics' },
+          h('div', null, h('span', { class: 'stat-label', text: 'Journal balance estimate' }), h('strong', { class: 'dashboard-today-value', text: CUR + fmt(journalBalance) })),
+          h('div', null, h('span', { class: 'stat-label', text: 'Starting balance' }), h('strong', { class: 'dashboard-today-value', text: CUR + fmt(startBalance) })),
+          h('div', null, h('span', { class: 'stat-label', text: 'Realized P&L logged' }), h('strong', { class: 'dashboard-today-value ' + cls(a.total), text: signed(a.total) }))),
+        h('p', { class: 'hint', style: 'margin:10px 0 0', text: 'Estimate based on the starting balance and trades recorded in PIPBOOK. It does not sync live broker equity or include unrecorded deposits, withdrawals or open positions.' }));
+      box.appendChild(summary);
+    }
     var reminder = motivationReminderPanel(); if (reminder) box.appendChild(reminder);
     if (!a.n) {
       box.appendChild(h('section', { class: 'panel hero-empty pipbook-empty' },

@@ -428,7 +428,7 @@
     }
     if (authUser && authUser.id !== nextUser.id) {
       authLoadToken++; activeCloudUserId = null; activeCloudAdapter = null;
-      state.trades = []; state.playbooks = []; state.days = []; state.settings = normSettings(null); applySettings(); setAccountGate(false);
+      state.trades = []; state.playbooks = []; state.days = []; state.accounts = []; state.activeAccount = null; state.settings = normSettings(null); applySettings(); setAccountGate(false);
     }
     authUser = nextUser; refreshAuthPanel(); loadCloudJournal(authUser);
   }

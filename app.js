@@ -1601,7 +1601,8 @@
   }
   function renderAccountWorkspace() {
     var topbar = document.querySelector('.workspace-topbar');
-    if (!topbar || !authUser) return;
+    if (!topbar) return;
+    if (!authUser) { var oldPanel = document.getElementById('account-workspace'); if (oldPanel) oldPanel.hidden = true; return; }
     var panel = document.getElementById('account-workspace');
     if (!panel) {
       panel = h('div', { id: 'account-workspace', class: 'account-workspace' });
@@ -1627,7 +1628,7 @@
             account_name: name.trim(), account_type: ['live','demo','prop'].indexOf(kind.toLowerCase()) >= 0 ? kind.toLowerCase() : 'live',
             broker: firm.trim(), starting_balance: balance,
             currency: state.activeAccount && state.activeAccount.currency || 'USD',
-            prop_rules: { riskPct: state.settings.riskPct || null, dailyLossLimit: null, maxDrawdown: null, profitTarget: null, consistencyRule: null, minimumTradingDays: null }
+            prop_rules: { riskPct: state.settings.riskPct || null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null, profitTarget: null, consistencyPercent: null, minimumTradingDays: null, maxTradesDay: null, newsTradingAllowed: null, weekendHoldingAllowed: null }
           });
           await switchTradingAccount(created.id);
         } catch (error) { toast('Account could not be created: ' + ((error && error.message) || 'Please try again.')); }
@@ -1636,15 +1637,20 @@
       rules.addEventListener('click', async function () {
         if (!state.activeAccount || !activeCloudAdapter) return;
         var current = state.activeAccount.prop_rules || {};
-        var raw = window.prompt('Custom rules for this account (JSON). Keep the field names and edit the values as needed:', JSON.stringify(current, null, 2));
+        var raw = window.prompt('Edit this account’s custom rules as JSON. Supported keys: riskPct, dailyLossLimit, maxDrawdownAmount, maxDrawdownPercent, profitTarget, consistencyPercent, minimumTradingDays, maxTradesDay, newsTradingAllowed, weekendHoldingAllowed. Use numbers for limits and true/false for permissions.', JSON.stringify(current, null, 2));
         if (raw == null) return;
         try {
           var parsed = JSON.parse(raw);
           if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('Rules must be a JSON object.');
           var updated = await activeCloudAdapter.updateAccount(state.activeAccount.id, { prop_rules: parsed });
           state.activeAccount = updated;
-          if (parsed.riskPct != null) state.settings.riskPct = Number(parsed.riskPct) || null;
-          renderAll(); toast('Account rules saved.');
+          state.settings = normSettings(Object.assign({}, state.settings, {
+            riskPct: parsed.riskPct != null ? parsed.riskPct : state.settings.riskPct,
+            dailyLoss: parsed.dailyLossLimit != null ? parsed.dailyLossLimit : state.settings.dailyLoss,
+            maxTradesDay: parsed.maxTradesDay != null ? parsed.maxTradesDay : state.settings.maxTradesDay,
+            monthlyTarget: parsed.profitTarget != null ? parsed.profitTarget : state.settings.monthlyTarget
+          }));
+          applySettings(); renderAll(); toast('Account rules saved.');
         } catch (error) { toast('Rules not saved: ' + ((error && error.message) || 'Check the JSON and try again.')); }
       });
       panel.appendChild(select); panel.appendChild(add); panel.appendChild(rules);

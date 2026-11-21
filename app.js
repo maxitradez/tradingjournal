@@ -240,7 +240,9 @@
       if (state.activeAccount) {
         state.activeAccount.starting_balance = obj.balance || 0;
         state.activeAccount.currency = obj.currency || 'USD';
-        state.activeAccount.prop_rules = Object.assign({}, state.activeAccount.prop_rules || {}, { riskPct: obj.riskPct });
+        state.activeAccount.prop_rules = Object.assign({}, state.activeAccount.prop_rules || {}, {
+          riskPct: obj.riskPct, dailyLossLimit: obj.dailyLoss, maxTradesDay: obj.maxTradesDay, profitTarget: obj.monthlyTarget
+        });
       }
     }); }
   }
@@ -400,7 +402,10 @@
       state.settings = normSettings(Object.assign({}, cloud.settings, {
         balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
         currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: accountRules.riskPct || cloud.settings.riskPct
+        riskPct: accountRules.riskPct != null ? accountRules.riskPct : cloud.settings.riskPct,
+        dailyLoss: accountRules.dailyLossLimit != null ? accountRules.dailyLossLimit : cloud.settings.dailyLoss,
+        maxTradesDay: accountRules.maxTradesDay != null ? accountRules.maxTradesDay : cloud.settings.maxTradesDay,
+        monthlyTarget: accountRules.profitTarget != null ? accountRules.profitTarget : cloud.settings.monthlyTarget
       }));
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
@@ -1581,7 +1586,10 @@
       state.settings = normSettings(Object.assign({}, cloud.settings, {
         balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
         currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: rules.riskPct || cloud.settings.riskPct
+        riskPct: rules.riskPct != null ? rules.riskPct : cloud.settings.riskPct,
+        dailyLoss: rules.dailyLossLimit != null ? rules.dailyLossLimit : cloud.settings.dailyLoss,
+        maxTradesDay: rules.maxTradesDay != null ? rules.maxTradesDay : cloud.settings.maxTradesDay,
+        monthlyTarget: rules.profitTarget != null ? rules.profitTarget : cloud.settings.monthlyTarget
       }));
       state.mode = 'cloud'; applySettings(); setDataState('cloud-ready'); renderAll();
       toast('Switched to ' + (state.activeAccount.account_name || 'account'));

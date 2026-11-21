@@ -399,14 +399,16 @@
       state.playbooks = (cloud.playbooks || []).map(normPb);
       state.days = (cloud.days || []).map(normDay);
       var accountRules = state.activeAccount && state.activeAccount.prop_rules || {};
-      state.settings = normSettings(Object.assign({}, cloud.settings, {
-        balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
-        currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: Object.prototype.hasOwnProperty.call(accountRules, 'riskPct') ? accountRules.riskPct : cloud.settings.riskPct,
-        dailyLoss: Object.prototype.hasOwnProperty.call(accountRules, 'dailyLossLimit') ? accountRules.dailyLossLimit : cloud.settings.dailyLoss,
-        maxTradesDay: Object.prototype.hasOwnProperty.call(accountRules, 'maxTradesDay') ? accountRules.maxTradesDay : cloud.settings.maxTradesDay,
-        monthlyTarget: Object.prototype.hasOwnProperty.call(accountRules, 'profitTarget') ? accountRules.profitTarget : cloud.settings.monthlyTarget
-      }));
+      state.settings = normSettings({
+        balance: state.activeAccount ? state.activeAccount.starting_balance : null,
+        currency: state.activeAccount ? state.activeAccount.currency : '',
+        riskPct: Object.prototype.hasOwnProperty.call(accountRules, 'riskPct') ? accountRules.riskPct : null,
+        dailyLoss: Object.prototype.hasOwnProperty.call(accountRules, 'dailyLossLimit') ? accountRules.dailyLossLimit : null,
+        maxTradesDay: Object.prototype.hasOwnProperty.call(accountRules, 'maxTradesDay') ? accountRules.maxTradesDay : null,
+        monthlyTarget: Object.prototype.hasOwnProperty.call(accountRules, 'profitTarget') ? accountRules.profitTarget : null,
+        lossStreakThreshold: Object.prototype.hasOwnProperty.call(accountRules, 'lossStreakThreshold') ? accountRules.lossStreakThreshold : 3,
+        example: false
+      });
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
       authNotice('Your private journal is ready. Trades, playbooks, daily notes, settings and private chart screenshots save to your account.', false);
@@ -1643,7 +1645,8 @@
       { key: 'profitTarget', label: 'Profit target', suffix: '', step: '0.01', hint: 'Target amount in the account currency.' },
       { key: 'consistencyPercent', label: 'Consistency limit', suffix: '%', step: '0.01', hint: 'Maximum permitted share of total profit from one day.' },
       { key: 'minimumTradingDays', label: 'Minimum trading days', suffix: 'days', step: '1', hint: 'Whole number of qualifying trading days.' },
-      { key: 'maxTradesDay', label: 'Maximum trades per day', suffix: 'trades', step: '1', hint: 'Leave blank if there is no daily trade cap.' }
+      { key: 'maxTradesDay', label: 'Maximum trades per day', suffix: 'trades', step: '1', hint: 'Leave blank if there is no daily trade cap.' },
+      { key: 'lossStreakThreshold', label: 'Loss-streak reminder', suffix: 'losses', step: '1', hint: 'Reminder after 2–10 consecutive losing trades.' }
     ];
     dialog.appendChild(h('div', { class: 'rules-dialog-head' },
       h('div', {}, h('span', { class: 'rules-eyebrow', text: 'ACCOUNT SETTINGS' }), h('h2', { id: 'rules-dialog-title', text: 'Trading rules' }), h('p', { text: account.account_name || 'Active account' })),

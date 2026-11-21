@@ -237,6 +237,11 @@
     if (!cloudWriteReady()) return Promise.reject(new Error('Create an account or sign in before changing your journal.'));
     { var adapter = activeCloudAdapter; return cloudWrite(function () { return adapter.saveSettings(obj); }, function () {
       state.settings = obj; applySettings();
+      if (state.activeAccount) {
+        state.activeAccount.starting_balance = obj.balance || 0;
+        state.activeAccount.currency = obj.currency || 'USD';
+        state.activeAccount.prop_rules = Object.assign({}, state.activeAccount.prop_rules || {}, { riskPct: obj.riskPct });
+      }
     }); }
   }
 

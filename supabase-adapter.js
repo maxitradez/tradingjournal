@@ -305,7 +305,10 @@
           var accountRules = accountRow.data.prop_rules && typeof accountRow.data.prop_rules === 'object' ? accountRow.data.prop_rules : {};
           var accountUpdate = await api.from('trading_accounts').update({
             starting_balance: settings.balance || 0, currency: settings.currency || 'USD',
-            prop_rules: Object.assign({}, accountRules, { riskPct: settings.riskPct })
+            prop_rules: Object.assign({}, accountRules, {
+              riskPct: settings.riskPct, dailyLossLimit: settings.dailyLoss,
+              maxTradesDay: settings.maxTradesDay, profitTarget: settings.monthlyTarget
+            })
           }).eq('user_id', userId).eq('id', activeAccountId).select('id').maybeSingle();
           if (accountUpdate.error) throw accountUpdate.error;
           if (!accountUpdate.data) throw new Error('The active account settings were not saved. Refresh and try again.');

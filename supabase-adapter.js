@@ -10,6 +10,7 @@
     var normDay = helpers.normDay, normSettings = helpers.normSettings;
     var num = helpers.num;
     var ids = { playbooks: {} };
+    var activeAccountId = null;
     var screenshotBucket = 'trade-screenshots';
     var signedUrlLifetime = 60 * 60 * 24 * 7;
 
@@ -59,10 +60,12 @@
         return found;
       }
       function jsonArray(value) { return Array.isArray(value) ? value : []; }
-      async function allOwned(table, orderColumn) {
+      async function allOwned(table, orderColumn, accountId) {
         var rows = [], offset = 0, pageSize = 1000;
         while (true) {
-          var page = await own(table).order(orderColumn, { ascending: true }).order('id', { ascending: true }).range(offset, offset + pageSize - 1);
+          var query = own(table);
+          if (accountId) query = query.eq('account_id', accountId);
+          var page = await query.order(orderColumn, { ascending: true }).order('id', { ascending: true }).range(offset, offset + pageSize - 1);
           if (page.error) throw page.error;
           var batch = page.data || []; rows = rows.concat(batch);
           if (batch.length < pageSize) break;
@@ -104,7 +107,7 @@
       function toCloudTrade(t) {
         var pbCloudId = t.playbook ? ids.playbooks[t.playbook] : null;
         return {
-          user_id: userId, legacy_id: String(t.id),
+          user_id: userId, account_id: activeAccountId, legacy_id: String(t.id),
           instrument_symbol: t.asset || 'UNKNOWN', trade_date: t.date,
           trade_time: t.time || null, side: t.side === 'sell' ? 'sell' : 'buy',
           status: 'closed', entry_price: num(t.entry), stop_loss: num(t.sl),
@@ -140,10 +143,16 @@
         uploadScreenshot: uploadScreenshot,
         getScreenshotUrl: screenshotUrl,
         deleteScreenshot: removeScreenshot,
-        async load() {
+        async load(requestedAccountId) {
+          var accountRows = await allOwned('trading_accounts', 'created_at');
+          var accounts = accountRows.filter(function (a) { return !a.is_archived; });
+          if (!accounts.length) throw new Error('No active trading account was found. Create an account to continue.');
+          var selected = accounts.find(function (a) { return a.id === requestedAccountId; })
+            || accounts.find(function (a) { return a.is_default; }) || accounts[0];
+          activeAccountId = selected.id;
           var results = await Promise.all([
-            allOwned('playbooks', 'created_at'), allOwned('trades', 'trade_date'),
-            allOwned('daily_journals', 'journal_date'),
+            allOwned('playbooks', 'created_at'), allOwned('trades', 'trade_date', activeAccountId),
+            allOwned('daily_journals', 'journal_date', activeAccountId),
             api.from('user_settings').select('*').eq('user_id', userId).maybeSingle()
           ]);
           if (results[3].error) throw results[3].error;
@@ -168,6 +177,7 @@
           var settingsRow = results[3].data;
           var prefs = settingsRow && settingsRow.preferences && typeof settingsRow.preferences === 'object' ? settingsRow.preferences : {};
           return {
+            accounts: accounts, activeAccount: selected,
             trades: trs, playbooks: pbs,
             days: (results[2] || []).map(fromCloudDay),
             settings: normSettings({
@@ -199,10 +209,10 @@
             return saveLegacyRow('trades', obj.id, toCloudTrade(obj));
           }
           if (kind === 'days') {
-            var existing = await own('daily_journals').eq('journal_date', obj.date || obj.id).is('account_id', null).maybeSingle();
+            var existing = await own('daily_journals').eq('journal_date', obj.date || obj.id).eq('account_id', activeAccountId).maybeSingle();
             if (existing.error) throw existing.error;
             var payload = {
-              user_id: userId, legacy_id: String(obj.id), journal_date: obj.date || obj.id,
+              user_id: userId, account_id: activeAccountId, legacy_id: String(obj.id), journal_date: obj.date || obj.id,
               plan: obj.plan || '', review: obj.review || '', mood: obj.mood,
               is_example: !!obj.example
             };
@@ -232,7 +242,7 @@
           var table = kind === 'trades' ? 'trades' : kind === 'days' ? 'daily_journals' : null;
           if (!table) throw new Error('Unsupported cloud record type: ' + kind);
           if (kind === 'days') {
-            var dayRows = await own(table).eq('journal_date', String(id)).is('account_id', null).select('id');
+            var dayRows = await own(table).eq('journal_date', String(id)).eq('account_id', activeAccountId).select('id');
             if (dayRows.error) throw dayRows.error;
             var dayIds = (dayRows.data || []).map(function (row) { return row.id; });
             if (!dayIds.length) return;
@@ -256,6 +266,36 @@
             }
           }
           return { screenshotCleanupError: '' };
+        },
+        async createAccount(account) {
+          var payload = {
+            user_id: userId, account_name: String(account.account_name || 'New account').trim(),
+            account_type: account.account_type || 'live', broker: account.broker || null,
+            platform: account.platform || null, currency: account.currency || 'USD',
+            starting_balance: Number(account.starting_balance) || 0,
+            prop_rules: account.prop_rules && typeof account.prop_rules === 'object' ? account.prop_rules : {},
+            is_default: false, is_archived: false
+          };
+          if (!payload.account_name) throw new Error('Enter an account name.');
+          var result = await api.from('trading_accounts').insert(payload).select('*').single();
+          if (result.error) throw result.error;
+          return result.data;
+        },
+        async updateAccount(accountId, changes) {
+          var allowed = {};
+          ['account_name','account_type','broker','platform','currency','starting_balance','prop_rules'].forEach(function (key) {
+            if (Object.prototype.hasOwnProperty.call(changes, key)) allowed[key] = changes[key];
+          });
+          allowed.updated_at = new Date().toISOString();
+          var result = await api.from('trading_accounts').update(allowed).eq('user_id', userId).eq('id', accountId).select('*').single();
+          if (result.error) throw result.error;
+          return result.data;
+        },
+        async archiveAccount(accountId) {
+          var result = await api.from('trading_accounts').update({ is_archived: true, updated_at: new Date().toISOString() })
+            .eq('user_id', userId).eq('id', accountId).select('id').single();
+          if (result.error) throw result.error;
+          if (activeAccountId === accountId) activeAccountId = null;
         },
         async saveSettings(settings) {
           var prefs = {

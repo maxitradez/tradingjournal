@@ -3269,3 +3269,21 @@ tr:last-child td { border-bottom:0; }
   .account-dialog .rules-form > * { grid-column:1; }
   .archived-account-row { align-items:flex-start; }
 }
+
+
+/* Conditional prop-firm setup during account creation */
+.prop-create-rules {
+  grid-column:1/-1;
+  min-width:0;
+  padding:15px;
+  border:1px solid #3B526E;
+  border-radius:12px;
+  background:#122239;
+}
+.prop-create-heading strong { color:#F4F7FB;font:750 14px/1.3 var(--font-display); }
+.prop-create-heading p { margin:5px 0 0;color:#AEBBD0;font:400 11px/1.55 var(--font-body); }
+.prop-create-rules .rules-fields { margin-top:13px; }
+.prop-create-rules .rules-permissions { margin-top:12px;padding-top:12px; }
+@media(max-width:560px) {
+  .prop-create-rules { padding:11px; }
+}

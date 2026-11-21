@@ -402,10 +402,10 @@
       state.settings = normSettings(Object.assign({}, cloud.settings, {
         balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
         currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: accountRules.riskPct != null ? accountRules.riskPct : cloud.settings.riskPct,
-        dailyLoss: accountRules.dailyLossLimit != null ? accountRules.dailyLossLimit : cloud.settings.dailyLoss,
-        maxTradesDay: accountRules.maxTradesDay != null ? accountRules.maxTradesDay : cloud.settings.maxTradesDay,
-        monthlyTarget: accountRules.profitTarget != null ? accountRules.profitTarget : cloud.settings.monthlyTarget
+        riskPct: Object.prototype.hasOwnProperty.call(accountRules, 'riskPct') ? accountRules.riskPct : cloud.settings.riskPct,
+        dailyLoss: Object.prototype.hasOwnProperty.call(accountRules, 'dailyLossLimit') ? accountRules.dailyLossLimit : cloud.settings.dailyLoss,
+        maxTradesDay: Object.prototype.hasOwnProperty.call(accountRules, 'maxTradesDay') ? accountRules.maxTradesDay : cloud.settings.maxTradesDay,
+        monthlyTarget: Object.prototype.hasOwnProperty.call(accountRules, 'profitTarget') ? accountRules.profitTarget : cloud.settings.monthlyTarget
       }));
       state.mode = 'cloud'; state.readOnlyCloud = false;
       applySettings(); setDataState('cloud-ready'); renderAll(); setAccountGate(true);
@@ -1610,10 +1610,10 @@
       state.settings = normSettings(Object.assign({}, cloud.settings, {
         balance: state.activeAccount ? state.activeAccount.starting_balance : cloud.settings.balance,
         currency: state.activeAccount ? state.activeAccount.currency : cloud.settings.currency,
-        riskPct: rules.riskPct != null ? rules.riskPct : cloud.settings.riskPct,
-        dailyLoss: rules.dailyLossLimit != null ? rules.dailyLossLimit : cloud.settings.dailyLoss,
-        maxTradesDay: rules.maxTradesDay != null ? rules.maxTradesDay : cloud.settings.maxTradesDay,
-        monthlyTarget: rules.profitTarget != null ? rules.profitTarget : cloud.settings.monthlyTarget
+        riskPct: Object.prototype.hasOwnProperty.call(rules, 'riskPct') ? rules.riskPct : cloud.settings.riskPct,
+        dailyLoss: Object.prototype.hasOwnProperty.call(rules, 'dailyLossLimit') ? rules.dailyLossLimit : cloud.settings.dailyLoss,
+        maxTradesDay: Object.prototype.hasOwnProperty.call(rules, 'maxTradesDay') ? rules.maxTradesDay : cloud.settings.maxTradesDay,
+        monthlyTarget: Object.prototype.hasOwnProperty.call(rules, 'profitTarget') ? rules.profitTarget : cloud.settings.monthlyTarget
       }));
       state.mode = 'cloud'; applySettings(); setDataState('cloud-ready'); renderAll();
       toast('Switched to ' + (state.activeAccount.account_name || 'account'));

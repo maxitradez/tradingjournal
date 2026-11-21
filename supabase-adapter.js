@@ -334,7 +334,8 @@
             starting_balance: settings.balance || 0, currency: settings.currency || 'USD',
             prop_rules: Object.assign({}, accountRules, {
               riskPct: settings.riskPct, dailyLossLimit: settings.dailyLoss,
-              maxTradesDay: settings.maxTradesDay, profitTarget: settings.monthlyTarget
+              maxTradesDay: settings.maxTradesDay, profitTarget: settings.monthlyTarget,
+              lossStreakThreshold: settings.lossStreakThreshold
             })
           }).eq('user_id', userId).eq('id', activeAccountId).select('id').maybeSingle();
           if (accountUpdate.error) throw accountUpdate.error;

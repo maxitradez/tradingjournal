@@ -1624,6 +1624,102 @@
       toast('Could not switch account: ' + ((error && error.message) || 'Please try again.'));
     }
   }
+  function openAccountRulesDialog() {
+    if (!state.activeAccount || !activeCloudAdapter) return;
+    var account = state.activeAccount;
+    var current = Object.assign({}, account.prop_rules || {});
+    var overlay = h('div', { class: 'rules-overlay' });
+    var dialog = h('section', { class: 'rules-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'rules-dialog-title' });
+    var form = h('form', { class: 'rules-form' });
+    var fields = [
+      { key: 'riskPct', label: 'Risk per trade', suffix: '%', step: '0.01', hint: 'Maximum planned risk as a percentage of account balance.' },
+      { key: 'dailyLossLimit', label: 'Maximum daily loss', suffix: '', step: '0.01', hint: 'Amount in the account currency.' },
+      { key: 'maxDrawdownAmount', label: 'Maximum drawdown', suffix: '', step: '0.01', hint: 'Maximum total loss amount, if the firm defines it as a fixed amount.' },
+      { key: 'maxDrawdownPercent', label: 'Maximum drawdown', suffix: '%', step: '0.01', hint: 'Maximum total drawdown percentage.' },
+      { key: 'profitTarget', label: 'Profit target', suffix: '', step: '0.01', hint: 'Target amount in the account currency.' },
+      { key: 'consistencyPercent', label: 'Consistency limit', suffix: '%', step: '0.01', hint: 'Maximum permitted share of total profit from one day.' },
+      { key: 'minimumTradingDays', label: 'Minimum trading days', suffix: 'days', step: '1', hint: 'Whole number of qualifying trading days.' },
+      { key: 'maxTradesDay', label: 'Maximum trades per day', suffix: 'trades', step: '1', hint: 'Leave blank if there is no daily trade cap.' }
+    ];
+    dialog.appendChild(h('div', { class: 'rules-dialog-head' },
+      h('div', {}, h('span', { class: 'rules-eyebrow', text: 'ACCOUNT SETTINGS' }), h('h2', { id: 'rules-dialog-title', text: 'Trading rules' }), h('p', { text: account.account_name || 'Active account' })),
+      h('button', { type: 'button', class: 'btn btn-sm', text: 'Close', 'aria-label': 'Close rules editor', onclick: function () { overlay.remove(); } })
+    ));
+    form.appendChild(h('p', { class: 'rules-intro', text: 'Set the limits that apply to this account. Blank values mean no limit is configured.' }));
+    var grid = h('div', { class: 'rules-fields' });
+    fields.forEach(function (field) {
+      var wrap = h('label', { class: 'rules-field', 'for': 'rule-' + field.key });
+      wrap.appendChild(h('span', { class: 'rules-field-label', text: field.label }));
+      var input = h('input', { id: 'rule-' + field.key, name: field.key, type: 'number', min: '0', step: field.step, placeholder: 'Not set' });
+      if (current[field.key] != null && current[field.key] !== '') input.value = current[field.key];
+      wrap.appendChild(input);
+      wrap.appendChild(h('small', { text: field.hint + (field.suffix ? ' (' + field.suffix + ')' : '') }));
+      grid.appendChild(wrap);
+    });
+    form.appendChild(grid);
+    var permissions = h('div', { class: 'rules-permissions' });
+    [
+      { key: 'newsTradingAllowed', label: 'News trading', hint: 'Whether the firm permits trading around restricted news.' },
+      { key: 'weekendHoldingAllowed', label: 'Weekend holding', hint: 'Whether positions may remain open over the weekend.' }
+    ].forEach(function (field) {
+      var wrap = h('label', { class: 'rules-field', 'for': 'rule-' + field.key });
+      wrap.appendChild(h('span', { class: 'rules-field-label', text: field.label }));
+      var select = h('select', { id: 'rule-' + field.key, name: field.key });
+      select.appendChild(h('option', { value: '', text: 'Not specified' }));
+      select.appendChild(h('option', { value: 'true', text: 'Allowed' }));
+      select.appendChild(h('option', { value: 'false', text: 'Not allowed' }));
+      if (typeof current[field.key] === 'boolean') select.value = String(current[field.key]);
+      wrap.appendChild(select);
+      wrap.appendChild(h('small', { text: field.hint }));
+      permissions.appendChild(wrap);
+    });
+    form.appendChild(permissions);
+    form.appendChild(h('p', { class: 'rules-disclaimer', text: 'These settings are stored per account. News and weekend restrictions are not automatically checked yet; PIPBOOK does not currently have a live news calendar or open-position holding data.' }));
+    var error = h('p', { class: 'rules-error', role: 'alert', hidden: true });
+    form.appendChild(error);
+    var actions = h('div', { class: 'rules-actions' });
+    actions.appendChild(h('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: function () { overlay.remove(); } }));
+    var save = h('button', { type: 'submit', class: 'btn btn-primary', text: 'Save rules' });
+    actions.appendChild(save); form.appendChild(actions);
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      var parsed = Object.assign({}, current);
+      fields.forEach(function (field) {
+        var raw = form.elements[field.key].value.trim();
+        if (!raw) { delete parsed[field.key]; return; }
+        var value = Number(raw);
+        if (!isFinite(value) || value < 0) throw new Error(field.label + ' must be zero or greater.');
+        if ((field.key === 'riskPct' || field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
+        if ((field.key === 'minimumTradingDays' || field.key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error(field.label + ' must be a whole number.');
+        parsed[field.key] = value;
+      });
+      ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
+        var value = form.elements[key].value;
+        if (!value) delete parsed[key]; else parsed[key] = value === 'true';
+      });
+      save.disabled = true; save.textContent = 'Saving…'; error.hidden = true;
+      try {
+        var updated = await activeCloudAdapter.updateAccount(account.id, { prop_rules: parsed });
+        state.activeAccount = updated;
+        state.accounts = state.accounts.map(function (a) { return a.id === updated.id ? updated : a; });
+        state.settings = normSettings(Object.assign({}, state.settings, {
+          riskPct: Object.prototype.hasOwnProperty.call(parsed, 'riskPct') ? parsed.riskPct : null,
+          dailyLoss: Object.prototype.hasOwnProperty.call(parsed, 'dailyLossLimit') ? parsed.dailyLossLimit : null,
+          maxTradesDay: Object.prototype.hasOwnProperty.call(parsed, 'maxTradesDay') ? parsed.maxTradesDay : null,
+          monthlyTarget: Object.prototype.hasOwnProperty.call(parsed, 'profitTarget') ? parsed.profitTarget : null
+        }));
+        applySettings(); overlay.remove(); renderAll(); toast('Account rules saved.');
+      } catch (saveError) {
+        save.disabled = false; save.textContent = 'Save rules';
+        error.textContent = 'Rules not saved: ' + ((saveError && saveError.message) || 'Please try again.');
+        error.hidden = false;
+      }
+    });
+    overlay.addEventListener('click', function (event) { if (event.target === overlay) overlay.remove(); });
+    dialog.appendChild(form); overlay.appendChild(dialog); document.body.appendChild(overlay);
+    var first = dialog.querySelector('input'); if (first) first.focus();
+  }
+
   function renderAccountWorkspace() {
     var topbar = document.querySelector('.workspace-topbar');
     if (!topbar) return;
@@ -1692,37 +1788,7 @@
         } catch (error) { toast('Account could not be archived: ' + ((error && error.message) || 'Please try again.')); }
       });
       var rules = h('button', { type: 'button', class: 'btn btn-sm', text: 'Rules', title: 'Edit custom prop-firm rules for this account' });
-      rules.addEventListener('click', async function () {
-        if (!state.activeAccount || !activeCloudAdapter) return;
-        var current = state.activeAccount.prop_rules || {};
-        var raw = window.prompt('Edit this account’s custom rules as JSON. Supported keys: riskPct, dailyLossLimit, maxDrawdownAmount, maxDrawdownPercent, profitTarget, consistencyPercent, minimumTradingDays, maxTradesDay, newsTradingAllowed, weekendHoldingAllowed. Use numbers for limits and true/false for permissions. Note: newsTradingAllowed and weekendHoldingAllowed are stored as account settings but are not automatically verified yet; the journal has no live news calendar or open-position holding data.', JSON.stringify(current, null, 2));
-        if (raw == null) return;
-        try {
-          var parsed = JSON.parse(raw);
-          if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('Rules must be a JSON object.');
-          var numericRules = ['riskPct','dailyLossLimit','maxDrawdownAmount','maxDrawdownPercent','profitTarget','consistencyPercent','minimumTradingDays','maxTradesDay'];
-          numericRules.forEach(function (key) {
-            if (parsed[key] == null || parsed[key] === '') return;
-            var value = Number(parsed[key]);
-            if (!isFinite(value) || value < 0) throw new Error(key + ' must be a non-negative number.');
-            if ((key === 'riskPct' || key === 'maxDrawdownPercent' || key === 'consistencyPercent') && value > 100) throw new Error(key + ' cannot exceed 100.');
-            if (key === 'minimumTradingDays' || key === 'maxTradesDay') { if (Math.floor(value) !== value) throw new Error(key + ' must be a whole number.'); }
-            parsed[key] = value;
-          });
-          ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
-            if (parsed[key] != null && typeof parsed[key] !== 'boolean') throw new Error(key + ' must be true or false.');
-          });
-          var updated = await activeCloudAdapter.updateAccount(state.activeAccount.id, { prop_rules: parsed });
-          state.activeAccount = updated;
-          state.settings = normSettings(Object.assign({}, state.settings, {
-            riskPct: parsed.riskPct != null ? parsed.riskPct : state.settings.riskPct,
-            dailyLoss: parsed.dailyLossLimit != null ? parsed.dailyLossLimit : state.settings.dailyLoss,
-            maxTradesDay: parsed.maxTradesDay != null ? parsed.maxTradesDay : state.settings.maxTradesDay,
-            monthlyTarget: parsed.profitTarget != null ? parsed.profitTarget : state.settings.monthlyTarget
-          }));
-          applySettings(); renderAll(); toast('Account rules saved.');
-        } catch (error) { toast('Rules not saved: ' + ((error && error.message) || 'Check the JSON and try again.')); }
-      });
+      rules.addEventListener('click', function () { openAccountRulesDialog(); });
       panel.appendChild(select); panel.appendChild(add); panel.appendChild(editAccount); panel.appendChild(rules); panel.appendChild(archiveAccount);
       var heading = topbar.querySelector('.workspace-heading');
       if (heading && heading.nextSibling) topbar.insertBefore(panel, heading.nextSibling); else topbar.insertBefore(panel, topbar.firstChild);

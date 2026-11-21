@@ -1744,10 +1744,13 @@
     overlay.appendChild(dialog); document.body.appendChild(overlay);
     return { overlay: overlay, dialog: dialog };
   }
+  function accountTypeLabel(type) {
+    return type === 'prop' ? 'Prop firm' : 'Personal';
+  }
   function openAccountDetailsDialog(editing) {
     if (!activeCloudAdapter) return;
     var account = editing ? state.activeAccount : null;
-    var modal = accountDialog(editing ? 'Edit account' : 'Add trading account', editing ? account.account_name : 'Create a separate workspace for another broker, prop firm or personal account.');
+    var modal = accountDialog(editing ? 'Edit account' : 'Add trading account', editing ? account.account_name : 'Choose the account type, then add only the information relevant to it.');
     var form = h('form', { class: 'rules-form' });
     var fields = [
       { key: 'account_name', label: 'Account name', placeholder: 'e.g. GoFund 10K', value: account ? account.account_name : '' },
@@ -1759,11 +1762,12 @@
       label.appendChild(h('input', { name: field.key, required: field.key === 'account_name', maxlength: '80', placeholder: field.placeholder, value: field.value }));
       form.appendChild(label);
     });
+    var type = null, propRulesPanel = null;
     if (!editing) {
       var typeLabel = h('label', { class: 'rules-field' });
       typeLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Account type' }));
-      var type = h('select', { name: 'account_type' });
-      [['prop','Prop firm'],['live','Live'],['demo','Demo']].forEach(function (pair) { type.appendChild(h('option', { value: pair[0], text: pair[1] })); });
+      type = h('select', { name: 'account_type' });
+      [['personal','Personal account'],['prop','Prop firm account']].forEach(function (pair) { type.appendChild(h('option', { value: pair[0], text: pair[1] })); });
       typeLabel.appendChild(type); form.appendChild(typeLabel);
       var balanceLabel = h('label', { class: 'rules-field' });
       balanceLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Starting balance' }));
@@ -1774,7 +1778,52 @@
       currencyLabel.appendChild(h('span', { class: 'rules-field-label', text: 'Currency symbol or code' }));
       currencyLabel.appendChild(h('input', { name: 'currency', maxlength: '4', value: state.activeAccount && state.activeAccount.currency || 'USD', required: true }));
       form.appendChild(currencyLabel);
-      form.appendChild(h('p', { class: 'rules-disclaimer', text: 'This account starts with its own blank risk limits and trading setup. It will not copy the current account’s risk settings.' }));
+
+      propRulesPanel = h('div', { class: 'prop-create-rules' });
+      propRulesPanel.appendChild(h('div', { class: 'prop-create-heading' },
+        h('strong', { text: 'Prop firm rules' }),
+        h('p', { text: 'Add the limits from your challenge or funded-account agreement. Leave anything that does not apply blank.' })
+      ));
+      var ruleGrid = h('div', { class: 'rules-fields' });
+      [
+        { key: 'dailyLossLimit', label: 'Maximum daily loss', step: '0.01', hint: 'Amount in this account currency.' },
+        { key: 'maxDrawdownAmount', label: 'Maximum overall drawdown', step: '0.01', hint: 'Fixed amount, if your firm uses one.' },
+        { key: 'maxDrawdownPercent', label: 'Maximum overall drawdown', step: '0.01', suffix: '%', hint: 'Percentage limit, if your firm uses one.' },
+        { key: 'profitTarget', label: 'Profit target', step: '0.01', hint: 'Target amount for the challenge or phase.' },
+        { key: 'consistencyPercent', label: 'Consistency rule', step: '0.01', suffix: '%', hint: 'Maximum share of total profit from one day.' },
+        { key: 'minimumTradingDays', label: 'Minimum trading days', step: '1', hint: 'Required qualifying days.' },
+        { key: 'maxTradesDay', label: 'Maximum trades per day', step: '1', hint: 'Only if the firm sets a trade cap.' }
+      ].forEach(function (field) {
+        var wrap = h('label', { class: 'rules-field' });
+        wrap.appendChild(h('span', { class: 'rules-field-label', text: field.label }));
+        wrap.appendChild(h('input', { name: 'prop_' + field.key, type: 'number', min: '0', step: field.step, placeholder: 'Not set' }));
+        wrap.appendChild(h('small', { text: field.hint + (field.suffix ? ' (' + field.suffix + ')' : '') }));
+        ruleGrid.appendChild(wrap);
+      });
+      propRulesPanel.appendChild(ruleGrid);
+      var permissions = h('div', { class: 'rules-permissions' });
+      [
+        { key: 'newsTradingAllowed', label: 'News trading' },
+        { key: 'weekendHoldingAllowed', label: 'Weekend holding' }
+      ].forEach(function (field) {
+        var wrap = h('label', { class: 'rules-field' });
+        wrap.appendChild(h('span', { class: 'rules-field-label', text: field.label }));
+        var select = h('select', { name: 'prop_' + field.key });
+        select.appendChild(h('option', { value: '', text: 'Not specified' }));
+        select.appendChild(h('option', { value: 'true', text: 'Allowed' }));
+        select.appendChild(h('option', { value: 'false', text: 'Not allowed' }));
+        wrap.appendChild(select); permissions.appendChild(wrap);
+      });
+      propRulesPanel.appendChild(permissions);
+      form.appendChild(propRulesPanel);
+      function updateAccountTypeFields() {
+        propRulesPanel.hidden = type.value !== 'prop';
+        var brokerLabel = form.querySelector('input[name="broker"]').closest('.rules-field');
+        if (brokerLabel) brokerLabel.querySelector('.rules-field-label').textContent = type.value === 'prop' ? 'Prop firm' : 'Broker (optional)';
+      }
+      type.addEventListener('change', updateAccountTypeFields);
+      updateAccountTypeFields();
+      form.appendChild(h('p', { class: 'rules-disclaimer', text: 'Your Trading Setup is configured separately after creating the account. Personal accounts do not need prop firm rules.' }));
     }
     var error = h('p', { class: 'rules-error', role: 'alert', hidden: true });
     form.appendChild(error);
@@ -1797,11 +1846,35 @@
           var balance = Number(form.elements.starting_balance.value);
           var currency = form.elements.currency.value.trim().toUpperCase();
           if (!isFinite(balance) || balance < 0) throw new Error('Starting balance must be zero or greater.');
-          if (!currency || currency.length > 4 || /\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
+          if (!currency || currency.length > 4 || /\\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
+          var accountType = form.elements.account_type.value;
+          var propRules = {
+            riskPct: null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null,
+            profitTarget: null, consistencyPercent: null, minimumTradingDays: null, maxTradesDay: null,
+            lossStreakThreshold: 3, newsTradingAllowed: null, weekendHoldingAllowed: null
+          };
+          if (accountType === 'prop') {
+            [
+              'dailyLossLimit','maxDrawdownAmount','maxDrawdownPercent','profitTarget',
+              'consistencyPercent','minimumTradingDays','maxTradesDay'
+            ].forEach(function (key) {
+              var raw = form.elements['prop_' + key].value.trim();
+              if (!raw) return;
+              var value = Number(raw);
+              if (!isFinite(value) || value < 0) throw new Error('Prop firm limits must be zero or greater.');
+              if ((key === 'maxDrawdownPercent' || key === 'consistencyPercent') && value > 100) throw new Error('Percentage-based prop firm rules cannot exceed 100%.');
+              if ((key === 'minimumTradingDays' || key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error('Trading days and trades per day must be whole numbers.');
+              propRules[key] = value;
+            });
+            ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
+              var value = form.elements['prop_' + key].value;
+              propRules[key] = value === '' ? null : value === 'true';
+            });
+          }
           var created = await activeCloudAdapter.createAccount({
-            account_name: name, account_type: form.elements.account_type.value,
+            account_name: name, account_type: accountType,
             broker: form.elements.broker.value.trim() || null, starting_balance: balance, currency: currency,
-            prop_rules: { riskPct: null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null, profitTarget: null, consistencyPercent: null, minimumTradingDays: null, maxTradesDay: null, lossStreakThreshold: 3, newsTradingAllowed: null, weekendHoldingAllowed: null }
+            prop_rules: propRules
           });
           modal.overlay.remove();
           var switched = await switchTradingAccount(created.id);
@@ -1824,7 +1897,7 @@
       var row = h('div', { class: 'archived-account-row' });
       var details = h('div', { class: 'archived-account-details' },
         h('strong', { text: account.account_name || 'Untitled account' }),
-        h('small', { text: (account.broker || 'No broker specified') + ' · ' + (account.account_type || 'account') })
+        h('small', { text: (account.broker || 'No broker specified') + ' · ' + accountTypeLabel(account.account_type) })
       );
       var restore = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Restore' });
       restore.addEventListener('click', async function () {
@@ -1883,7 +1956,7 @@
       select.addEventListener('change', function () { switchTradingAccount(select.value); });
       var add = h('button', { type: 'button', class: 'btn btn-sm', text: '+ Account', onclick: function () { openAccountDetailsDialog(false); } });
       var edit = h('button', { type: 'button', class: 'btn btn-sm', text: 'Edit', title: 'Edit the active account', onclick: function () { openAccountDetailsDialog(true); } });
-      var rules = h('button', { type: 'button', class: 'btn btn-sm', text: 'Rules', title: 'Edit the active account trading rules', onclick: function () { openAccountRulesDialog(); } });
+      var rules = h('button', { id: 'account-rules-button', type: 'button', class: 'btn btn-sm', text: 'Prop rules', title: 'Edit the active account trading rules', onclick: function () { openAccountRulesDialog(); } });
       var archive = h('button', { type: 'button', class: 'btn btn-sm', text: 'Archive', title: 'Archive this account without deleting history', onclick: function () { openArchiveAccountDialog(); } });
       var archived = h('button', { type: 'button', class: 'btn btn-sm', text: 'Archived', title: 'View and restore archived accounts', onclick: function () { openArchivedAccountsDialog(); } });
       panel.appendChild(select); panel.appendChild(add); panel.appendChild(edit); panel.appendChild(rules); panel.appendChild(archive); panel.appendChild(archived);
@@ -1894,9 +1967,11 @@
     if (!picker) return;
     picker.textContent = '';
     (state.accounts || []).forEach(function (account) {
-      picker.appendChild(h('option', { value: account.id, text: account.account_name + (account.account_type ? ' · ' + account.account_type : '') }));
+      picker.appendChild(h('option', { value: account.id, text: account.account_name + ' · ' + accountTypeLabel(account.account_type) }));
     });
     if (state.activeAccount) picker.value = state.activeAccount.id;
+    var rulesButton = panel.querySelector('#account-rules-button');
+    if (rulesButton) rulesButton.hidden = !state.activeAccount || state.activeAccount.account_type !== 'prop';
     picker.disabled = state.dataState === 'cloud-loading' || state.dataState === 'cloud-syncing';
     panel.hidden = !state.accounts || !state.accounts.length;
     panel.style.display = panel.hidden ? 'none' : 'flex';

@@ -3249,3 +3249,23 @@ tr:last-child td { border-bottom:0; }
   .rules-field { padding:11px; }
   .rules-dialog-head h2 { font-size:22px; }
 }
+
+
+/* Account management dialogs and archived-account restore list */
+.account-dialog { max-width:560px; }
+.account-dialog .rules-form { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+.account-dialog .rules-form > .rules-field,
+.account-dialog .rules-form > .rules-disclaimer,
+.account-dialog .rules-form > .rules-error,
+.account-dialog .rules-form > .rules-actions { grid-column:1/-1; }
+.account-dialog .rules-field input,.account-dialog .rules-field select { box-sizing:border-box; }
+.archived-account-list { display:flex;flex-direction:column;gap:9px;margin-top:8px; }
+.archived-account-row { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid #304761;border-radius:11px;background:#192C45; }
+.archived-account-details { display:flex;flex-direction:column;gap:5px;min-width:0; }
+.archived-account-details strong { color:#F4F7FB;font-size:13px;overflow-wrap:anywhere; }
+.archived-account-details small { color:#AEBBD0;font-size:10px; }
+@media(max-width:560px) {
+  .account-dialog .rules-form { grid-template-columns:1fr; }
+  .account-dialog .rules-form > * { grid-column:1; }
+  .archived-account-row { align-items:flex-start; }
+}

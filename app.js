@@ -1797,7 +1797,7 @@
           var balance = Number(form.elements.starting_balance.value);
           var currency = form.elements.currency.value.trim().toUpperCase();
           if (!isFinite(balance) || balance < 0) throw new Error('Starting balance must be zero or greater.');
-          if (!currency || currency.length > 4 || /\\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
+          if (!currency || currency.length > 4 || /\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
           var created = await activeCloudAdapter.createAccount({
             account_name: name, account_type: form.elements.account_type.value,
             broker: form.elements.broker.value.trim() || null, starting_balance: balance, currency: currency,

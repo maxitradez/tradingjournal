@@ -135,7 +135,9 @@
             var existingNotes = found.data.notes && typeof found.data.notes === 'object' ? found.data.notes : {};
             payload.notes = Object.assign({}, existingNotes, payload.notes);
           }
-          var updated = await api.from(table).update(payload).eq('id', found.data.id).eq('user_id', userId).select('id').maybeSingle();
+          var updateQuery = api.from(table).update(payload).eq('id', found.data.id).eq('user_id', userId);
+          if (table === 'trades' && activeAccountId) updateQuery = updateQuery.eq('account_id', activeAccountId);
+          var updated = await updateQuery.select('id').maybeSingle();
           if (updated.error) throw updated.error;
           if (!updated.data) throw new Error('The cloud record was not updated. Refresh the journal and try again.');
           return found.data.id;
@@ -273,7 +275,9 @@
           if (!found.data) return { screenshotCleanupError: '' };
           var screenshotPath = kind === 'trades' && found.data.notes && typeof found.data.notes === 'object'
             ? found.data.notes.chart_screenshot_path || '' : '';
-          var result = await api.from(table).delete().eq('user_id', userId).eq('id', found.data.id).select('id').maybeSingle();
+          var deleteQuery = api.from(table).delete().eq('user_id', userId).eq('id', found.data.id);
+          if (kind === 'trades' && activeAccountId) deleteQuery = deleteQuery.eq('account_id', activeAccountId);
+          var result = await deleteQuery.select('id').maybeSingle();
           if (result.error) throw result.error;
           if (!result.data) throw new Error('The cloud record was not deleted. Refresh the journal and try again.');
           if (screenshotPath) {

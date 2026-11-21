@@ -196,7 +196,7 @@
           var settingsRow = results[3].data;
           var prefs = settingsRow && settingsRow.preferences && typeof settingsRow.preferences === 'object' ? settingsRow.preferences : {};
           return {
-            accounts: accounts, activeAccount: selected,
+            accounts: accounts, archivedAccounts: accountRows.filter(function (a) { return !!a.is_archived; }), activeAccount: selected,
             trades: trs, playbooks: pbs,
             days: (results[2] || []).map(fromCloudDay),
             settings: normSettings({
@@ -317,6 +317,12 @@
             .eq('user_id', userId).eq('id', accountId).select('id').single();
           if (result.error) throw result.error;
           if (activeAccountId === accountId) activeAccountId = null;
+        },
+        async restoreAccount(accountId) {
+          var result = await api.from('trading_accounts').update({ is_archived: false, updated_at: new Date().toISOString() })
+            .eq('user_id', userId).eq('id', accountId).select('*').single();
+          if (result.error) throw result.error;
+          return result.data;
         },
         async saveSettings(settings) {
           var accountRow = await api.from('trading_accounts').select('prop_rules')

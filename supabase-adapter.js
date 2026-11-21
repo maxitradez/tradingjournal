@@ -298,6 +298,17 @@
           if (activeAccountId === accountId) activeAccountId = null;
         },
         async saveSettings(settings) {
+          var accountRow = await api.from('trading_accounts').select('prop_rules')
+            .eq('user_id', userId).eq('id', activeAccountId).maybeSingle();
+          if (accountRow.error) throw accountRow.error;
+          if (!accountRow.data) throw new Error('The active trading account was not found. Refresh and try again.');
+          var accountRules = accountRow.data.prop_rules && typeof accountRow.data.prop_rules === 'object' ? accountRow.data.prop_rules : {};
+          var accountUpdate = await api.from('trading_accounts').update({
+            starting_balance: settings.balance || 0, currency: settings.currency || 'USD',
+            prop_rules: Object.assign({}, accountRules, { riskPct: settings.riskPct })
+          }).eq('user_id', userId).eq('id', activeAccountId).select('id').maybeSingle();
+          if (accountUpdate.error) throw accountUpdate.error;
+          if (!accountUpdate.data) throw new Error('The active account settings were not saved. Refresh and try again.');
           var prefs = {
             riskPct: settings.riskPct, monthlyTarget: settings.monthlyTarget,
             maxTradesDay: settings.maxTradesDay, dailyLoss: settings.dailyLoss,

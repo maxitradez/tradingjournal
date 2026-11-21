@@ -905,6 +905,7 @@
     if (Number(rules.maxDrawdownAmount) > 0 && stats.maxDD >= Number(rules.maxDrawdownAmount)) msgs.push('This account has reached its maximum drawdown amount of ' + CUR + fmt(Number(rules.maxDrawdownAmount)) + '.');
     if (Number(rules.maxDrawdownPercent) > 0 && s.balance > 0 && stats.maxDD / s.balance * 100 >= Number(rules.maxDrawdownPercent)) msgs.push('This account has reached its maximum drawdown of ' + rules.maxDrawdownPercent + '%.');
     if (Number(rules.profitTarget) > 0 && stats.total >= Number(rules.profitTarget)) msgs.push('The account profit target of ' + CUR + fmt(Number(rules.profitTarget)) + ' has been reached. Check your firm’s remaining requirements before trading further.');
+    if (rules.weekendHoldingAllowed === false && date) { var tradeDay = new Date(date + 'T00:00:00').getDay(); if (tradeDay === 0 || tradeDay === 6) msgs.push('This account does not allow weekend holding/trading. Confirm the firm’s exact restriction before proceeding.'); }
     if (Number(rules.minimumTradingDays) > 0 && stats.dayCount < Number(rules.minimumTradingDays)) msgs.push('Trading-day requirement: ' + stats.dayCount + ' of ' + Number(rules.minimumTradingDays) + ' days logged.');
     if (Number(rules.consistencyPercent) > 0 && stats.total > 0) {
       var bestDay = Object.keys(stats.days).reduce(function (best, key) { return Math.max(best, stats.days[key].net); }, 0);
@@ -1684,6 +1685,18 @@
         try {
           var parsed = JSON.parse(raw);
           if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('Rules must be a JSON object.');
+          var numericRules = ['riskPct','dailyLossLimit','maxDrawdownAmount','maxDrawdownPercent','profitTarget','consistencyPercent','minimumTradingDays','maxTradesDay'];
+          numericRules.forEach(function (key) {
+            if (parsed[key] == null || parsed[key] === '') return;
+            var value = Number(parsed[key]);
+            if (!isFinite(value) || value < 0) throw new Error(key + ' must be a non-negative number.');
+            if ((key === 'riskPct' || key === 'maxDrawdownPercent' || key === 'consistencyPercent') && value > 100) throw new Error(key + ' cannot exceed 100.');
+            if (key === 'minimumTradingDays' || key === 'maxTradesDay') { if (Math.floor(value) !== value) throw new Error(key + ' must be a whole number.'); }
+            parsed[key] = value;
+          });
+          ['newsTradingAllowed','weekendHoldingAllowed'].forEach(function (key) {
+            if (parsed[key] != null && typeof parsed[key] !== 'boolean') throw new Error(key + ' must be true or false.');
+          });
           var updated = await activeCloudAdapter.updateAccount(state.activeAccount.id, { prop_rules: parsed });
           state.activeAccount = updated;
           state.settings = normSettings(Object.assign({}, state.settings, {

@@ -1638,7 +1638,6 @@
     var dialog = h('section', { class: 'rules-dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'rules-dialog-title' });
     var form = h('form', { class: 'rules-form' });
     var fields = [
-      { key: 'riskPct', label: 'Risk per trade', suffix: '%', step: '0.01', hint: 'Maximum planned risk as a percentage of account balance.' },
       { key: 'dailyLossLimit', label: 'Maximum daily loss', suffix: '', step: '0.01', hint: 'Amount in the account currency.' },
       { key: 'maxDrawdownAmount', label: 'Maximum drawdown', suffix: '', step: '0.01', hint: 'Maximum total loss amount, if the firm defines it as a fixed amount.' },
       { key: 'maxDrawdownPercent', label: 'Maximum drawdown', suffix: '%', step: '0.01', hint: 'Maximum total drawdown percentage.' },
@@ -1646,13 +1645,12 @@
       { key: 'consistencyPercent', label: 'Consistency limit', suffix: '%', step: '0.01', hint: 'Maximum permitted share of total profit from one day.' },
       { key: 'minimumTradingDays', label: 'Minimum trading days', suffix: 'days', step: '1', hint: 'Whole number of qualifying trading days.' },
       { key: 'maxTradesDay', label: 'Maximum trades per day', suffix: 'trades', step: '1', hint: 'Leave blank if there is no daily trade cap.' },
-      { key: 'lossStreakThreshold', label: 'Loss-streak reminder', suffix: 'losses', step: '1', hint: 'Reminder after 2–10 consecutive losing trades.' }
-    ];
+        ];
     dialog.appendChild(h('div', { class: 'rules-dialog-head' },
       h('div', {}, h('span', { class: 'rules-eyebrow', text: 'ACCOUNT SETTINGS' }), h('h2', { id: 'rules-dialog-title', text: 'Trading rules' }), h('p', { text: account.account_name || 'Active account' })),
       h('button', { type: 'button', class: 'btn btn-sm', text: 'Close', 'aria-label': 'Close rules editor', onclick: function () { overlay.remove(); } })
     ));
-    form.appendChild(h('p', { class: 'rules-intro', text: 'Set the limits that apply to this account. Blank values mean no limit is configured.' }));
+    form.appendChild(h('p', { class: 'rules-intro', text: 'Set the limits imposed by this prop firm. Your personal risk per trade and loss-streak reminder live in Trading Setup.' }));
     var grid = h('div', { class: 'rules-fields' });
     fields.forEach(function (field) {
       var wrap = h('label', { class: 'rules-field', 'for': 'rule-' + field.key });
@@ -1697,7 +1695,7 @@
           if (!raw) { delete parsed[field.key]; return; }
           var value = Number(raw);
           if (!isFinite(value) || value < 0) throw new Error(field.label + ' must be zero or greater.');
-          if ((field.key === 'riskPct' || field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
+          if ((field.key === 'maxDrawdownPercent' || field.key === 'consistencyPercent') && value > 100) throw new Error(field.label + ' cannot exceed 100%.');
           if ((field.key === 'minimumTradingDays' || field.key === 'maxTradesDay') && Math.floor(value) !== value) throw new Error(field.label + ' must be a whole number.');
           if (field.key === 'lossStreakThreshold' && (value < 2 || value > 10)) throw new Error('Loss-streak reminder must be between 2 and 10.');
           parsed[field.key] = value;
@@ -1846,7 +1844,7 @@
           var balance = Number(form.elements.starting_balance.value);
           var currency = form.elements.currency.value.trim().toUpperCase();
           if (!isFinite(balance) || balance < 0) throw new Error('Starting balance must be zero or greater.');
-          if (!currency || currency.length > 4 || /\\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
+          if (!currency || currency.length > 4 || /\s/.test(currency)) throw new Error('Enter a currency symbol or 3–4 letter currency code.');
           var accountType = form.elements.account_type.value;
           var propRules = {
             riskPct: null, dailyLossLimit: null, maxDrawdownAmount: null, maxDrawdownPercent: null,

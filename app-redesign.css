@@ -212,3 +212,48 @@ html body .wrap .workspace-topbar { position:static; z-index:auto; isolation:aut
   html body.mobile-nav-open #fab { display:none !important; }
 }
 html body.mobile-nav-open #fab { visibility:hidden !important; pointer-events:none !important; z-index:0 !important; }
+
+
+/* PIPBOOK auth feedback: prominent, inline messages below the email field */
+#public-auth .auth-email-field {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:8px;
+}
+#public-auth .auth-message {
+  display:block;
+  box-sizing:border-box;
+  width:100%;
+  min-height:0;
+  margin:4px 0 0;
+  padding:13px 15px;
+  border:1px solid #3B526E;
+  border-left:4px solid #60A5FA;
+  border-radius:10px;
+  background:#14243A;
+  color:#E7EDF5;
+  font:500 14px/1.55 var(--font-body);
+  letter-spacing:0;
+  overflow-wrap:anywhere;
+}
+#public-auth .auth-message:empty { display:none; }
+#public-auth .auth-message[data-kind="info"] {
+  border-color:rgba(52,211,153,.42);
+  border-left-color:#34D399;
+  background:rgba(16,185,129,.12);
+  color:#D1FAE5;
+}
+#public-auth .auth-message[data-kind="error"] {
+  border-color:rgba(248,113,113,.48);
+  border-left-color:#F87171;
+  background:rgba(127,29,29,.24);
+  color:#FECACA;
+}
+@media(max-width:560px) {
+  #public-auth .auth-message {
+    padding:13px 14px;
+    font-size:14px;
+    line-height:1.55;
+  }
+}

@@ -257,3 +257,39 @@ html body.mobile-nav-open #fab { visibility:hidden !important; pointer-events:no
     line-height:1.55;
   }
 }
+
+
+/* Password visibility control on the public authentication form */
+#public-auth .auth-password-control {
+  position:relative;
+  display:flex;
+  align-items:center;
+  width:100%;
+}
+#public-auth .auth-password-control input {
+  width:100%;
+  padding-right:76px;
+}
+#public-auth .auth-password-toggle {
+  position:absolute;
+  right:9px;
+  top:50%;
+  transform:translateY(-50%);
+  min-width:52px;
+  min-height:34px;
+  padding:6px 9px;
+  border:1px solid var(--line-strong);
+  border-radius:7px;
+  background:var(--surface-2);
+  color:var(--fg);
+  font:650 12px/1 var(--font-body);
+  cursor:pointer;
+}
+#public-auth .auth-password-toggle:hover {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+#public-auth .auth-password-toggle:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}

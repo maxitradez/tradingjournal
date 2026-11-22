@@ -70,7 +70,78 @@ async function loadFeedback(){
   var failed=document.createElement('p');failed.className='muted';failed.textContent=error.message||'Could not load feedback reports.';list.appendChild(failed);
  }
 }
-async function loadOverview(){
+
+async function announcementRequest(payload){
+ var result=await client.functions.invoke('pipbook-announcements',{body:payload});
+ if(result.error)throw new Error(result.data&&result.data.error?result.data.error:result.error.message||'Announcement request failed.');
+ if(!result.data||!result.data.success)throw new Error(result.data&&result.data.error?result.data.error:'Announcement request failed.');
+ return result.data;
+}
+async function processAnnouncementEmails(id,statusNode){
+ var rounds=0,last=null;
+ while(rounds<10){
+  rounds++;last=await announcementRequest({action:'send_batch',announcement_id:id});
+  statusNode.textContent='Email delivery: '+last.sent+'/'+last.total+' sent · '+last.failed+' failed'+(last.remaining?' · '+last.remaining+' remaining':'');
+  if(!last.remaining)break;
+ }
+ await loadAnnouncements();
+ if(last&&last.remaining)statusNode.textContent+=' · Select Continue in the history to resume.';
+ return last;
+}
+async function loadAnnouncements(){
+ var list=document.getElementById('announcement-history'),count=document.getElementById('announcement-count');
+ if(!list||!count)return;
+ list.textContent='Loading announcements…';
+ try{
+  var data=await announcementRequest({action:'admin_list'}),items=data.announcements||[];
+  count.textContent=items.length+' announcement'+(items.length===1?'':'s');list.replaceChildren();
+  if(!items.length){var empty=document.createElement('p');empty.className='muted';empty.textContent='No announcements yet. Your published updates will appear here.';list.appendChild(empty);return;}
+  items.forEach(function(item){
+   var card=document.createElement('article');card.className='announcement-admin-item';
+   var title=document.createElement('h4');title.textContent=item.title||'Untitled announcement';card.appendChild(title);
+   var meta=document.createElement('div');meta.className='announcement-admin-meta';var q=item.email_queue||{};
+   meta.textContent=fmtDate(item.published_at)+' · Email: '+(q.sent||0)+' sent, '+(q.queued||0)+' queued, '+(q.failed||0)+' failed';card.appendChild(meta);
+   var message=document.createElement('p');message.textContent=item.message||'';card.appendChild(message);
+   var actions=document.createElement('div');actions.className='announcement-admin-actions';
+   var status=document.createElement('span');status.className='announcement-admin-status';
+   status.textContent=item.archived_at?'Archived':item.email_status==='completed'?'Email delivery complete':item.email_status==='completed_with_errors'?'Email delivery finished with errors':item.email_status==='sending'?'Email delivery in progress':'Email delivery pending';
+   actions.appendChild(status);
+   if(!item.archived_at&&q.queued>0){
+    var send=document.createElement('button');send.type='button';send.textContent='Continue email sending';
+    send.addEventListener('click',async function(){send.disabled=true;status.textContent='Sending email batch…';try{await processAnnouncementEmails(item.id,status);}catch(error){status.textContent=error.message||'Email batch failed.';}finally{send.disabled=false;loadAnnouncements();}});
+    actions.appendChild(send);
+   }
+   if(!item.archived_at&&q.failed>0){
+    var retry=document.createElement('button');retry.type='button';retry.textContent='Retry failed emails';
+    retry.addEventListener('click',async function(){retry.disabled=true;try{await announcementRequest({action:'retry_failed',announcement_id:item.id});await processAnnouncementEmails(item.id,status);}catch(error){status.textContent=error.message||'Could not retry failed emails.';}finally{retry.disabled=false;loadAnnouncements();}});
+    actions.appendChild(retry);
+   }
+   if(!item.archived_at){
+    var archive=document.createElement('button');archive.type='button';archive.textContent='Archive in-app';
+    archive.addEventListener('click',async function(){archive.disabled=true;try{await announcementRequest({action:'archive',announcement_id:item.id});status.textContent='Archived';loadAnnouncements();}catch(error){status.textContent=error.message||'Could not archive announcement.';archive.disabled=false;}});
+    actions.appendChild(archive);
+   }
+   card.appendChild(actions);list.appendChild(card);
+  });
+ }catch(error){count.textContent='Unavailable';list.replaceChildren();var failed=document.createElement('p');failed.className='muted';failed.textContent=error.message||'Could not load announcements.';list.appendChild(failed);}
+}
+function setupAnnouncementComposer(){
+ var form=document.getElementById('announcement-form');if(!form)return;
+ var publish=document.getElementById('announcement-publish'),status=document.getElementById('announcement-form-status');
+ form.addEventListener('submit',async function(event){
+  event.preventDefault();var title=document.getElementById('announcement-title').value.trim(),message=document.getElementById('announcement-message').value.trim();
+  if(title.length<4||message.length<10){status.textContent='Enter a title and a message before publishing.';return;}
+  publish.disabled=true;status.textContent='Publishing in PIPBOOK…';
+  try{
+   var created=await announcementRequest({action:'publish',title:title,message:message});form.reset();
+   status.textContent='Published in-app. Starting email delivery to '+created.email_total+' verified accounts…';await loadAnnouncements();
+   if(created.email_total>0)await processAnnouncementEmails(created.announcement.id,status);
+   else status.textContent='Published in-app. No verified email accounts were found to receive this update.';
+  }catch(error){status.textContent=error.message||'Could not publish announcement.';}
+  finally{publish.disabled=false;}
+ });
+}
+\nasync function loadOverview(){
  if(!client){message(statusEl,'Account service unavailable. Please try again later.',true);return;}
  refreshButton.disabled=true;message(statusEl,'Verifying administrator permission…');
  try{
@@ -108,7 +179,7 @@ async function loadOverview(){
    });body.appendChild(tr);
   });
   if(!body.children.length){var empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=3;cell.textContent='No registered users yet.';cell.className='muted';empty.appendChild(cell);body.appendChild(empty);}
-  loadFeedback();
+  loadFeedback();\n  loadAnnouncements();
  }catch(error){
   showLogin('We could not verify administrator access. '+(error.message||'Please try again.'),true);
  }
@@ -130,7 +201,7 @@ signout.addEventListener('click',async function(){
  if(result.error){message(statusEl,'Could not sign out. Please try again.',true);return;}
  showLogin('You are signed out.');
 });
-refreshButton.addEventListener('click',loadOverview);
+refreshButton.addEventListener('click',loadOverview);\nsetupAnnouncementComposer();
 client.auth.onAuthStateChange(function(){setTimeout(loadOverview,0);});
 loadOverview();
 })();

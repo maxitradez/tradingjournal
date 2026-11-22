@@ -128,6 +128,16 @@ async function loadAnnouncements(){
 function setupAnnouncementComposer(){
  var form=document.getElementById('announcement-form');if(!form)return;
  var publish=document.getElementById('announcement-publish'),status=document.getElementById('announcement-form-status');
+ var testButton=document.getElementById('announcement-test-email');
+ testButton.addEventListener('click',async function(){
+  var title=document.getElementById('announcement-title').value.trim(),message=document.getElementById('announcement-message').value.trim();
+  if(title.length<4||message.length<10){status.textContent='Enter a title and message before sending a test.';return;}
+  testButton.disabled=true;status.textContent='Sending a test email only to the administrator…';
+  try{var result=await announcementRequest({action:'send_test',title:title,message:message});status.textContent='Test email sent to '+result.sent_to+'. No users were emailed.';}
+  catch(error){status.textContent=error.message||'Test email could not be sent.';}
+  finally{testButton.disabled=false;}
+ });
+
  form.addEventListener('submit',async function(event){
   event.preventDefault();var title=document.getElementById('announcement-title').value.trim(),message=document.getElementById('announcement-message').value.trim();
   if(title.length<4||message.length<10){status.textContent='Enter a title and a message before publishing.';return;}

@@ -350,7 +350,7 @@
     form.hidden = false;
     authPanel.querySelector('.auth-message').textContent = '';
     if (email && mode !== 'recovery') email.focus();
-    if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' || mode === 'recovery' ? 'new-password' : 'current-password'); }
+    if (password) { password.value = ''; password.setAttribute('autocomplete', mode === 'signup' || mode === 'recovery' ? 'new-password' : 'current-password'); password.placeholder = mode === 'signup' || mode === 'recovery' ? 'At least 8 characters' : 'Enter your password'; password.minLength = mode === 'signup' || mode === 'recovery' ? 8 : 1; }
   }
   function refreshAuthPanel() {
     if (!authPanel) return;
@@ -467,7 +467,7 @@
     form.appendChild(h('h2', { class: 'auth-form-title', text: 'Sign in to your account' }));
     form.appendChild(h('div', { class: 'auth-fields' },
       h('div', { class: 'field auth-email-field' }, h('label', { for: 'maxi-auth-email', text: 'Email address' }), h('input', { id: 'maxi-auth-email', type: 'email', autocomplete: 'email', required: true, maxlength: '254', placeholder: 'you@example.com' }), h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' })),
-      h('div', { class: 'field auth-password-field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('div', { class: 'auth-password-control' }, h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'At least 6 characters' }), h('button', { class: 'auth-password-toggle', type: 'button', text: 'Show', 'aria-label': 'Show password', 'aria-pressed': 'false', onclick: function () { var input = form.querySelector('#maxi-auth-password'); var reveal = input.type === 'password'; input.type = reveal ? 'text' : 'password'; this.textContent = reveal ? 'Hide' : 'Show'; this.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password'); this.setAttribute('aria-pressed', reveal ? 'true' : 'false'); } })))));
+      h('div', { class: 'field auth-password-field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('div', { class: 'auth-password-control' }, h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '8', placeholder: 'At least 8 characters' }), h('button', { class: 'auth-password-toggle', type: 'button', text: 'Show', 'aria-label': 'Show password', 'aria-pressed': 'false', onclick: function () { var input = form.querySelector('#maxi-auth-password'); var reveal = input.type === 'password'; input.type = reveal ? 'text' : 'password'; this.textContent = reveal ? 'Hide' : 'Show'; this.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password'); this.setAttribute('aria-pressed', reveal ? 'true' : 'false'); } })))));
     form.appendChild(h('div', { class: 'auth-form-actions' },
       h('button', { class: 'btn btn-primary auth-submit', type: 'submit', text: 'Sign in' }),
       h('button', { class: 'btn auth-toggle', type: 'button', text: 'New here? Create an account', onclick: function () { showAuthForm(authFormMode === 'signin' ? 'signup' : 'signin'); } }),
@@ -494,7 +494,7 @@
       var password = form.querySelector('#maxi-auth-password').value;
       var submit = form.querySelector('.auth-submit');
       if (authFormMode !== 'recovery' && !email) { authNotice('Enter your email address.', true); return; }
-      if (!password || password.length < 6) { authNotice('Your password must contain at least 6 characters.', true); return; }
+      if (!password || ((authFormMode === 'signup' || authFormMode === 'recovery') && password.length < 8)) { authNotice(authFormMode === 'signin' ? 'Enter your password.' : 'Your password must contain at least 8 characters.', true); return; }
       submit.disabled = true;
       authNotice(authFormMode === 'signup' ? 'Creating your account…' : authFormMode === 'recovery' ? 'Updating your password…' : 'Signing you in…', false);
       try {

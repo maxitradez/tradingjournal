@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E1116">
+<title>PIPBOOK — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="./">PIPBOOK<span> / ADMIN</span></a><div class="top-actions"><a href="./">Journal</a><button id="signout" class="quiet" hidden>Sign out</button></div></header>
+<main class="shell">
+<section id="login-panel" class="panel login-panel" hidden>
+  <p class="eyebrow">RESTRICTED ACCESS</p><h1>Admin sign in</h1>
+  <p class="muted">Use your existing PIPBOOK administrator account. There is no admin sign-up.</p>
+  <form id="login-form">
+    <label for="email">Email address</label><input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>
+    <button class="primary" id="login-submit" type="submit">Sign in securely</button>
+  </form>
+  <p id="login-message" class="message" role="status"></p>
+</section>
+<section id="dashboard" hidden>
+  <div class="heading"><div><p class="eyebrow">PIPBOOK CONTROL ROOM</p><h1>Admin overview</h1><p class="muted">Platform-level totals only. Traders' private journal entries are not displayed here.</p></div><button id="refresh" class="quiet">Refresh data</button></div>
+  <p id="status" class="message" role="status">Checking administrator access…</p>
+  <div id="metrics" class="metrics" hidden>
+    <article class="metric"><span>REGISTERED USERS</span><strong id="users">—</strong><small>Accounts with a PIPBOOK profile</small></article>
+    <article class="metric"><span>TRADES RECORDED</span><strong id="trades">—</strong><small>Across all accounts · count only</small></article>
+    <article class="metric"><span>TRADING ACCOUNTS</span><strong id="accounts">—</strong><small>Across all users · count only</small></article>
+  </div>
+  <section class="panel users-panel"><div class="panel-head"><div><p class="eyebrow">ACCOUNT ACTIVITY</p><h2>Recently registered users</h2></div><span class="muted small">Limited account details</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Email</th><th>Joined</th><th>Status</th></tr></thead><tbody id="recent-users"><tr><td colspan="3" class="muted">Waiting for secure data…</td></tr></tbody></table></div>
+  </section>
+  <p class="footnote">Admin access is verified by Supabase on the server for every data request. Never share your password or session.</p>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="admin.js"></script>
+</body></html>

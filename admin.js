@@ -14,6 +14,62 @@ function showLogin(text,isError){dashboard.hidden=true;loginPanel.hidden=false;s
 function showDashboard(){loginPanel.hidden=true;dashboard.hidden=false;signout.hidden=false;}
 function fmtDate(value){if(!value)return '—';var d=new Date(value);return isNaN(d.getTime())?'—':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});}
 function escapeText(value){return String(value==null?'':value);}
+
+async function loadFeedback(){
+ var list=document.getElementById('feedback-list');
+ var count=document.getElementById('feedback-count');
+ if(!list||!count)return;
+ list.textContent='Loading feedback…';
+ try{
+  var result=await client.functions.invoke('pipbook-feedback',{body:{action:'list'}});
+  if(result.error){
+   var detail=result.data&&result.data.error?result.data.error:result.error.message;
+   throw new Error(detail||'Could not load feedback.');
+  }
+  var reports=result.data&&result.data.reports?result.data.reports:[];
+  count.textContent=reports.length+' report'+(reports.length===1?'':'s');
+  list.replaceChildren();
+  if(!reports.length){var empty=document.createElement('p');empty.className='muted';empty.textContent='No feedback submitted yet. Reports from your testers will appear here.';list.appendChild(empty);return;}
+  reports.forEach(function(report){
+   var card=document.createElement('article');card.className='feedback-item';
+   var head=document.createElement('div');head.className='feedback-item-head';
+   var titleWrap=document.createElement('div');
+   var title=document.createElement('h3');title.textContent=report.title||'Untitled report';
+   var meta=document.createElement('p');meta.className='muted small';meta.textContent=(report.category==='bug'?'Bug report':report.category==='idea'?'Improvement idea':'Other feedback')+' · '+(report.area||'General')+' · '+fmtDate(report.created_at);
+   titleWrap.appendChild(title);titleWrap.appendChild(meta);
+   var email=document.createElement('span');email.className='feedback-reporter';email.textContent=report.user_email||'Unknown user';
+   head.appendChild(titleWrap);head.appendChild(email);card.appendChild(head);
+   var details=document.createElement('p');details.className='feedback-description';details.textContent=report.description||'';card.appendChild(details);
+   var controls=document.createElement('div');controls.className='feedback-controls';
+   var statusLabel=document.createElement('label');statusLabel.textContent='Status';
+   var status=document.createElement('select');status.className='feedback-status';
+   [['new','New'],['in_progress','In progress'],['resolved','Resolved'],['closed','Closed']].forEach(function(option){var o=document.createElement('option');o.value=option[0];o.textContent=option[1];status.appendChild(o);});
+   status.value=report.status||'new';statusLabel.appendChild(status);controls.appendChild(statusLabel);
+   var noteLabel=document.createElement('label');noteLabel.textContent='Private admin note';
+   var note=document.createElement('textarea');note.rows=2;note.maxLength=1000;note.placeholder='Optional internal note…';note.value=report.admin_note||'';noteLabel.appendChild(note);controls.appendChild(noteLabel);
+   var actionRow=document.createElement('div');actionRow.className='feedback-save-row';
+   var save=document.createElement('button');save.type='button';save.className='quiet';save.textContent='Save update';
+   var feedbackStatus=document.createElement('span');feedbackStatus.className='muted small';
+   save.addEventListener('click',async function(){
+    save.disabled=true;feedbackStatus.textContent='Saving…';
+    try{
+     var update=await client.functions.invoke('pipbook-feedback',{body:{action:'update',id:report.id,status:status.value,admin_note:note.value}});
+     if(update.error){var msg=update.data&&update.data.error?update.data.error:update.error.message;throw new Error(msg||'Update failed.');}
+     if(!update.data||!update.data.success)throw new Error((update.data&&update.data.error)||'Update failed.');
+     feedbackStatus.textContent='Saved';
+     report.status=status.value;report.admin_note=note.value;
+    }catch(error){feedbackStatus.textContent=error.message||'Could not save.';}
+    finally{save.disabled=false;}
+   });
+   actionRow.appendChild(save);actionRow.appendChild(feedbackStatus);controls.appendChild(actionRow);
+   card.appendChild(controls);list.appendChild(card);
+  });
+ }catch(error){
+  count.textContent='Unavailable';
+  list.replaceChildren();
+  var failed=document.createElement('p');failed.className='muted';failed.textContent=error.message||'Could not load feedback reports.';list.appendChild(failed);
+ }
+}
 async function loadOverview(){
  if(!client){message(statusEl,'Account service unavailable. Please try again later.',true);return;}
  refreshButton.disabled=true;message(statusEl,'Verifying administrator permission…');
@@ -52,6 +108,7 @@ async function loadOverview(){
    });body.appendChild(tr);
   });
   if(!body.children.length){var empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=3;cell.textContent='No registered users yet.';cell.className='muted';empty.appendChild(cell);body.appendChild(empty);}
+  loadFeedback();
  }catch(error){
   showLogin('We could not verify administrator access. '+(error.message||'Please try again.'),true);
  }

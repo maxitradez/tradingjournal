@@ -1,0 +1,1 @@
+alter table public.announcement_email_queue add column if not exists claimed_at timestamptz;

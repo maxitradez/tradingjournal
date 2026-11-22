@@ -1,0 +1,19 @@
+.workspace-actions{position:relative}
+.announcement-unread-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:99px;background:#10b981;color:#06251b;font-size:10px;font-weight:800;vertical-align:middle}
+.pipbook-announcement-overlay{position:fixed;inset:0;z-index:1100;background:rgba(3,7,12,.78);backdrop-filter:blur(8px);display:grid;place-items:center;padding:14px}
+.pipbook-announcement-overlay[hidden]{display:none!important}
+.pipbook-announcement-dialog{width:min(100%,620px);max-height:min(88vh,760px);overflow:auto;background:#151b23;color:#edf2f7;border:1px solid #27313d;border-radius:18px;padding:22px;box-shadow:0 24px 90px rgba(0,0,0,.45)}
+.pipbook-announcement-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.pipbook-announcement-head h2{font:700 25px "Bricolage Grotesque",sans-serif;margin:0}
+.pipbook-announcement-subtitle{font-size:13px;color:#91a0b1;margin:8px 0 0}
+.pipbook-announcement-list{display:grid;gap:10px}
+.pipbook-announcement-card{border:1px solid #27313d;border-radius:11px;background:#111820;overflow:hidden}
+.pipbook-announcement-card.is-unread{border-color:rgba(16,185,129,.55)}
+.pipbook-announcement-toggle{width:100%;display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:10px;padding:14px;background:transparent;border:0;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.pipbook-announcement-dot{width:7px;height:7px;border-radius:50%;background:transparent}
+.is-unread .pipbook-announcement-dot{background:#10b981}
+.pipbook-announcement-title{font-size:14px;font-weight:700;overflow-wrap:anywhere}
+.pipbook-announcement-date{font-size:11px;color:#91a0b1;white-space:nowrap}
+.pipbook-announcement-message{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:0 15px 16px 34px;color:#c5ced8;font-size:13px;line-height:1.7}
+.pipbook-announcement-error{color:#fb7185;font-size:12px;padding:8px 12px}
+@media(max-width:600px){.pipbook-announcement-dialog{padding:17px}.pipbook-announcement-toggle{grid-template-columns:8px minmax(0,1fr);gap:8px}.pipbook-announcement-date{grid-column:2}.pipbook-announcement-message{padding-left:26px}}

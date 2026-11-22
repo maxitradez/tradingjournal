@@ -141,7 +141,8 @@ function setupAnnouncementComposer(){
   finally{publish.disabled=false;}
  });
 }
-\nasync function loadOverview(){
+
+async function loadOverview(){
  if(!client){message(statusEl,'Account service unavailable. Please try again later.',true);return;}
  refreshButton.disabled=true;message(statusEl,'Verifying administrator permission…');
  try{
@@ -179,7 +180,8 @@ function setupAnnouncementComposer(){
    });body.appendChild(tr);
   });
   if(!body.children.length){var empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=3;cell.textContent='No registered users yet.';cell.className='muted';empty.appendChild(cell);body.appendChild(empty);}
-  loadFeedback();\n  loadAnnouncements();
+  loadFeedback();
+  loadAnnouncements();
  }catch(error){
   showLogin('We could not verify administrator access. '+(error.message||'Please try again.'),true);
  }
@@ -201,7 +203,8 @@ signout.addEventListener('click',async function(){
  if(result.error){message(statusEl,'Could not sign out. Please try again.',true);return;}
  showLogin('You are signed out.');
 });
-refreshButton.addEventListener('click',loadOverview);\nsetupAnnouncementComposer();
+refreshButton.addEventListener('click',loadOverview);
+setupAnnouncementComposer();
 client.auth.onAuthStateChange(function(){setTimeout(loadOverview,0);});
 loadOverview();
 })();

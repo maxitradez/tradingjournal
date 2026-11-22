@@ -1,0 +1,214 @@
+/* ==========================================================================
+   PIPBOOK — APP REDESIGN (presentation only; load AFTER redesign.css)
+   Sidebar shell, a dashboard with clear hierarchy, calmer shared components.
+   Uses CSS grid/order only. No markup, JS, data or logic is changed.
+   Remove the <link> to this file to roll back this stage.
+   ========================================================================== */
+
+/* ---------- Shared components ---------- */
+html body .wrap .panel, html body .wrap .tcard, html body .wrap .pb, html body .wrap .icard, html body .wrap .mini {
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:none;
+}
+html body .wrap .panel { padding:22px; }
+html body .wrap .panel-head h2 { font:650 17px/1.3 var(--font-display); letter-spacing:-.02em; }
+html body .wrap .panel-head .sub, html body .wrap .sub { color:var(--muted); font-size:13px; }
+html body .wrap .eyebrow, html body .wrap .workspace-kicker { text-transform:lowercase; letter-spacing:0; font:500 14px/1.4 var(--font-body); color:var(--accent); }
+html body .wrap .eyebrow::first-letter { text-transform:uppercase; }
+html body .wrap .stat-label { text-transform:none; letter-spacing:0; font:500 13px/1.3 var(--font-body); color:var(--muted); }
+html body .wrap .pill { border-radius:99px; font-weight:600; font-size:12px; letter-spacing:0; text-transform:none; }
+html body .wrap .pos { color:var(--win); } html body .wrap .neg { color:var(--loss); }
+html body .wrap .btn { border-radius:var(--radius-md); }
+html body .wrap .btn-sm { min-height:36px; }
+html body .wrap .ring .prog { stroke:var(--accent); }
+html body .wrap .bar i, html body .wrap .part-row .bar i { background:var(--accent); }
+html body .wrap .hint { color:var(--faint); }
+
+/* ---------- Desktop shell: sidebar + content ---------- */
+@media (min-width:1000px) {
+  html body .wrap {
+    width:100%; max-width:1360px; margin:0 auto; padding:0 28px 40px 0;
+    display:grid; grid-template-columns:240px minmax(0,1fr); column-gap:36px; align-items:start;
+    grid-template-areas:"brand banner" "nav main" "nav foot";
+    grid-template-rows:auto auto 1fr;
+  }
+  html body .wrap > .masthead { grid-area:brand; position:sticky; top:0; z-index:5; flex-direction:column; align-items:flex-start; gap:14px;
+    min-height:0; padding:26px 22px 8px; border:0; background:var(--bg); }
+  html body .wrap > .masthead .tagline, html body .wrap > .masthead .mobile-menu-toggle { display:none; }
+  html body .wrap > .masthead .brand::before { display:none; }
+  html body .wrap > .masthead .brand h1 { font-size:26px; letter-spacing:-.04em; }
+
+  html body .wrap > .nav {
+    grid-area:nav; position:sticky; top:96px; display:flex !important; flex-direction:column; gap:2px; height:auto !important;
+    padding:8px 14px 24px; margin:0; border:0; background:none; overflow:visible; max-height:calc(100vh - 110px);
+  }
+  html body .wrap > .nav a {
+    display:flex; align-items:center; min-height:44px; padding:0 14px; border-radius:var(--radius-md); border:0; background:none;
+    color:var(--muted); font:500 15px var(--font-body); text-decoration:none; letter-spacing:0; text-transform:none; white-space:nowrap;
+  }
+  html body .wrap > .nav a:hover { background:var(--surface-2); color:var(--fg); }
+  html body .wrap > .nav a.on, html body .wrap > .nav a.active, html body .wrap > .nav a[aria-current] {
+    background:var(--surface-3); color:var(--fg); box-shadow:inset 3px 0 0 var(--accent);
+  }
+  html body .wrap > .banner { grid-area:banner; margin:20px 0 0; }
+  html body .wrap > main { grid-area:main; padding-top:26px; min-width:0; }
+  html body .wrap > .foot { grid-area:foot; max-width:70ch; color:var(--faint); font-size:13px; }
+}
+
+/* ---------- Workspace heading ---------- */
+html body .wrap .workspace-topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 22px; padding:0; border:0; }
+html body .wrap .workspace-heading h2 { font:700 clamp(26px,3.4vw,34px)/1.1 var(--font-display); letter-spacing:-.03em; margin:2px 0 0; }
+html body .wrap .workspace-heading .workspace-kicker { display:none; }
+html body .wrap #fab { min-height:46px; padding:0 22px; background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:700; }
+
+/* ---------- Dashboard: clear hierarchy ---------- */
+html body #v-dashboard:not([hidden]) { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:16px; align-items:stretch; }
+html body #v-dashboard > * { grid-column:1 / -1; min-width:0; margin:0; }
+html body #v-dashboard > .motivation-reminder { order:-3; border-color:var(--amber); background:linear-gradient(0deg,rgba(230,189,112,.07),rgba(230,189,112,.07)),var(--surface); }
+html body #v-dashboard > .dashboard-today { order:-2; }
+html body #v-dashboard > .account-balance-summary { order:-1; }
+html body #v-dashboard > .stats { order:1; } html body #v-dashboard > .goals { order:2; } html body #v-dashboard > .g-dash { order:3; }
+@media (min-width:1000px) {
+  html body #v-dashboard > .dashboard-today:has(~ .account-balance-summary) { grid-column:span 7; }
+  html body #v-dashboard > .account-balance-summary { grid-column:span 5; }
+}
+
+/* Today: the daily-ritual hero */
+html body #v-dashboard .dashboard-today { padding:26px; }
+html body #v-dashboard .dashboard-today-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:22px; }
+html body #v-dashboard .dashboard-today-head h2 { font:700 24px/1.15 var(--font-display); letter-spacing:-.03em; margin:2px 0 4px; }
+html body #v-dashboard .dashboard-today-metrics { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1.2fr); gap:20px; }
+html body #v-dashboard .dashboard-today-metrics > div { display:flex; flex-direction:column; gap:6px; min-width:0; }
+html body #v-dashboard .dashboard-today-value { font:700 clamp(30px,4.4vw,48px)/1 var(--font-display); letter-spacing:-.04em; }
+html body #v-dashboard .dashboard-today-status { font:600 17px/1.3 var(--font-body); color:var(--muted); }
+html body #v-dashboard .account-balance-summary .dashboard-today-metrics { grid-template-columns:1fr; gap:12px; }
+html body #v-dashboard .account-balance-summary .dashboard-today-value { font-size:22px; letter-spacing:-.02em; }
+html body #v-dashboard .account-balance-summary .dashboard-today-metrics > div { flex-direction:row; justify-content:space-between; align-items:baseline; }
+html body #v-dashboard .account-balance-summary > .hint { display:none; }
+
+/* Stats: three headline numbers, three supporting */
+html body #v-dashboard .stats { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin:0; }
+html body #v-dashboard .stats .stat { grid-column:span 2; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); padding:18px 20px; box-shadow:none; }
+html body #v-dashboard .stats .stat:nth-child(-n+3) .stat-value { font:700 clamp(30px,3.6vw,42px)/1.05 var(--font-display); letter-spacing:-.04em; margin-top:8px; }
+html body #v-dashboard .stats .stat:nth-child(n+4) { padding:14px 20px; background:transparent; }
+html body #v-dashboard .stats .stat:nth-child(n+4) .stat-value { font:650 22px/1.1 var(--font-display); letter-spacing:-.02em; margin-top:4px; }
+html body #v-dashboard .stats .stat-sub { margin-top:6px; color:var(--faint); font:400 12.5px/1.4 var(--font-body); text-transform:none; letter-spacing:0; }
+
+/* Goals: slim progress strip */
+html body #v-dashboard .goals .goal-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; }
+html body #v-dashboard .goals .goal-v { font:650 22px/1.2 var(--font-display); letter-spacing:-.02em; }
+html body #v-dashboard .goals .bar { height:6px; border-radius:99px; background:var(--surface-3); overflow:hidden; margin-top:10px; }
+
+/* Equity curve leads; score supports */
+html body #v-dashboard .g-dash { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:16px; }
+html body #v-dashboard .g-dash > * { grid-column:1 / -1; min-width:0; }
+@media (min-width:1000px) {
+  html body #v-dashboard .g-dash > .a-eq { grid-column:1 / span 8; grid-row:1; }
+  html body #v-dashboard .g-dash > .a-recent { grid-column:1 / span 8; grid-row:2; }
+  html body #v-dashboard .g-dash > .a-score { grid-column:9 / span 4; grid-row:1 / span 2; align-self:start; }
+}
+html body #v-dashboard .a-recent .recent { list-style:none; margin:0; padding:0; }
+html body #v-dashboard .a-recent .recent li { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+html body #v-dashboard .a-recent .recent li:first-child { border-top:0; padding-top:0; }
+html body #v-dashboard .a-recent .m { color:var(--faint); font-size:13px; }
+html body #v-dashboard .a-recent .p { font:650 15px var(--font-display); white-space:nowrap; }
+html body #v-dashboard .a-score .score-top { display:flex; align-items:center; gap:16px; }
+html body #v-dashboard .a-score .parts { display:grid; gap:10px; margin-top:16px; }
+html body #v-dashboard .a-score .part-row { display:grid; grid-template-columns:1fr auto; gap:4px 10px; font-size:13px; color:var(--muted); }
+html body #v-dashboard .a-score .part-row .bar { grid-column:1 / -1; height:4px; border-radius:99px; background:var(--surface-3); overflow:hidden; }
+html body #v-dashboard .hero-empty { text-align:left; padding:34px 28px; }
+html body #v-dashboard .hero-empty h2 { font:700 26px/1.15 var(--font-display); letter-spacing:-.03em; }
+
+/* ---------- Other screens: calmer tables, toolbars, cards ---------- */
+html body .wrap table { border-collapse:collapse; width:100%; }
+html body .wrap th { color:var(--muted); font:500 13px var(--font-body); text-transform:none; letter-spacing:0; border-bottom:1px solid var(--line-strong); }
+html body .wrap td { border-bottom:1px solid var(--line); padding-top:14px; padding-bottom:14px; }
+html body .wrap tbody tr:hover { background:var(--surface-2); }
+html body .wrap .toolbar { gap:10px; }
+html body .wrap .pbgrid, html body .wrap .trade-card-grid { gap:16px; }
+html body .wrap .brk .track { height:8px; border-radius:99px; background:var(--surface-3); }
+html body .wrap .cal .day { border-color:var(--line); border-radius:var(--radius-sm); }
+
+
+/* ---------- Neutralise legacy decoration layers (frames, glows, watermarks, grid areas) ---------- */
+html body .wrap, html body .wrap > main { border:0; border-radius:0; background:none; box-shadow:none; }
+html body .wrap::before, html body .wrap::after, html body .wrap > main::before, html body .wrap > main::after,
+html body .wrap .panel::before, html body .wrap .panel::after, html body .wrap .stat::before, html body .wrap .stat::after,
+html body .wrap .workspace-topbar::before, html body .wrap .workspace-topbar::after,
+html body .wrap .masthead::before, html body .wrap .masthead::after { content:none !important; display:none !important; }
+html body .wrap .panel, html body .wrap .stat, html body .wrap .tcard, html body .wrap .pb, html body .wrap .icard, html body .wrap .mini { background-image:none; background-color:var(--surface); }
+html body .wrap .workspace-topbar { background:none; box-shadow:none; min-height:0; }
+html body .wrap .workspace-heading h2 { text-transform:none; }
+html body .wrap .masthead .brand h1 { background:none; border:0; padding:0; box-shadow:none; text-transform:none; width:auto; }
+html body .wrap .masthead .chip { margin:0; align-self:flex-start; }
+html body #v-dashboard .dashboard-today-metrics > div { border:0; background:none; padding:0; border-radius:0; box-shadow:none; min-height:0; }
+html body #v-dashboard .dashboard-today-value { white-space:nowrap; }
+html body #v-dashboard .dashboard-today-status { white-space:normal; }
+html body #v-dashboard .g-dash { grid-template-areas:none; }
+html body #v-dashboard .g-dash > * { grid-row:auto; }
+html body #v-dashboard .a-recent .recent { display:block; }
+html body #v-dashboard .a-recent .recent li { display:flex; background:none; border-radius:0; border-left:0; border-right:0; border-bottom:0; padding-left:0; padding-right:0; }
+html body #v-dashboard .a-recent .asset { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+
+/* ---------- Tablet & phone ---------- */
+@media (max-width:999px) {
+  html body .wrap { padding:0 16px calc(96px + var(--safe-b)); }
+  html body .wrap > .masthead { padding:calc(12px + env(safe-area-inset-top,0px)) 0 12px; min-height:0; }
+  html body .wrap > .masthead .tagline { display:none; }
+  html body .wrap .mobile-menu-toggle { min-height:44px; border-radius:var(--radius-md); }
+  html body:not(.mobile-nav-open) #nav { display:none !important; }
+  html body.mobile-nav-open #nav {
+    display:flex !important; flex-direction:column; gap:2px; position:fixed; inset:0; z-index:40; overflow:auto;
+    padding:calc(76px + env(safe-area-inset-top,0px)) 16px calc(24px + var(--safe-b)); background:var(--bg);
+  }
+  html body.mobile-nav-open #nav a { display:flex; align-items:center; min-height:54px; padding:0 14px; border-radius:var(--radius-md); font:600 18px var(--font-body); color:var(--fg); text-decoration:none; border:0; }
+  html body.mobile-nav-open #nav a:active { background:var(--surface-2); }
+  html body.mobile-nav-open .wrap > .masthead { position:relative; z-index:50; }
+  html body .wrap .workspace-topbar #fab { display:inline-flex; }
+}
+@media (max-width:640px) {
+  html body .wrap .panel { padding:18px; }
+  html body #v-dashboard .dashboard-today { padding:20px; }
+  html body #v-dashboard .dashboard-today-head { flex-direction:column; gap:14px; }
+  html body #v-dashboard .dashboard-today-head .btn { width:100%; }
+  html body #v-dashboard .dashboard-today-metrics { grid-template-columns:1fr 1fr; gap:16px; }
+  html body #v-dashboard .dashboard-today-metrics > div:first-child { grid-column:1 / -1; }
+  /* Net P&L full width, win rate + profit factor side by side, the rest as a quiet list */
+  html body #v-dashboard .stats .stat:nth-child(1) { grid-column:1 / -1; }
+  html body #v-dashboard .stats .stat:nth-child(2), html body #v-dashboard .stats .stat:nth-child(3) { grid-column:span 3; padding:16px; }
+  html body #v-dashboard .stats .stat:nth-child(n+4) { grid-column:1 / -1; display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:2px 12px; padding:12px 4px; border:0; border-top:1px solid var(--line); border-radius:0; }
+  html body #v-dashboard .stats .stat:nth-child(n+4) .stat-sub { grid-column:1 / -1; margin:0; }
+  html body #v-dashboard .stats .stat:nth-child(n+4) .stat-value { margin:0; text-align:right; grid-column:2; grid-row:1; }
+  html body #v-dashboard .g-dash > .a-recent { order:2; } html body #v-dashboard .g-dash > .a-score { order:3; }
+}
+
+/* ---------- Final overrides: flat surfaces, brand block, readable labels ---------- */
+html body #v-dashboard .panel, html body #v-dashboard .stats .stat:nth-child(-n+3) { background:var(--surface) !important; }
+html body #v-dashboard .stats .stat:nth-child(n+4) { background:transparent !important; }
+html body .wrap .masthead .brand { background:none !important; border:0 !important; padding:0 !important; box-shadow:none !important; }
+html body .wrap .masthead .brand h1 { background:none !important; border:0 !important; padding:0 !important; margin:0; }
+html body .wrap .masthead .chip { background:var(--surface); border:1px solid var(--line); }
+html body #v-dashboard .dashboard-today-metrics .stat-label { font-size:13px; }
+html body #v-dashboard .a-eq .chart, html body #v-dashboard .a-eq > div:last-child { min-height:250px; }
+
+html body #v-dashboard .stats .stat { min-height:0; height:auto; }
+html body #v-dashboard .dashboard-today-metrics, html body #v-dashboard .dashboard-today-metrics > div { text-align:left; align-items:flex-start; }
+html body #v-dashboard .account-balance-summary .dashboard-today-metrics > div { align-items:baseline; }
+
+/* Floating action button must sit above content: topbar must not trap it in a lower stacking layer */
+html body .wrap .workspace-topbar { position:static; z-index:auto; isolation:auto; transform:none; filter:none; backdrop-filter:none; overflow:visible; }
+@media (max-width:999px) { html body .wrap #fab { z-index:60; } }
+
+/* Phone menu: true full-screen sheet, left-aligned, button hidden while open */
+@media (max-width:999px) {
+  html body.mobile-nav-open #nav {
+    top:0; left:0; right:0; bottom:0; width:auto; height:auto !important; max-height:none; margin:0;
+    border:0; border-radius:0; box-shadow:none; justify-content:flex-start; justify-items:stretch; align-items:stretch; align-content:flex-start;
+  }
+  html body.mobile-nav-open #nav a { justify-content:flex-start; text-align:left; gap:14px; }
+  html body.mobile-nav-open #fab { display:none; }
+}
+@media (max-width:999px) {
+  html body.mobile-nav-open #nav { height:100dvh !important; min-height:100dvh; max-height:none !important; }
+  html body.mobile-nav-open #fab { display:none !important; }
+}
+html body.mobile-nav-open #fab { visibility:hidden !important; pointer-events:none !important; z-index:0 !important; }

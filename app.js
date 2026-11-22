@@ -466,7 +466,7 @@
     var form = h('form', { class: 'auth-form', hidden: true, novalidate: true });
     form.appendChild(h('h2', { class: 'auth-form-title', text: 'Sign in to your account' }));
     form.appendChild(h('div', { class: 'auth-fields' },
-      h('div', { class: 'field' }, h('label', { for: 'maxi-auth-email', text: 'Email address' }), h('input', { id: 'maxi-auth-email', type: 'email', autocomplete: 'email', required: true, maxlength: '254', placeholder: 'you@example.com' })),
+      h('div', { class: 'field auth-email-field' }, h('label', { for: 'maxi-auth-email', text: 'Email address' }), h('input', { id: 'maxi-auth-email', type: 'email', autocomplete: 'email', required: true, maxlength: '254', placeholder: 'you@example.com' }), h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' })),
       h('div', { class: 'field' }, h('label', { for: 'maxi-auth-password', text: 'Password' }), h('input', { id: 'maxi-auth-password', type: 'password', autocomplete: 'current-password', required: true, minlength: '6', placeholder: 'At least 6 characters' }))));
     form.appendChild(h('div', { class: 'auth-form-actions' },
       h('button', { class: 'btn btn-primary auth-submit', type: 'submit', text: 'Sign in' }),
@@ -538,7 +538,6 @@
     });
     authPanel.appendChild(summary);
     authPanel.appendChild(form);
-    authPanel.appendChild(h('p', { class: 'auth-message', role: 'status', 'aria-live': 'polite' }));
     var publicAuth = document.getElementById('public-auth');
     if (publicAuth) publicAuth.appendChild(authPanel);
     else document.querySelector('.masthead').insertAdjacentElement('afterend', authPanel);

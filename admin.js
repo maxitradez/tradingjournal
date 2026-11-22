@@ -22,7 +22,19 @@ async function loadOverview(){
   var session=sessionResult.data&&sessionResult.data.session;
   if(!session){showLogin('Sign in with your existing PIPBOOK admin account.');return;}
   var result=await client.functions.invoke('pipbook-admin-overview',{body:{}});
-  if(result.error){var detail=result.data&&result.data.error?result.data.error:result.error.message;throw new Error(detail||'Admin request failed.');}
+  if(result.error){
+   var responseStatus=result.error.context&&result.error.context.status;
+   if(responseStatus===403){
+    showLogin('Access denied. This PIPBOOK account does not have administrator permissions. Sign in with the authorized admin account.',true);
+    return;
+   }
+   if(responseStatus===401){
+    showLogin('Your session could not be verified. Please sign in again.',true);
+    return;
+   }
+   var detail=result.data&&result.data.error?result.data.error:result.error.message;
+   throw new Error(detail||'Admin request failed.');
+  }
   var data=result.data||{};
   if(!data.success||!data.metrics)throw new Error(data.error||'Could not verify administrator access.');
   showDashboard();message(statusEl,'Securely connected · Last updated '+new Date(data.generatedAt).toLocaleTimeString());
@@ -40,7 +52,9 @@ async function loadOverview(){
    });body.appendChild(tr);
   });
   if(!body.children.length){var empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=3;cell.textContent='No registered users yet.';cell.className='muted';empty.appendChild(cell);body.appendChild(empty);}
- }catch(error){message(statusEl,error.message||'Could not load admin data.',true);if(/not authorized|invalid|sign in|jwt/i.test(error.message||''))showLogin('This account does not have an active admin session. Sign in again or contact the administrator.',true);}
+ }catch(error){
+  showLogin('We could not verify administrator access. '+(error.message||'Please try again.'),true);
+ }
  finally{refreshButton.disabled=false;}
 }
 if(!client){showLogin('Could not connect to PIPBOOK account services.',true);return;}
